@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationsRepository } from '../../src/notifications/notifications.repository';
+import { NotificationsRepository } from '../../src/modules/notifications/notifications.repository';
 import { PrismaService } from '../../src/prisma/prisma.service';
 
 describe('NotificationsRepository', () => {
@@ -7,7 +7,10 @@ describe('NotificationsRepository', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [NotificationsRepository, { provide: PrismaService, useValue: {} }],
+      providers: [
+        NotificationsRepository,
+        { provide: PrismaService, useValue: {} },
+      ],
     }).compile();
 
     repository = module.get<NotificationsRepository>(NotificationsRepository);

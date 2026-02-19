@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DashboardService } from '../../src/dashboard/dashboard.service';
-import { OrdersRepository } from '../../src/orders/orders.repository';
-import { ProductsRepository } from '../../src/products/products.repository';
+import { DashboardService } from '../../src/modules/dashboard/dashboard.service';
+import { OrdersRepository } from '../../src/modules/orders/orders.repository';
+import { ProductsRepository } from '../../src/modules/products/products.repository';
 
 describe('DashboardService', () => {
   let service: DashboardService;
@@ -11,7 +11,7 @@ describe('DashboardService', () => {
       providers: [
         DashboardService,
         { provide: OrdersRepository, useValue: {} },
-        { provide: ProductsRepository, useValue: {} }
+        { provide: ProductsRepository, useValue: {} },
       ],
     }).compile();
 

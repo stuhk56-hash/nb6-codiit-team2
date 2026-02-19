@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ReviewsService } from '../../src/reviews/reviews.service';
-import { ReviewsRepository } from '../../src/reviews/reviews.repository';
-import { OrdersRepository } from '../../src/orders/orders.repository';
-import { S3Service } from '../../src/s3/s3.service';
+import { ReviewsService } from '../../src/modules/reviews/reviews.service';
+import { ReviewsRepository } from '../../src/modules/reviews/reviews.repository';
+import { OrdersRepository } from '../../src/modules/orders/orders.repository';
+import { S3Service } from '../../src/modules/s3/s3.service';
 
 describe('ReviewsService', () => {
   let service: ReviewsService;

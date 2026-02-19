@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { OrdersRepository } from '../../src/orders/orders.repository';
+import { OrdersRepository } from '../../src/modules/orders/orders.repository';
 import { PrismaService } from '../../src/prisma/prisma.service';
 
 describe('OrdersRepository', () => {

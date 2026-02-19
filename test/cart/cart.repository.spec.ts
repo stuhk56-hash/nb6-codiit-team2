@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CartRepository } from '../../src/cart/cart.repository';
+import { CartRepository } from '../../src/modules/cart/cart.repository';
 
 describe('CartRepository', () => {
   let repository: CartRepository;

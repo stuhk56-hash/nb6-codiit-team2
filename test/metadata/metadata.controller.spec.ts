@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { MetadataController } from '../../src/metadata/metadata.controller';
-import { MetadataService } from '../../src/metadata/metadata.service';
+import { MetadataController } from '../../src/modules/metadata/metadata.controller';
+import { MetadataService } from '../../src/modules/metadata/metadata.service';
 
 describe('MetadataController', () => {
   let controller: MetadataController;

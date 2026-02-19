@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationsController } from '../../src/notifications/notifications.controller';
-import { NotificationsService } from '../../src/notifications/notifications.service';
+import { NotificationsController } from '../../src/modules/notifications/notifications.controller';
+import { NotificationsService } from '../../src/modules/notifications/notifications.service';
 
 describe('NotificationsController', () => {
   let controller: NotificationsController;

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { InquiriesService } from '../../src/inquiries/inquiries.service';
-import { InquiriesRepository } from '../../src/inquiries/inquiries.repository';
+import { InquiriesService } from '../../src/modules/inquiries/inquiries.service';
+import { InquiriesRepository } from '../../src/modules/inquiries/inquiries.repository';
 
 describe('InquiriesService', () => {
   let service: InquiriesService;

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { StoresRepository } from '../../src/stores/stores.repository';
+import { StoresRepository } from '../../src/modules/stores/stores.repository';
 
 describe('StoresRepository', () => {
   let repository: StoresRepository;
