@@ -1,2 +1,8 @@
-// This is the root module of the application.
-// It will import all other modules.
+import { Module } from '@nestjs/common';
+import { ProductsModule } from './modules/products/products.module';
+import { PrismaModule } from './prisma/prisma.module';
+
+@Module({
+  imports: [ProductsModule, PrismaModule],
+})
+export class AppModule {}

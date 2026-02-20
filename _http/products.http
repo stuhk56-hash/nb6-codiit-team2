@@ -1,0 +1,55 @@
+### 환경 설정
+@base = http://localhost:3000
+@accessToken = 
+@refreshToken = 
+
+### 새 상품 등록
+POST {{base}}/products
+Authorization: Bearer {{accessToken}}
+
+### 상품 목록 조회  
+GET {{base}}/products
+Authorization: Bearer {{accessToken}}
+
+### 상품 수정
+PATCH {{base}}/products/{productId}
+Authorization: Bearer {{accessToken}}
+ 
+### 상품 정보 조회
+GET {{base}}/products/{productId}
+Authorization: Bearer {{accessToken}}
+
+### 상품 삭제
+DELETE {{base}}/products/{productId}
+Authorization: Bearer {{accessToken}}
+
+### 상품 문의 등록
+POST {{base}}/products/{productId}/inquiries
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+{
+  "id": "CUID",
+  "userId": "CUID",
+  "productId": "CUID",
+  "title": "상품 문의",
+  "content": "문의 내용입니다.",
+  "status": "CompletedAnswer",
+  "isSecret": false,
+  "createdAt": "2023-10-01T00:00:00.000Z",
+  "updatedAt": "2023-10-01T00:00:00.000Z",
+  "reply": {
+    "id": "CUID",
+    "content": "이 제품은 재입고 예정입니다.",
+    "createdAt": "2024-06-01T12:00:00.000Z",
+    "updatedAt": "2024-06-01T12:00:00.000Z",
+    "user": {
+      "id": "abc123",
+      "name": "홍길동"
+    }
+  }
+}
+
+### 상품 문의 조회
+GET {{base}}/products/{productId}/inquiries
+Authorization: Bearer {{accessToken}}
+

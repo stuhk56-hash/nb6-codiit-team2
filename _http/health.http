@@ -1,0 +1,8 @@
+### 환경 설정
+@base = http://localhost:3000
+
+### 서버 상태 확인
+GET {{base}}/health
+
+### 데이터베이스 상태 확인  
+GET {{base}}/health/db
