@@ -1,0 +1,283 @@
+// This is your Prisma schema file
+
+datasource db {
+  provider = "postgresql" // 사용하는 DB에 따라 수정하세요 (mysql, sqlite 등)
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// =========================
+// ENUMS
+// =========================
+
+enum UserType {
+  SELLER
+  BUYER
+}
+
+enum InquiryStatus {
+  WaitingAnswer
+  CompletedAnswer
+}
+
+enum OrderStatus {
+  WaitingPayment
+  CompletedPayment
+  Canceled
+}
+
+enum PaymentStatus {
+  Pending
+  Paid
+  Failed
+  Canceled
+}
+
+// =========================
+// MODELS
+// =========================
+
+model Grade {
+  id        String @id @default(cuid())
+  name      String @unique
+  rate      Int
+  minAmount Int
+  users     User[]
+}
+
+model User {
+  id             String          @id @default(cuid())
+  type           UserType
+  email          String          @unique
+  name           String
+  passwordHash   String
+  imageUrl       String?
+  imageKey       String?
+  points         Int             @default(0)
+  gradeId        String?
+  grade          Grade?          @relation(fields: [gradeId], references: [id], onDelete: SetNull)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  
+  refreshTokens  RefreshToken[]
+  notifications  Notification[]
+  store          Store?
+  storeFavorites StoreFavorite[]
+  cart           Cart?
+  inquiries      Inquiry[]
+  inquiryAnswers InquiryAnswer[]
+  orders         Order[]
+  reviews        Review[]
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  isChecked Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Store {
+  id             String          @id @default(cuid())
+  sellerId       String          @unique
+  seller         User            @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  name           String
+  address        String
+  detailAddress  String
+  phoneNumber    String
+  content        String
+  imageUrl       String?
+  imageKey       String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  
+  products       Product[]
+  storeFavorites StoreFavorite[]
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  products Product[]
+}
+
+model Product {
+  id                String         @id @default(cuid())
+  storeId           String
+  store             Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name              String
+  content           String?
+  price             Int
+  isSoldOut         Boolean        @default(false)
+  categoryId        Int
+  category          Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  imageUrl          String?
+  imageKey          String?
+  discountRate      Int?
+  discountStartTime DateTime?
+  discountEndTime   DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  
+  stocks            ProductStock[]
+  cartItems         CartItem[]
+  inquiries         Inquiry[]
+  orderItems        OrderItem[]
+  reviews           Review[]
+}
+
+model Size {
+  id           Int            @id @default(autoincrement())
+  name         String         @unique
+  nameEn       String         @unique
+  nameKo       String         @unique
+  productStocks ProductStock[]
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+}
+
+model ProductStock {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sizeId    Int
+  size      Size    @relation(fields: [sizeId], references: [id], onDelete: Restrict)
+  quantity  Int
+
+  @@unique([productId, sizeId])
+}
+
+model StoreFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, storeId])
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  buyerId   String     @unique
+  buyer     User       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sizeId    Int
+  size      Size     @relation(fields: [sizeId], references: [id], onDelete: Restrict)
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId, sizeId])
+}
+
+model Inquiry {
+  id        String        @id @default(cuid())
+  productId String
+  product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  buyerId   String
+  buyer     User          @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  isSecret  Boolean       @default(false)
+  status    InquiryStatus @default(WaitingAnswer)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  
+  answer    InquiryAnswer?
+}
+
+model InquiryAnswer {
+  id        String   @id @default(cuid())
+  inquiryId String   @unique
+  inquiry   Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  sellerId  String
+  seller    User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  buyerId      String
+  buyer        User        @relation(fields: [buyerId], references: [id], onDelete: Restrict)
+  status       OrderStatus @default(WaitingPayment)
+  buyerName    String
+  phoneNumber  String
+  address      String
+  usedPoints   Int         @default(0)
+  earnedPoints Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  orderItems   OrderItem[]
+  payment      Payment?
+}
+
+model OrderItem {
+  id              String   @id @default(cuid())
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  sizeId          Int
+  size            Size     @relation(fields: [sizeId], references: [id], onDelete: Restrict)
+  quantity        Int
+  unitPrice       Int
+  productName     String
+  productImageUrl String?
+  
+  review          Review[]
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  orderId   String        @unique
+  order     Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  price     Int
+  status    PaymentStatus @default(Pending)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model Review {
+  id          String     @id @default(cuid())
+  buyerId     String
+  buyer       User       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItemId String?    @unique
+  orderItem   OrderItem? @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+  rating      Int
+  content     String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
