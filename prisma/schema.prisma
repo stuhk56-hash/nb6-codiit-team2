@@ -1,34 +1,34 @@
-// This is your Prisma schema file
-
-datasource db {
-  provider = "postgresql" // 사용하는 DB에 따라 수정하세요 (mysql, sqlite 등)
-  url      = env("DATABASE_URL")
-}
-
+// Prisma Client 생성 설정
 generator client {
   provider = "prisma-client-js"
 }
 
-// =========================
-// ENUMS
-// =========================
+// 실제 데이터베이스 연결 설정
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
+// 사용자 역할(셀러/바이어)
 enum UserType {
   SELLER
   BUYER
 }
 
+// 문의 상태(답변 대기/답변 완료)
 enum InquiryStatus {
   WaitingAnswer
   CompletedAnswer
 }
 
+// 주문 상태
 enum OrderStatus {
   WaitingPayment
   CompletedPayment
   Canceled
 }
 
+// 결제 상태(실결제 연동 없이 상태 흐름 테스트용)
 enum PaymentStatus {
   Pending
   Paid
@@ -36,248 +36,522 @@ enum PaymentStatus {
   Canceled
 }
 
-// =========================
-// MODELS
-// =========================
-
-model Grade {
-  id        String @id @default(cuid())
-  name      String @unique
-  rate      Int
-  minAmount Int
-  users     User[]
-}
-
+// 회원 정보
 model User {
-  id             String          @id @default(cuid())
-  type           UserType
-  email          String          @unique
-  name           String
-  passwordHash   String
-  imageUrl       String?
-  imageKey       String?
-  points         Int             @default(0)
-  gradeId        String?
-  grade          Grade?          @relation(fields: [gradeId], references: [id], onDelete: SetNull)
+  // 사용자 고유 ID
+  id           String   @id @default(cuid())
+  // 사용자 타입(SELLER/BUYER)
+  type         UserType
+  // 로그인 이메일(중복 불가)
+  email        String   @unique
+  // 닉네임/이름
+  name         String
+  // 비밀번호 해시값(원문 비밀번호 저장 금지)
+  passwordHash String
+  // 프로필 이미지 URL
+  imageUrl     String?
+  // 이미지 저장소 키(S3 key 등)
+  imageKey     String?
+  // 보유 포인트
+  points       Int      @default(0)
+
+  // 현재 등급 ID(없을 수도 있음)
+  gradeId String?
+  // 등급 관계
+  grade   Grade?  @relation(fields: [gradeId], references: [id], onDelete: SetNull)
+
+  // 1:1 스토어(셀러만 보유)
+  store         Store?
+  // 찜한 스토어 목록
+  favorites     StoreFavorite[]
+  // 바이어 장바구니(1:1)
+  cart          Cart?
+  // 작성한 문의
+  inquiries     Inquiry[]
+  // 작성한 리뷰
+  reviews       Review[]
+  // 생성한 주문
+  orders        Order[]
+  // 보유한 리프레시 토큰들
+  refreshTokens RefreshToken[]
+  // 받은 알림들
+  notifications Notification[]
+
+  // 생성 시각
   createdAt      DateTime        @default(now())
+  // 수정 시각(자동 갱신)
   updatedAt      DateTime        @updatedAt
-  
-  refreshTokens  RefreshToken[]
-  notifications  Notification[]
-  store          Store?
-  storeFavorites StoreFavorite[]
-  cart           Cart?
-  inquiries      Inquiry[]
+  // 셀러가 작성한 문의 답변 목록
   inquiryAnswers InquiryAnswer[]
-  orders         Order[]
-  reviews        Review[]
 }
 
-model RefreshToken {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash  String   @unique
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  createdAt  DateTime @default(now())
+// 회원 등급 정보
+model Grade {
+  // 등급 ID (예: "grade_green")
+  id        String @id
+  // 등급 이름(중복 불가)
+  name      String @unique
+  // 적립률(%)
+  rate      Int
+  // 해당 등급 최소 누적 구매금액
+  minAmount Int
+
+  // 이 등급에 속한 사용자들
+  users User[]
 }
 
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content   String
-  isChecked Boolean  @default(false)
+// 스토어 정보
+model Store {
+  // 스토어 고유 ID
+  id       String @id @default(cuid())
+  // 스토어 소유 셀러 ID(셀러당 1개 스토어)
+  sellerId String @unique
+  // 셀러 사용자와의 관계
+  seller   User   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  // 스토어 이름
+  name          String
+  // 기본 주소
+  address       String
+  // 상세 주소
+  detailAddress String
+  // 스토어 연락처
+  phoneNumber   String
+  // 스토어 소개글
+  content       String
+  // 스토어 대표 이미지 URL
+  imageUrl      String?
+  // 스토어 이미지 저장소 키
+  imageKey      String?
+
+  // 스토어가 판매하는 상품들
+  products    Product[]
+  // 스토어를 찜한 사용자들
+  favoritedBy StoreFavorite[]
+
+  // 생성 시각
   createdAt DateTime @default(now())
+  // 수정 시각
   updatedAt DateTime @updatedAt
 }
 
-model Store {
-  id             String          @id @default(cuid())
-  sellerId       String          @unique
-  seller         User            @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  name           String
-  address        String
-  detailAddress  String
-  phoneNumber    String
-  content        String
-  imageUrl       String?
-  imageKey       String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  
-  products       Product[]
-  storeFavorites StoreFavorite[]
+// 스토어 찜(좋아요) 매핑 테이블
+model StoreFavorite {
+  // 찜 레코드 고유 ID
+  id      String @id @default(cuid())
+  // 찜한 사용자 ID
+  userId  String
+  // 찜 대상 스토어 ID
+  storeId String
+
+  // 사용자 관계
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // 스토어 관계
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // 찜한 시각
+  createdAt DateTime @default(now())
+
+  // 한 사용자가 같은 스토어를 중복 찜하지 못하도록 제한
+  @@unique([userId, storeId])
+  // 스토어별 찜 조회 최적화
+  @@index([storeId])
 }
 
+// 상품 카테고리
 model Category {
-  id       Int       @id @default(autoincrement())
-  name     String    @unique
+  // 카테고리 ID (자동 증가)
+  id   Int    @id @default(autoincrement())
+  // 카테고리 이름(중복 불가)
+  name String @unique
+
+  // 카테고리에 속한 상품들
   products Product[]
 }
 
-model Product {
-  id                String         @id @default(cuid())
-  storeId           String
-  store             Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  name              String
-  content           String?
-  price             Int
-  isSoldOut         Boolean        @default(false)
-  categoryId        Int
-  category          Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  imageUrl          String?
-  imageKey          String?
-  discountRate      Int?
-  discountStartTime DateTime?
-  discountEndTime   DateTime?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  
-  stocks            ProductStock[]
-  cartItems         CartItem[]
-  inquiries         Inquiry[]
-  orderItems        OrderItem[]
-  reviews           Review[]
-}
-
+// 상품 사이즈 마스터
 model Size {
-  id           Int            @id @default(autoincrement())
-  name         String         @unique
-  nameEn       String         @unique
-  nameKo       String         @unique
-  productStocks ProductStock[]
-  cartItems    CartItem[]
-  orderItems   OrderItem[]
+  // 사이즈 ID (자동 증가)
+  id     Int    @id @default(autoincrement())
+  // 공통 이름 (예: "M", "FREE")
+  name   String @unique
+  // 영문 표기
+  nameEn String @unique
+  // 한글 표기
+  nameKo String @unique
+
+  // 상품 재고(사이즈별)
+  stocks     ProductStock[]
+  // 장바구니 아이템에서 참조
+  cartItems  CartItem[]
+  // 주문 아이템에서 참조
+  orderItems OrderItem[]
 }
 
+// 상품 정보
+model Product {
+  // 상품 고유 ID
+  id      String @id @default(cuid())
+  // 소속 스토어 ID
+  storeId String
+  // 스토어 관계
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // 상품명
+  name      String
+  // 상세 설명
+  content   String?
+  // 정가
+  price     Int
+  // 품절 여부
+  isSoldOut Boolean @default(false)
+
+  // 카테고리 ID
+  categoryId Int
+  // 카테고리 관계
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  // 상품 대표 이미지 URL
+  imageUrl String?
+  // 상품 이미지 저장소 키
+  imageKey String?
+
+  // 할인율(예: 10 = 10%)
+  discountRate      Int?
+  // 할인 시작 시각
+  discountStartTime DateTime?
+  // 할인 종료 시각
+  discountEndTime   DateTime?
+
+  // 사이즈별 재고 목록
+  stocks     ProductStock[]
+  // 상품 문의 목록
+  inquiries  Inquiry[]
+  // 상품 리뷰 목록
+  reviews    Review[]
+  // 주문 아이템 참조
+  orderItems OrderItem[]
+  // 장바구니 아이템 참조
+  cartItems  CartItem[]
+
+  // 생성 시각
+  createdAt DateTime @default(now())
+  // 수정 시각
+  updatedAt DateTime @updatedAt
+
+  // 스토어별 상품 조회 최적화
+  @@index([storeId])
+  // 카테고리별 상품 조회 최적화
+  @@index([categoryId])
+}
+
+// 상품-사이즈별 재고
 model ProductStock {
-  id        String  @id @default(cuid())
+  // 재고 레코드 ID
+  id        String @id @default(cuid())
+  // 상품 ID
   productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // 사이즈 ID
   sizeId    Int
-  size      Size    @relation(fields: [sizeId], references: [id], onDelete: Restrict)
+  // 재고 수량
   quantity  Int
 
+  // 상품 관계
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // 사이즈 관계
+  size    Size    @relation(fields: [sizeId], references: [id], onDelete: Restrict)
+
+  // 같은 상품+사이즈 조합은 1개만 허용
   @@unique([productId, sizeId])
 }
 
-model StoreFavorite {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  storeId   String
-  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([userId, storeId])
-}
-
-model Cart {
-  id        String     @id @default(cuid())
-  buyerId   String     @unique
-  buyer     User       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
-  items     CartItem[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-}
-
-model CartItem {
-  id        String   @id @default(cuid())
-  cartId    String
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  sizeId    Int
-  size      Size     @relation(fields: [sizeId], references: [id], onDelete: Restrict)
-  quantity  Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([cartId, productId, sizeId])
-}
-
+// 상품 문의
 model Inquiry {
-  id        String        @id @default(cuid())
+  // 문의 ID
+  id        String @id @default(cuid())
+  // 문의 대상 상품 ID
   productId String
-  product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // 문의 작성 바이어 ID
   buyerId   String
-  buyer     User          @relation(fields: [buyerId], references: [id], onDelete: Cascade)
-  title     String
-  content   String
-  isSecret  Boolean       @default(false)
-  status    InquiryStatus @default(WaitingAnswer)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  
-  answer    InquiryAnswer?
+
+  // 문의 제목
+  title    String
+  // 문의 내용
+  content  String
+  // 비밀글 여부
+  isSecret Boolean       @default(false)
+  // 답변 상태
+  status   InquiryStatus @default(WaitingAnswer)
+
+  // 상품 관계
+  product Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // 작성자(바이어) 관계
+  buyer   User           @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  // 문의 답변(1:1, 아직 없을 수 있음)
+  answer  InquiryAnswer?
+
+  // 생성 시각
+  createdAt DateTime @default(now())
+  // 수정 시각
+  updatedAt DateTime @updatedAt
+
+  // 상품별 문의 조회 최적화
+  @@index([productId])
+  // 작성자별 문의 조회 최적화
+  @@index([buyerId])
 }
 
+// 문의 답변(셀러 작성)
 model InquiryAnswer {
-  id        String   @id @default(cuid())
-  inquiryId String   @unique
-  inquiry   Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  // 답변 ID
+  id        String @id @default(cuid())
+  // 대상 문의 ID(문의당 답변 1개)
+  inquiryId String @unique
+  // 답변 작성 셀러 ID
   sellerId  String
-  seller    User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  content   String
+
+  // 답변 내용
+  content String
+
+  // 문의 관계
+  inquiry Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  // 작성자(셀러) 관계
+  seller  User    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  // 생성 시각
   createdAt DateTime @default(now())
+  // 수정 시각
   updatedAt DateTime @updatedAt
 }
 
+// 장바구니(바이어 1명당 1개)
+model Cart {
+  // 장바구니 ID
+  id      String @id @default(cuid())
+  // 바이어 ID(유저당 1개 카트)
+  buyerId String @unique
+  // 바이어 관계
+  buyer   User   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  // 장바구니 아이템 목록
+  items CartItem[]
+
+  // 생성 시각
+  createdAt DateTime @default(now())
+  // 수정 시각
+  updatedAt DateTime @updatedAt
+}
+
+// 장바구니 개별 아이템
+model CartItem {
+  // 아이템 ID
+  id        String @id @default(cuid())
+  // 장바구니 ID
+  cartId    String
+  // 상품 ID
+  productId String
+  // 사이즈 ID
+  sizeId    Int
+  // 담은 수량
+  quantity  Int
+
+  // 장바구니 관계
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  // 상품 관계
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // 사이즈 관계
+  size    Size    @relation(fields: [sizeId], references: [id], onDelete: Restrict)
+
+  // 생성 시각
+  createdAt DateTime @default(now())
+  // 수정 시각
+  updatedAt DateTime @updatedAt
+
+  // 같은 장바구니에서 동일 상품+사이즈 중복 방지
+  @@unique([cartId, productId, sizeId])
+  // 상품 기준 조회 최적화
+  @@index([productId])
+}
+
+// 주문 정보
 model Order {
-  id           String      @id @default(cuid())
-  buyerId      String
-  buyer        User        @relation(fields: [buyerId], references: [id], onDelete: Restrict)
-  status       OrderStatus @default(WaitingPayment)
-  buyerName    String
-  phoneNumber  String
-  address      String
-  usedPoints   Int         @default(0)
-  earnedPoints Int         @default(0)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  
-  orderItems   OrderItem[]
-  payment      Payment?
+  // 주문 ID
+  id      String @id @default(cuid())
+  // 주문한 바이어 ID
+  buyerId String
+  // 바이어 관계
+  buyer   User   @relation(fields: [buyerId], references: [id], onDelete: Restrict)
+
+  // 주문 상태
+  status OrderStatus @default(WaitingPayment)
+
+  // 주문자 이름(주문 시점 스냅샷)
+  buyerName   String
+  // 주문자 연락처(주문 시점 스냅샷)
+  phoneNumber String
+  // 배송 주소(주문 시점 스냅샷)
+  address     String
+
+  // 사용한 포인트
+  usedPoints   Int @default(0)
+  // 주문으로 적립된 포인트
+  earnedPoints Int @default(0)
+
+  // 주문 아이템 목록
+  items   OrderItem[]
+  // 결제 정보(테스트용 단순 결제)
+  payment Payment?
+
+  // 생성 시각
+  createdAt DateTime @default(now())
+  // 수정 시각
+  updatedAt DateTime @updatedAt
+
+  // 사용자별 주문 조회 최적화
+  @@index([buyerId])
+  // 상태별 주문 조회 최적화
+  @@index([status])
 }
 
+// 주문에 포함된 상품 단위
 model OrderItem {
-  id              String   @id @default(cuid())
-  orderId         String
-  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId       String
-  product         Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
-  sizeId          Int
-  size            Size     @relation(fields: [sizeId], references: [id], onDelete: Restrict)
-  quantity        Int
-  unitPrice       Int
+  // 주문 아이템 ID
+  id        String @id @default(cuid())
+  // 소속 주문 ID
+  orderId   String
+  // 상품 ID
+  productId String
+  // 주문한 사이즈 ID
+  sizeId    Int
+
+  // 주문 수량
+  quantity  Int
+  // 주문 시점 최종 단가 스냅샷
+  unitPrice Int
+
+  // 주문 시점 상품명 스냅샷
   productName     String
+  // 주문 시점 상품 이미지 스냅샷
   productImageUrl String?
-  
-  review          Review[]
+
+  // 주문 관계
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // 상품 관계
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  // 사이즈 관계
+  size    Size    @relation(fields: [sizeId], references: [id], onDelete: Restrict)
+
+  // 이 주문 아이템에 연결된 리뷰들
+  reviews Review[]
+
+  // 상품별 주문 아이템 조회 최적화
+  @@index([productId])
 }
 
-model Payment {
-  id        String        @id @default(cuid())
-  orderId   String        @unique
-  order     Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  price     Int
-  status    PaymentStatus @default(Pending)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-}
-
+// 상품 리뷰
 model Review {
-  id          String     @id @default(cuid())
+  // 리뷰 ID
+  id          String  @id @default(cuid())
+  // 리뷰 작성 바이어 ID
   buyerId     String
-  buyer       User       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  // 리뷰 대상 상품 ID
   productId   String
-  product     Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  orderItemId String?    @unique
-  orderItem   OrderItem? @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
-  rating      Int
-  content     String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  // 어떤 주문아이템 구매건의 리뷰인지(없을 수도 있음)
+  orderItemId String?
+
+  // 별점(예: 1~5)
+  rating  Int
+  // 리뷰 본문
+  content String
+
+  // 작성자 관계
+  buyer     User       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  // 상품 관계
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // 주문아이템 관계
+  orderItem OrderItem? @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+
+  // 생성 시각
+  createdAt DateTime @default(now())
+  // 수정 시각
+  updatedAt DateTime @updatedAt
+
+  // orderItemId가 존재하는 경우, 같은 주문아이템 리뷰 중복 작성 방지
+  // (PostgreSQL에서 nullable unique는 null끼리 중복 허용)
+  @@unique([orderItemId])
+  // 상품별 리뷰 조회 최적화
+  @@index([productId])
+  // 작성자별 리뷰 조회 최적화
+  @@index([buyerId])
+}
+
+// 결제 정보(실결제 연동 없는 테스트용)
+model Payment {
+  // 결제 ID
+  id      String @id @default(cuid())
+  // 연결된 주문 ID(주문당 결제 1건)
+  orderId String @unique
+  // 주문 관계
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // 결제 금액
+  price  Int
+  // 결제 상태
+  status PaymentStatus @default(Pending)
+
+  // 생성 시각
+  createdAt DateTime @default(now())
+  // 수정 시각
+  updatedAt DateTime @updatedAt
+
+  // 상태별 결제 조회 최적화
+  @@index([status])
+}
+
+// 사용자 알림
+model Notification {
+  // 알림 ID
+  id     String @id @default(cuid())
+  // 알림 수신 사용자 ID
+  userId String
+  // 사용자 관계
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 알림 메시지 내용
+  content   String
+  // 읽음 여부
+  isChecked Boolean @default(false)
+
+  // 생성 시각
+  createdAt DateTime @default(now())
+  // 수정 시각
+  updatedAt DateTime @updatedAt
+
+  // 사용자별 최신 알림 조회 최적화
+  @@index([userId, createdAt])
+  // 읽음/안읽음 필터 최적화
+  @@index([isChecked])
+}
+
+// 리프레시 토큰 저장소
+model RefreshToken {
+  // 토큰 레코드 ID
+  id        String    @id @default(cuid())
+  // 소유 사용자 ID
+  userId    String
+  // 토큰 해시값(원문 저장 금지)
+  tokenHash String    @unique
+  // 만료 시각
+  expiresAt DateTime
+  // 폐기 시각(로그아웃/강제만료 시 사용)
+  revokedAt DateTime?
+
+  // 사용자 관계
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 생성 시각
+  createdAt DateTime @default(now())
+
+  // 사용자별 토큰 조회 최적화
+  @@index([userId])
 }
