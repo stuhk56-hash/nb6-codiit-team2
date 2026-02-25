@@ -1,8 +1,7 @@
 /**
  * @description 토큰 생성 및 검증 유틸리티 모듈
  * 언제든지 수정 가능하니 문제 있으면 알려주세요!
- * @author 이호성
- * @date 2025-12-29
+ * @date 2026-02-25
  * @version 1.0
  **/
 
@@ -26,7 +25,7 @@ const generateRefreshSecret = (): Secret => {
 };
 
 export const generateAccessToken = (
-  payload: string | Buffer | object
+  payload: string | Buffer | object,
 ): string => {
   try {
     return jwt.sign(payload, generateAccessSecret(), {
@@ -38,7 +37,7 @@ export const generateAccessToken = (
 };
 
 export const generateRefreshToken = (
-  payload: string | Buffer | object
+  payload: string | Buffer | object,
 ): string => {
   try {
     return jwt.sign(payload, generateRefreshSecret(), {
