@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 /* 2026-02-25 */
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
@@ -23,4 +21,3 @@ import { JwtStrategy } from './jwt.strategy';
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
->>>>>>> Auth-Edky

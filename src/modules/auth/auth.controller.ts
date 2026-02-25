@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 /* 2026-02-25 */
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -28,4 +26,3 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 }
->>>>>>> Auth-Edky

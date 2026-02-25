@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 /* 2026-02-25 */
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -59,4 +57,3 @@ export class AuthService {
     };
   }
 }
->>>>>>> Auth-Edky

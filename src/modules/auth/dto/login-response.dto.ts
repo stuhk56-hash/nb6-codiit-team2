@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 /* 2026-02-25 */
 import { ApiProperty } from '@nestjs/swagger';
 import { UserResponse } from '../../users/dto/user-response.dto';
@@ -17,4 +15,3 @@ export class LoginResponseDto {
   })
   accessToken: string;
 }
->>>>>>> Auth-Edky
