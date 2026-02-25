@@ -54,6 +54,8 @@ model User {
   imageKey     String?
   // 보유 포인트
   points       Int      @default(0)
+  // 삭제(탈퇴) 시각
+  deletedAt    DateTime?
 
   // 현재 등급 ID(없을 수도 있음)
   gradeId String?
