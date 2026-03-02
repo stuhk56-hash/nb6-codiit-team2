@@ -1,4 +1,4 @@
-import { object, optional, string, type Infer } from 'superstruct';
+import { object, optional, string } from 'superstruct';
 
 export const InquiriesListQueryStruct = object({
   page: optional(string()),
@@ -6,4 +6,8 @@ export const InquiriesListQueryStruct = object({
   status: optional(string()),
 });
 
-export type InquiriesListQueryDto = Infer<typeof InquiriesListQueryStruct>;
+export type InquiriesListQueryDto = {
+  page?: string;
+  pageSize?: string;
+  status?: string;
+};

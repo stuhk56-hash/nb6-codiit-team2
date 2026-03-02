@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { assert, object, string, StructError, type Struct } from 'superstruct';
 import asyncHandler from '../../errors/async-handler.js';
-import { ValidationError } from '../../errors/error-handler.js';
+import { InquiryValidationError } from './inquiries.errors';
 import {
   CreateInquiryReplyBodyStruct,
   type CreateInquiryReplyDto,
@@ -40,7 +40,7 @@ const validateStruct = <T>(value: unknown, struct: Struct<T, any>) => {
   } catch (error) {
     if (error instanceof StructError) {
       const path = error.path?.length ? String(error.path.join('.')) : null;
-      throw new ValidationError(path, error.message);
+      throw new InquiryValidationError(error.message);
     }
     throw error;
   }
@@ -120,6 +120,15 @@ export class InquiriesController {
           UpdateInquiryReplyBodyStruct,
         );
         const result = await this.inquiriesService.updateReply(req.user, replyId, body);
+        res.status(200).json(result);
+      }),
+    );
+
+    router.delete(
+      '/:replyId/replies',
+      asyncHandler(async (req: TypedRequest, res: Response) => {
+        const { replyId } = validateStruct<{ replyId: string }>(req.params, ReplyIdParamStruct);
+        const result = await this.inquiriesService.deleteReply(req.user, replyId);
         res.status(200).json(result);
       }),
     );

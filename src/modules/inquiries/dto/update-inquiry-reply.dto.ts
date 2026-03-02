@@ -1,7 +1,9 @@
-import { object, size, string, type Infer } from 'superstruct';
+import { object, size, string } from 'superstruct';
 
 export const UpdateInquiryReplyBodyStruct = object({
   content: size(string(), 1, 5000),
 });
 
-export type UpdateInquiryReplyDto = Infer<typeof UpdateInquiryReplyBodyStruct>;
+export type UpdateInquiryReplyDto = {
+  content: string;
+};

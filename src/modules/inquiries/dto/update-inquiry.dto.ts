@@ -1,4 +1,4 @@
-import { boolean, object, optional, size, string, type Infer } from 'superstruct';
+import { boolean, object, optional, size, string } from 'superstruct';
 
 export const UpdateInquiryBodyStruct = object({
   title: optional(size(string(), 1, 255)),
@@ -6,4 +6,8 @@ export const UpdateInquiryBodyStruct = object({
   isSecret: optional(boolean()),
 });
 
-export type UpdateInquiryDto = Infer<typeof UpdateInquiryBodyStruct>;
+export type UpdateInquiryDto = {
+  title?: string;
+  content?: string;
+  isSecret?: boolean;
+};

@@ -151,4 +151,22 @@ export class InquiriesRepository {
       include: { seller: { select: { id: true, name: true } } },
     });
   }
+
+  async deleteReply(replyId: string) {
+    return prisma.$transaction(async (tx) => {
+      const deletedReply = await tx.inquiryAnswer.delete({
+        where: { id: replyId },
+        include: {
+          seller: { select: { id: true, name: true } },
+        },
+      });
+
+      await tx.inquiry.update({
+        where: { id: deletedReply.inquiryId },
+        data: { status: InquiryStatus.WaitingAnswer },
+      });
+
+      return deletedReply;
+    });
+  }
 }
