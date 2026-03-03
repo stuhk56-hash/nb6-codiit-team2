@@ -14,6 +14,7 @@ export class InquiriesRepository {
     const { userId, role, page, pageSize, status } = params;
     const skip = (page - 1) * pageSize;
 
+    // 역할에 따라 조회 범위를 분기
     const where: Prisma.InquiryWhereInput = {
       ...(status ? { status } : {}),
       ...(role === 'BUYER'
@@ -111,6 +112,7 @@ export class InquiriesRepository {
   }
 
   async createReply(inquiryId: string, sellerId: string, content: string) {
+    // 답변 생성과 문의 상태 변경을 하나의 트랜잭션으로 처리
     return prisma.$transaction(async (tx) => {
       const reply = await tx.inquiryAnswer.create({
         data: { inquiryId, sellerId, content },
@@ -153,6 +155,7 @@ export class InquiriesRepository {
   }
 
   async deleteReply(replyId: string) {
+    // 답변 삭제와 문의 상태 복구를 하나의 트랜잭션으로 처리
     return prisma.$transaction(async (tx) => {
       const deletedReply = await tx.inquiryAnswer.delete({
         where: { id: replyId },

@@ -35,11 +35,11 @@ const ReplyIdParamStruct = object({
 
 const validateStruct = <T>(value: unknown, struct: Struct<T, any>) => {
   try {
+    // superstruct로 요청 데이터 형식을 검증
     assert(value, struct);
     return value as T;
   } catch (error) {
     if (error instanceof StructError) {
-      const path = error.path?.length ? String(error.path.join('.')) : null;
       throw new InquiryValidationError(error.message);
     }
     throw error;
@@ -55,6 +55,7 @@ export class InquiriesController {
     router.post(
       '/',
       asyncHandler(async (req: TypedRequest, res: Response) => {
+        // 문의 생성: body 검증 -> service 위임
         const body = validateStruct<CreateInquiryDto>(req.body, CreateInquiryBodyStruct);
         const result = await this.inquiriesService.createInquiry(req.user, body);
         res.status(201).json(result);
@@ -64,6 +65,7 @@ export class InquiriesController {
     router.get(
       '/',
       asyncHandler(async (req: TypedRequest, res: Response) => {
+        // 내 문의 목록 조회: 페이징/상태 필터 검증
         const query = validateStruct<InquiriesListQueryDto>(req.query, InquiriesListQueryStruct);
         const result = await this.inquiriesService.getMyInquiries(req.user, query);
         res.status(200).json(result);
@@ -73,6 +75,7 @@ export class InquiriesController {
     router.get(
       '/:inquiryId',
       asyncHandler(async (req: TypedRequest, res: Response) => {
+        // 문의 상세 조회
         const { inquiryId } = validateStruct<{ inquiryId: string }>(req.params, IdParamStruct);
         const result = await this.inquiriesService.getInquiryDetail(req.user, inquiryId);
         res.status(200).json(result);
@@ -82,6 +85,7 @@ export class InquiriesController {
     router.patch(
       '/:inquiryId',
       asyncHandler(async (req: TypedRequest, res: Response) => {
+        // 문의 수정
         const { inquiryId } = validateStruct<{ inquiryId: string }>(req.params, IdParamStruct);
         const body = validateStruct<UpdateInquiryDto>(req.body, UpdateInquiryBodyStruct);
         const result = await this.inquiriesService.updateInquiry(req.user, inquiryId, body);
@@ -92,6 +96,7 @@ export class InquiriesController {
     router.delete(
       '/:inquiryId',
       asyncHandler(async (req: TypedRequest, res: Response) => {
+        // 문의 삭제
         const { inquiryId } = validateStruct<{ inquiryId: string }>(req.params, IdParamStruct);
         const result = await this.inquiriesService.deleteInquiry(req.user, inquiryId);
         res.status(200).json(result);
@@ -101,6 +106,7 @@ export class InquiriesController {
     router.post(
       '/:inquiryId/replies',
       asyncHandler(async (req: TypedRequest, res: Response) => {
+        // 문의 답변 생성(판매자/관리자)
         const { inquiryId } = validateStruct<{ inquiryId: string }>(req.params, IdParamStruct);
         const body = validateStruct<CreateInquiryReplyDto>(
           req.body,
@@ -114,6 +120,7 @@ export class InquiriesController {
     router.patch(
       '/:replyId/replies',
       asyncHandler(async (req: TypedRequest, res: Response) => {
+        // 문의 답변 수정(판매자/관리자)
         const { replyId } = validateStruct<{ replyId: string }>(req.params, ReplyIdParamStruct);
         const body = validateStruct<UpdateInquiryReplyDto>(
           req.body,
@@ -124,6 +131,7 @@ export class InquiriesController {
       }),
     );
 
+    // 답변 삭제 시 문의 상태를 WaitingAnswer로 복구
     router.delete(
       '/:replyId/replies',
       asyncHandler(async (req: TypedRequest, res: Response) => {

@@ -47,6 +47,7 @@ export class InquiriesService {
     return InquiryEntity.toDetail(created as any);
   }
 
+  // 목록 조회 권한: BUYER=본인 문의, SELLER=본인 스토어 상품 문의
   async getMyInquiries(user: AuthUser | undefined, query: InquiriesListQueryDto) {
     this.ensureAuthenticated(user);
     const role = this.getRole(user);
@@ -74,6 +75,7 @@ export class InquiriesService {
     const inquiry = await this.inquiriesRepository.findInquiryById(inquiryId);
     if (!inquiry) throw new InquiryNotFoundError('문의가 존재하지 않습니다.');
 
+    // 비밀글 포함 조회 권한 검사
     this.assertCanReadInquiry(user, inquiry);
     return InquiryEntity.toDetail(inquiry as any);
   }
@@ -88,6 +90,7 @@ export class InquiriesService {
     if (role !== 'ADMIN' && inquiry.buyerId !== userId) {
       throw new InquiryForbiddenError('본인이 작성한 문의만 수정할 수 있습니다.');
     }
+    // 답변 완료 문의는 구매자가 원문 수정할 수 없음
     if (inquiry.status === InquiryStatus.CompletedAnswer) {
       throw new InquiryValidationError('답변 완료된 문의는 수정할 수 없습니다.');
     }
@@ -151,6 +154,7 @@ export class InquiriesService {
     const role = this.getRole(user);
     const userId = String(user.id);
     const ownerSellerId = reply.inquiry.product.store.sellerId;
+    // 답변 작성자 또는 해당 상품 판매자(또는 ADMIN)만 수정 가능
     if (role !== 'ADMIN' && reply.sellerId !== userId && ownerSellerId !== userId) {
       throw new InquiryForbiddenError('해당 답변을 수정할 권한이 없습니다.');
     }
@@ -174,6 +178,7 @@ export class InquiriesService {
       throw new InquiryForbiddenError('해당 답변을 삭제할 권한이 없습니다.');
     }
 
+    // 답변 삭제 시 repository에서 문의 상태도 WaitingAnswer로 함께 복구
     const deleted = await this.inquiriesRepository.deleteReply(replyId);
     return ReplyEntity.fromReply(deleted as any);
   }
@@ -187,6 +192,7 @@ export class InquiriesService {
     return parsed;
   }
 
+  // status 문자열은 API 표기와 DB enum 표기를 모두 허용
   private parseStatus(value?: string): InquiryStatus | undefined {
     if (!value) return undefined;
     if (Object.values(InquiryStatus).includes(value as InquiryStatus)) {

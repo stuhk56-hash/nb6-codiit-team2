@@ -47,6 +47,7 @@ type RawInquiryDetail = {
 };
 
 export class InquiryEntity {
+  // DB 결과를 목록 응답 스키마에 맞는 형태로 변환
   static toListItem(inquiry: RawInquiryListItem) {
     return {
       id: inquiry.id,
@@ -65,6 +66,7 @@ export class InquiryEntity {
     };
   }
 
+  // 상세 응답에서 answer를 reply 필드로 매핑
   static toDetail(inquiry: RawInquiryDetail) {
     return {
       id: inquiry.id,

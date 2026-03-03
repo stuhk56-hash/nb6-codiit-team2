@@ -12,6 +12,7 @@ type RawReply = {
 };
 
 export class ReplyEntity {
+  // 답변 단건 API 응답 형식으로 변환
   static fromReply(reply: RawReply) {
     return {
       id: reply.id,
@@ -23,6 +24,7 @@ export class ReplyEntity {
     };
   }
 
+  // 문의 상세 응답 내 reply 중첩 객체 형식으로 변환
   static forInquiryDetail(reply?: RawReply | null) {
     if (!reply) return null;
 
