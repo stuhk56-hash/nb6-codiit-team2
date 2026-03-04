@@ -2,7 +2,10 @@ import 'dotenv/config';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import { setupRoutes } from './app.module';
-import { defaultNotFoundHandler, globalErrorHandler } from './middlewares/errorHandler';
+import {
+  defaultNotFoundHandler,
+  globalErrorHandler,
+} from './middlewares/errorHandler';
 import { corsMiddleware } from './middlewares/cors';
 
 const app = express();

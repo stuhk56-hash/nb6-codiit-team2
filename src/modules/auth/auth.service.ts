@@ -6,7 +6,11 @@ import {
 } from '../../lib/constants/token';
 import { UnauthorizedError } from '../../lib/errors/customErrors';
 import { authRepository } from './auth.repository';
-import { toLoginResponse, toLoginUserPayload, toRefreshResponse } from './utils/auth.mapper';
+import {
+  toLoginResponse,
+  toLoginUserPayload,
+  toRefreshResponse,
+} from './utils/auth.mapper';
 import { LoginInput } from './types/auth.type';
 import {
   ensureLoginMatched,
@@ -32,7 +36,11 @@ export class AuthService {
       expiresAt: refreshExpiresAt,
     });
 
-    return toLoginResponse(toLoginUserPayload(user), makeAccessToken(user.id), refreshToken);
+    return toLoginResponse(
+      toLoginUserPayload(user),
+      makeAccessToken(user.id),
+      refreshToken,
+    );
   }
 
   async refresh(refreshToken?: string | null) {

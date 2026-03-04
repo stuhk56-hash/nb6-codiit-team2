@@ -2,7 +2,10 @@ import { Request, Response } from 'express';
 import { create as structCreate } from 'superstruct';
 import { requireAuthUser } from '../../lib/request/auth-user';
 import { AuthenticatedRequest } from '../../middlewares/authenticate';
-import { CreateUserBodyStruct, UpdateMeBodyStruct } from './structs/users.struct';
+import {
+  CreateUserBodyStruct,
+  UpdateMeBodyStruct,
+} from './structs/users.struct';
 import { UsersMulterRequest } from './types/users.type';
 import { usersService } from './users.service';
 

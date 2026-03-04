@@ -48,7 +48,10 @@ export class UsersService {
     }
 
     const imageUrl = image ? undefined : undefined;
-    const updated = await usersRepository.updateById(userId, toUserUpdateData(data, imageUrl));
+    const updated = await usersRepository.updateById(
+      userId,
+      toUserUpdateData(data, imageUrl),
+    );
 
     return toUserResponse(updated);
   }

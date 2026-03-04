@@ -1,7 +1,13 @@
 import { prisma } from '../../lib/constants/prismaClient';
 
 export class UsersRepository {
-  create(data: { type: 'SELLER' | 'BUYER'; name: string; email: string; passwordHash: string; gradeId?: string }) {
+  create(data: {
+    type: 'SELLER' | 'BUYER';
+    name: string;
+    email: string;
+    passwordHash: string;
+    gradeId?: string;
+  }) {
     return prisma.user.create({
       data,
       include: { grade: true },
