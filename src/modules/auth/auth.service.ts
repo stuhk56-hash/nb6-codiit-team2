@@ -1,59 +1,67 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { UsersRepository } from '../users/users.repository';
-import { LoginDto } from './dto/login.dto';
-import { LoginResponseDto } from './dto/login-response.dto';
-import * as bcrypt from 'bcrypt';
-import { UserResponse } from '../users/dto/user-response.dto';
+import {
+  hashToken,
+  makeAccessToken,
+  makeRefreshToken,
+  parseExpFromToken,
+} from '../../lib/constants/token';
+import { UnauthorizedError } from '../../lib/errors/customErrors';
+import { authRepository } from './auth.repository';
+import {
+  toLoginResponse,
+  toLoginUserPayload,
+  toRefreshResponse,
+} from './utils/auth.mapper';
+import { LoginInput } from './types/auth.type';
+import {
+  ensureLoginMatched,
+  ensureRefreshTokenRowValid,
+  requireRefreshUser,
+  requireRefreshUserId,
+} from './utils/auth.service.util';
 
-@Injectable()
 export class AuthService {
-  constructor(
-    private readonly usersRepository: UsersRepository,
-    private readonly jwtService: JwtService,
-  ) {}
+  async login(data: LoginInput) {
+    const user = await authRepository.findUserByEmailWithGrade(data.email);
+    ensureLoginMatched(user, data);
 
-  async login(dto: LoginDto): Promise<LoginResponseDto> {
-    const { email, password } = dto;
-
-    const user = await this.usersRepository.findByEmail(email);
-    if (!user) {
-      throw new UnauthorizedException(
-        '이메일 또는 비밀번호가 올바르지 않습니다.',
-      );
+    const refreshToken = makeRefreshToken(user.id);
+    const refreshExpiresAt = parseExpFromToken(refreshToken, 'refresh');
+    if (!refreshExpiresAt) {
+      throw new UnauthorizedError('리프레시 토큰이 유효하지 않습니다.');
     }
 
-    const isPasswordMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isPasswordMatch) {
-      throw new UnauthorizedException(
-        '이메일 또는 비밀번호가 올바르지 않습니다.',
-      );
-    }
+    await authRepository.createRefreshToken({
+      userId: user.id,
+      tokenHash: hashToken(refreshToken),
+      expiresAt: refreshExpiresAt,
+    });
 
-    // NOTE: This is a simplified mapping. In a real application,
-    // you would fetch related entities like 'grade' if they are needed in the response.
-    const userResponse: UserResponse = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      type: user.type,
-      points: user.points,
-      image: user.imageUrl,
-      grade: null, // Fetch grade info if necessary
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
-    };
+    return toLoginResponse(
+      toLoginUserPayload(user),
+      makeAccessToken(user.id),
+      refreshToken,
+    );
+  }
 
-    const payload = { email: user.email, sub: user.id, type: user.type };
-    const accessToken = this.jwtService.sign(payload);
+  async refresh(refreshToken?: string | null) {
+    const userId = requireRefreshUserId(refreshToken);
 
-    // TODO: Implement Refresh Token generation and storage
-    // const refreshToken = ...;
+    const tokenRow = await authRepository.findRefreshTokenByHash(
+      hashToken(refreshToken),
+    );
+    ensureRefreshTokenRowValid(tokenRow, userId);
 
-    return {
-      user: userResponse,
-      accessToken,
-    };
+    const user = await authRepository.findUserById(userId);
+    requireRefreshUser(user);
+
+    return toRefreshResponse(makeAccessToken(user.id));
+  }
+
+  async logout(refreshToken?: string | null) {
+    if (!refreshToken) return;
+
+    await authRepository.revokeRefreshToken(hashToken(refreshToken));
   }
 }
 
+export const authService = new AuthService();

@@ -1,23 +1,10 @@
-import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
-import { UsersModule } from '../users/users.module';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { JwtStrategy } from './jwt.strategy';
+import { Router } from 'express';
+import { withAsync } from '../../lib/withAsync';
+import { authenticate } from '../../middlewares/authenticate';
+import { login, logout, refresh } from './auth.controller';
 
-@Module({
-  imports: [
-    UsersModule,
-    PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({
-      secret: 'YOUR_SECRET_KEY', // TODO: Use a config service to manage secrets
-      signOptions: { expiresIn: '1h' }, // Example: Access token expires in 1 hour
-    }),
-  ],
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtModule],
-})
-export class AuthModule {}
+export const authRouter = Router();
 
+authRouter.post('/login', withAsync(login));
+authRouter.post('/refresh', withAsync(refresh));
+authRouter.post('/logout', authenticate(), withAsync(logout));

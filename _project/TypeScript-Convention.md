@@ -1,595 +1,577 @@
-# 📜 네이밍 컨벤션
+# TypeScript 컨벤션
 
-## 📄 1) 파일명
+이 문서는 현재 `codiit` 프로젝트 구현 기준으로 정리한 팀 공통 TypeScript 컨벤션입니다.
 
-[kebab-case]
+목표는 아래 3가지입니다.
 
-- 가장 많이 쓰고 인기가 많다.
-- 명확한 역할 표시를 줄 수 있다.
+- 파일 역할이 한눈에 보이게 작성한다.
+- 컨트롤러, 서비스, 레포지토리 책임을 명확하게 나눈다.
+- 프론트/백엔드 협업 중에도 구조를 쉽게 유지보수할 수 있게 한다.
 
-✅ 좋은 예:
-group-controller.js
-user-service.ts
+---
 
-❌ 나쁜 예:
-groupController.ts
-userService.ts
+## 1. 네이밍 규칙
 
-## 📄 2) 변수명 & 함수명
+### 파일명
 
-[camelCase]
+- 파일명은 `kebab-case`를 사용합니다.
+- 모듈 내부 파일은 역할이 드러나게 작성합니다.
 
-- 동사 + 명사 조합 (함수)
-- 명확한 의미 전달을 줄 수 있다.
-
-✅ 좋은 예:
+좋은 예:
 
 ```ts
-const createdGroup = await createGroup(data);
-function validatePassword(password) {}
+users.controller.ts;
+users.service.ts;
+users.repository.ts;
+users.mapper.ts;
+users.service.util.ts;
+users.struct.ts;
+users.type.ts;
+users.upload.ts;
 ```
 
-❌ 나쁜 예:
+피해야 하는 예:
 
 ```ts
-const g = await create(data);
-function check(pwd) {}
+usersController.ts;
+UserService.ts;
+helper.ts;
+misc.ts;
 ```
 
-## 📄 3) 상수명
+### 변수명 / 함수명 ()
 
-[UPPER_SNAKE_CASE]
+- 변수명과 함수명은 `camelCase`를 사용합니다.
+- 함수명은 역할이 보이도록 작성합니다.
+- 검증 함수는 `validate*`
+- 변환 함수는 `to*`
+- 정규화 함수는 `normalize*`
 
-✅ 좋은 예:
+좋은 예:
 
 ```ts
-const DEFAULT_PAGE_SIZE = 10;
-const BADGE_TYPES = {
-  PARTICIPANT_10: "PARTICIPANT_10",
-  RECORD_100: "RECORD_100",
-  LIKE_100: "LIKE_100",
-};
+const currentPassword = req.body.currentPassword;
+const normalizedQuery = normalizeProductListQuery(query);
+
+function requireUserById(userId: string) {}
+function ensureSeller(user: AuthUser) {}
+function toUserResponse(user: UserWithGrade) {}
 ```
 
-❌ 나쁜 예:
+### 상수명
+
+- 상수명은 `UPPER_SNAKE_CASE`를 사용합니다.
+- 의미가 반복되는 값은 반드시 상수로 분리합니다.
+
+좋은 예:
 
 ```ts
-const defaultPageSize = 10;
-const max_image_count = 3;
+const DEFAULT_IMAGE = '/icon/image_fail.svg';
+const TOP_SALES_LIMIT = 5;
 ```
 
-## 📄 4) 클래스명
+### 클래스명
 
-[PascalCase]
+- 클래스명은 `PascalCase`를 사용합니다.
+- 현재 프로젝트에서는 `Service`, `Repository`, `Error` 클래스 위주로 사용합니다.
 
-✅ 좋은 예:
-
-```ts
-class GroupController {}
-class ValidationError extends Error {}
-```
-
-❌ 나쁜 예:
+좋은 예:
 
 ```ts
-class groupController {}
-class validation_error {}
+class UsersService {}
+class OrdersRepository {}
+class ForbiddenError extends Error {}
 ```
 
 ---
 
-# 📜 주석 작성 컨벤션 (선택)
+## 2. 함수 선언 규칙
+
+### 기본 원칙
+
+- 기능 단위 함수는 `function` 선언식을 사용합니다.
+- 불필요한 arrow function 사용은 지양합니다.
+- 콜백(`map`, `filter`, `reduce`)처럼 문맥상 필요한 경우에만 arrow function을 사용합니다.
+
+좋은 예:
 
 ```ts
-// ✅ 복잡한 로직에만 간결하게 작성
-// 배지 조건 체크: 참여자 10명 이상
-if (participantCount >= 10) {
-  badges.push("PARTICIPANT_10");
+export function requireAuthUser(req: AuthenticatedRequest) {}
+export async function createUser(req: Request, res: Response) {}
+```
+
+허용되는 예:
+
+```ts
+items.map((item) => item.id);
+ratings.reduce((sum, rating) => sum + rating, 0);
+```
+
+### async 사용 기준
+
+- 함수 내부에서 `await`를 사용할 때만 `async`를 붙입니다.
+- Prisma가 반환하는 `Promise`를 그대로 반환만 할 경우 `async`를 붙이지 않습니다.
+
+좋은 예:
+
+```ts
+findById(id: string) {
+  return prisma.user.findUnique({ where: { id } });
 }
 
-// ✅ 함수 설명 (JSDoc)
-/**
- * 그룹의 배지 목록을 계산합니다
- * @param {number} groupId - 그룹 ID
- * @returns {Promise<string[]>} 배지 이름 배열
- */
-async function calculateBadges(groupId) {
-  // ...
+async updateMe(userId: string, data: UpdateUserDto) {
+  const user = await requireUserById(userId);
+  return usersRepository.updateById(userId, data);
 }
+```
 
-// ❌ 불필요한 주석
-// 변수에 groupId 할당
-const groupId = req.params.groupId;
+피해야 하는 예:
 
-// ❌ 코드와 불일치하는 주석
-// 사용자 삭제
-await prisma.group.delete({ where: { id } }); // ???
+```ts
+async findById(id: string) {
+  return prisma.user.findUnique({ where: { id } });
+}
+```
+
+### async/await vs then
+
+- 컨트롤러와 서비스는 `async/await`를 기본으로 사용합니다.
+- `.then()` 체이닝은 가독성을 해치므로 사용하지 않습니다.
+
+좋은 예:
+
+```ts
+export async function getMe(req: AuthenticatedRequest, res: Response) {
+  const user = requireAuthUser(req);
+  const data = await usersService.getMe(user.id);
+  res.send(data);
+}
+```
+
+피해야 하는 예:
+
+```ts
+return usersService.getMe(user.id).then((data) => res.send(data));
 ```
 
 ---
 
-# 📜 폴더 구조 컨벤션
+## 3. 레이어별 역할
 
-- 폴더명은 복수형, 파일명은 단수형
-- 예시: constrollers -> user-controller.ts
+### Controller
 
-main: (개발자 취향)
-✅ [controllers]
-✅ [middlewares]
-✅ [routes]
-✅ [services]
-✅ [repositories]
-❌ [main.ts] -> ✅ [app.ts]
+- 요청 파싱
+- `superstruct` 검증
+- 인증 유저 추출
+- 서비스 호출
+- 응답 반환
 
-etc:
-❌ [lib] -> ✅ [util],
-❌ [struct] -> ✅ [validator]
-✅ [config]
+컨트롤러에서는 아래를 지양합니다.
 
----
+- 비즈니스 로직 작성
+- 권한 검사 세부 구현
+- 응답 객체를 길게 직접 조립하는 것
 
-# 📜 Prisma 스키마 컨벤션
+좋은 예:
 
-```prisma
-// ✅ 모델명: PascalCase (단수형)
-model Group {
-  id          Int      @id @default(autoincrement())
-  name        String   // camelCase
-  description String?  // nullable은 ? 표시
-  imageUrl    String?  @map("image_url") // DB는 snake_case
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  // 관계는 복수형
-  participants Participant[]
-  records      Record[]
-
-  @@map("groups") // 테이블명은 복수형 snake_case
-}
-
-// ❌ 나쁜 예
-model group {  // 소문자 ❌
-  ID Int  // 대문자 ❌
-  Name String  // PascalCase ❌
+```ts
+export async function updateMe(req: UsersMulterRequest, res: Response) {
+  const authUser = requireAuthUser(req);
+  const body = structCreate(req.body, UpdateMeBodyStruct);
+  const user = await usersService.updateMe(authUser.id, body, req.file);
+  res.send(user);
 }
 ```
 
----
+### Service
 
-# 📜 베스트 프랙티스 컨벤션
+- 비즈니스 흐름을 담당합니다.
+- 여러 레포지토리 호출을 조합합니다.
+- 권한 확인 / 검증 보조 함수는 `service.util`로 분리할 수 있습니다.(필수아님)
 
-## 📄 1) 비동기 처리
+서비스 파일에는 “흐름”만 남기는 것을 권장합니다.
+
+좋은 예:
 
 ```ts
-// ✅ async/await 사용
-async function getGroup(id) {
-  const group = await prisma.group.findUnique({
+async update(user: ProductAuthUser, productId: string, body: UpdateProductBody) {
+  await requireSellerOwnedProduct(
+    user,
+    productId,
+    '판매자만 상품을 수정할 수 있습니다.',
+    '상품 수정 권한이 없습니다.',
+  );
+
+  const payload = toUpdateProductPayload(body);
+  return productsRepository.update(productId, payload);
+}
+```
+
+### Repository
+
+- Prisma를 통한 DB 접근만 담당합니다.
+- 쿼리 조합(`include`, `select`)은 `queries/*.query.ts`로 분리할 수 있습니다.
+- 로컬 비즈니스 로직은 두지 않습니다.
+
+좋은 예:
+
+```ts
+findById(id: string) {
+  return prisma.user.findUnique({
     where: { id },
+    include: { grade: true },
   });
-  return group;
-}
-
-// ❌ .then() 체이닝 지양
-function getGroup(id) {
-  return prisma.group
-    .findUnique({
-      where: { id },
-    })
-    .then((group) => {
-      return group;
-    });
 }
 ```
 
-## 📄 2) 매직 넘버 금지
+### Mapper
+
+- DB 결과나 내부 데이터를 응답 DTO로 변환합니다.
+- `to*Response`, `to*Item`, `to*Dto` 형태의 함수는 기본적으로 mapper에 둡니다.
+
+좋은 예:
 
 ```ts
-// ✅ 상수로 정의
-const MAX_IMAGE_COUNT = 3;
-const DEFAULT_PAGE_SIZE = 10;
-
-if (images.length > MAX_IMAGE_COUNT) {
-  throw new ValidationError("이미지는 최대 3장까지 업로드 가능합니다");
-}
-
-// ❌ 하드코딩
-if (images.length > 3) {
-  // 3이 무엇을 의미하는지 불명확
-  throw new ValidationError("이미지는 최대 3장까지 업로드 가능합니다");
-}
-```
-
-## 📄 3) Early Return 패턴
-
-```ts
-// ✅ 조건 불만족 시 빠르게 리턴
-async function deleteGroup(req, res) {
-  const group = await findGroup(id);
-
-  if (!group) {
-    throw new NotFoundError();
-  }
-
-  if (group.password !== password) {
-    throw new UnauthorizedError();
-  }
-
-  await prisma.group.delete({ where: { id } });
-  res.status(200).json({ message: "삭제 성공" });
-}
-
-// ❌ 중첩된 if문
-async function deleteGroup(req, res) {
-  const group = await findGroup(id);
-
-  if (group) {
-    if (group.password === password) {
-      await prisma.group.delete({ where: { id } });
-      res.status(200).json({ message: "삭제 성공" });
-    } else {
-      throw new UnauthorizedError();
-    }
-  } else {
-    throw new NotFoundError();
-  }
-}
-```
-
----
-
-# 📜 함수 선언 컨벤션
-
-## 📄 1) 기능 단위는 선언식 function
-
-```ts
-export async function createUser() {}
-```
-
-## 📄 2) 콜백, 간단한 유틸은 arrow function
-
-```ts
-export const delay = (ms: number) => new Promise(...)
-```
-
-## 📄 3) 미들웨어는 function 선언식 (표준)
-
-```ts
-export function requireAuth(req, res, next) {}
-```
-
----
-
-# 📜 타입/인터페이스 컨벤션
-
-## 📄 1) “구조 정의”는 Interface
-
-DTO, API 요청 타입, DB 모델 확장 등
-
-```ts
-interface User {
-  id: number;
-  email: string;
-}
-```
-
-## 📄 2) “타입 조합/유틸/변형”은 type
-
-```ts
-type TokenPayload = JwtPayload & { id: number };
-type Nullable<T> = T | null;
-```
-
-## 📄 3) 타입 이름은 PascalCase
-
-```ts
-type UserRole = "ADMIN" | "USER";
-```
-
----
-
-# 📜 null vs undefined
-
-1️⃣ 의미 복습:
-undefined: 값이 “없지만, 아직 안 채워졌음 / 선택사항임”
--> undefined는 “엔진이 기본으로 주는 값”
-
-null: 값을 “일부러 비워둠 / 명시적으로 없음이라고 표현”
--> null은 “사람이 직접 넣는 값”
-
-2️⃣ TypeScript에서 더 중요한 차이: 타입 설계
-TS에서는 아래가 전혀 다르다:
-
-```ts
-let a: string | undefined;
-let b: string | null;
-let c: string | null | undefined;
-```
-
-- string | null
-  \_ 값은 있는데, 그 값이 “없음(null)”일 수도 있다는 뜻
-  \_ DB에서 nullable 컬럼이랑 잘 어울린다.
-
-- string | null | undefined
-  \_ 상태가 3개라 처리 진짜 귀찮아짐
-
-그래서 보통 이렇게 정리한다.
-
-- 코드 내부(도메인 모델, 서비스 로직) -> undefined 위주
-- DB/JSON/API 응답 -> null을 주로 사용
-- 결론은 TS는 null보다 undefined 선호
-
----
-
-# 📜 async/await 의무화 (Promise.then 금지)
-
-```ts
-const user = await prisma.user.findUnique();
-
-// ❌ 아래 방식은 금지
-prisma.user.findUnique().then(...)
-```
-
----
-
-# 📜 Error는 throw하고, res.status 직접 쓰지 않는다
-
-- 컨트롤러 / 서비스는 throw 기반
-
-```ts
-throw new NotFoundError("유저 없음");
-```
-
-- 최종 응답은 전역 에러 핸들러가 처리
-- 미들웨어도 동일한 원칙을 따른다.
-
----
-
-# 📜 global declare
-
-req.user 같은 커스텀 필드는 반드시 타입 확장이 필수다.
-
-```ts
-declare global {
-  namespace Express {
-    interface Request {
-      user?: User;
-    }
-  }
-}
-```
-
-선언 안할 시 "any" 지옥이 생긴다.
-
----
-
-# 📜 서비스 레이어는 객체(Object Literal) 선호
-
-```ts
-export const userService = {
-  async getUser(id) {},
-  async createUser(data) {},
-};
-```
-
-- this 필요 없음
-- 인스턴스 생성 필요 없음
-- 가볍고 안전함
-- 테스트하기 쉬움
-
----
-
-# 📜 컨트롤러는 비즈니스 로직 금지 (Thin Controller Rule)
-
-- ✅ req 검증
-- ✅ service 호출
-- ✅ 응답 반환
-- ❌ DB 조회
-- ❌ 계산 처리
-- ❌ 권한 로직
-
----
-
-# 📜 환경 변수는 무조건 타입 체크한 config 모듈 사용
-
-예시:
-
-```ts
-export const ENV = {
-  JWT_SECRET: process.env.JWT_SECRET ?? "",
-  NODE_ENV: process.env.NODE_ENV ?? "development",
-} as const;
-```
-
-미들웨어에서는 그대로 쓰는 형태:
-
-```ts
-const secret = ENV.JWT_SECRET;
-```
-
----
-
-# 📜 Prisma 사용 시, 서비스 레이어 외부에서 Prisma 직접 호출 금지
-
-- ❌ 컨트롤러에서 Prisma 호출
-- ❌ 미들웨어에서 Prisma 호출(특수 케이스 제외)
-- ✅ 무조건 서비스 레이어에서 Prisma 호출
-- ✅ 단, Repo로 분리 시 Repo에서 Prisma 호출
-
----
-
-# 📜 API 응답 구조 통일 (선택)
-
-## 📄 1) 일반 응답
-
-```ts
-// 단일 데이터
-return res(200).json({
-  success: true, // 프론트를 위한 성공 여부 (선택)
-  message: "조회 성공",
-  data: {
+export function toUserResponse(user: UserWithGrade): UserResponseDto {
+  return {
     id: user.id,
     name: user.name,
-    // ...
-  },
-});
-
-// 목록 데이터 (페이지네이션 포함)
-res.status(200).json({
-  message: "목록 조회 성공",
-  data: [
-    { id: 1, name: "Group 1" },
-    { id: 2, name: "Group 2" },
-  ],
-  pagination: {
-    page: 1,
-    limit: 10,
-    total: 50,
-    totalPages: 5,
-  },
-});
-
-// 생성/수정/삭제 -> 삭제는 statusCode(204) 선택이지만 비추천
-res.status(201).json({
-  message: "그룹이 생성되었습니다",
-  data: createdGroup,
-});
+    email: user.email,
+    type: user.type,
+    points: user.points,
+    createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
+    grade: user.grade
+      ? {
+          name: user.grade.name,
+          id: user.grade.id,
+          rate: user.grade.rate,
+          minAmount: user.grade.minAmount,
+        }
+      : null,
+    image: user.imageUrl ?? '',
+  };
+}
 ```
 
-## 📄 2) 에러 응답
+### service.util / util (필수아님)
 
-애플리케이션은 상황에 따라 서로 다른 HTTP 상태 코드와 에러 구조를 반환한다.
-직접 res.status().json()을 사용하거나,
-커스텀 에러 클래스를 throw하여 전역 에러 핸들러가 응답을 생성하도록 한다.
+- `service.util`
+  - 권한 체크
+  - 입력 검증
+  - update payload 조립
+  - 흐름 보조 함수
+- `util`
+  - 순수 보조 함수
+  - enum 변환
+  - query 문자열 정리
+
+예:
 
 ```ts
-// 컨트롤러에서 직접 반환하는 경우
-res.status(404).json({
-  message: "그룹을 찾을 수 없습니다",
-  error: "NOT_FOUND",
-});
-
-res.status(400).json({
-  message: "입력 데이터가 올바르지 않습니다",
-  error: "VALIDATION_ERROR",
-  details: [{ field: "name", message: "그룹명은 필수입니다" }],
-});
-
-// 전역 에러 핸들러로 위임하는 경우
-throw new BadRequestError("에러 메시지");
-throw new NotFoundError("에러 메시지");
-throw new UnauthorizedError("에러 메시지");
+export function validateUpdatePassword(password?: string) {}
+export function toOrderStatus(value?: string): OrderStatus | undefined {}
+export function asString(value: string | string[]) {}
 ```
-
-에러 핸들러에 따라 응답 형식은 프로젝트 요구사항에 맞게 다양하게 정의할 수 있다.
 
 ---
 
-# 📜 모듈 export 규칙
+## 4. 타입 관리 규칙
 
-- default export는 실수가 너무 쉽게 일어나서 실무에서는 피한다.
-- named export는 안정적이고 IDE, TS 지원이 훨씬 좋다.
+### DTO vs Types 분리
 
-## 📄 1) default export는 이름이 강제되지 않는다
+- `dto/`
+  - API 요청/응답 계약
+  - Swagger/프론트 응답 구조와 직접 대응
+- `types/`
+  - 내부 구현용 타입
+  - repository row 타입
+  - mapper source 타입
+  - request 확장 타입
 
-예시:
+좋은 예:
 
 ```ts
-export default function signup() {}
+// dto
+export interface UserResponseDto {}
+
+// types
+export type UserWithGrade = UserEntity & {
+  grade: { id: string; name: string; rate: number; minAmount: number } | null;
+};
 ```
 
-가져올 때:
+### 모듈 타입 위치
+
+- 모듈 전용 타입은 해당 모듈의 `types/`에 둡니다.
+- 공통 타입만 `src/types`에 둡니다.
+
+`src/types`에 두는 대상:
+
+- 인증 요청 타입
+- 공통 에러 응답 타입
+- 토큰 타입
+- 전역적으로 재사용되는 타입
+
+현재 예:
 
 ```ts
-import ABC from "./signup";
+src / types / auth - request.type.ts;
+src / types / error.type.ts;
+src / types / token.type.ts;
 ```
 
-이렇게 써도 오류가 없다.
-파일 이름과 import 이름이 달라도 에러가 안 난다.
-그래서 장점도 있지만 팀 전체에서 서로 다른 이름으로 같은 모듈을 부르다가 헷갈린다.
-결국 코드 가독성이 떨어져 지옥이 열린다.
+### 로컬 타입 선언 기준
 
-## 📄 2) default export는 자동 리팩토링이 깨지는 경우가 많다
+- 여러 파일에서 재사용되면 `types`로 이동합니다.
+- 한 파일 내부 구현에만 필요한 타입은 파일 내부 유지가 가능합니다.
 
-VSCode에서 refactor(이름 바꾸기) 할 때:
+예:
 
-- named export는 전 파일에 걸쳐 정확히 rename 해준다.
-- default export는 rename 추적이 완벽하지 않아 엉뚱해지거나 놓치는 경우가 많다.
-
-## 📄 3) default export는 트리 쉐이킹(tree-shaking)이 덜 안정적
-
-번들러(Webpack, Rollup, ESBuild)는 named export 기반 구조에서 가장 최적화된 성능을 낸다.
-
-## 📄 4) default export는 타입 충돌을 숨긴다
-
-TS는 basic inference는 해주지만,
-이름이 통일되지 않기 때문에 타입 추적이 불안정해지는 패턴이 자주 나온다.
-
-## 📄 5) named export는 IDE 자동 완성(auto-complete)에 최적화됨
-
-네임이 확실하면 import 할 때 어떤 함수가 있는지 IDE가 바로 보여준다.
-default export는 이런 목록 제시가 약하다.
-
-## 📄 6) default는 구조 강제되어 확장이 어렵다
-
-예를 들어 처음에 클래스 하나만 export했는데,
-나중에 헬퍼 함수를 하나 더 넣고 싶어다고 한다면,
-export 방식이 섞이면서 API 구조가 더럽혀진다.
-반면 named export는 처음부터 확장 가능성 열려있다.
+- `SyntaxJsonError` 같은 내부 전용 타입 -> 파일 내부 유지
+- `AuthenticatedRequest`, `TokenPayload` -> 공통 타입으로 이동
 
 ---
 
-# 📜 type-only import 최적화 규칙
+## 5. 요청 검증 규칙
 
-_type-only import 최적화 규칙이란?_
+### superstruct 사용
 
-TypeScript 4.x부터 도입된 개념으로,
-“타입만 import하는 것과 실제 값을 import하는 것을 명확히 구분해서,
-더 빠르고 더 깔끔하게 코드를 관리하는 방식”이다.
+- 요청 검증은 `superstruct`를 사용합니다.
+- `class-validator` / decorator 방식은 사용하지 않습니다.
+- DTO는 class가 아니라 `interface`를 기본으로 사용합니다.
 
-**타입은 타입으로만, 값은 값으로만 가져오자.**
-
-이걸 체계적으로 적용한 걸 “type-only import 최적화 규칙”이라고 부른다.
-
-## 📄 규칙 1) 타입만 쓸 경우 반드시 import type
+좋은 예:
 
 ```ts
-import type { Request, Response } from "express";
+const body = structCreate(req.body, UpdateMeBodyStruct);
 ```
 
-- JS 결과물에 import가 남지 않음
-- 타입/값을 혼동하지 않음
-- 트리셰이킹 최적화
+### struct 위치
 
-## 📄 규칙 2) 타입과 값을 동시에 쓸 때는 일반 import
+- 각 모듈 검증 스키마는 `structs/*.struct.ts`에 둡니다.
+- 모듈 안에서 해결하는 구조를 우선합니다.
+
+예:
 
 ```ts
-import { Router, Request, Response } from "express";
+users / structs / users.struct.ts;
+products / structs / products.struct.ts;
+stores / structs / stores.struct.ts;
 ```
 
-Router는 실제 “값”이기 때문이다.
+### 컨트롤러 검증 방식
 
-## 📄 규칙 3) 혼합 import를 피하려면 타입을 따로 분리해도 됨
+- `structCreate(req.body, Struct)`
+- `structCreate(req.query, Struct)`
+- `structCreate(req.params, Struct)`
 
-개발 팀에 따라 더 엄격하게 이렇게 쓴다:
+`?? {}` 같은 방어 코드는 기본적으로 사용하지 않습니다.
+
+좋은 예:
 
 ```ts
-import { Router } from "express";
-import type { Request, Response } from "express";
+const body = structCreate(req.body, CreateUserBodyStruct);
+const query = structCreate(req.query, ProductListQueryStruct);
 ```
-
-이러면 타입과 값이 더 명확하게 구분된다.
-
-## 📄 규칙 4) ESlint 규칙으로 자동화할 수 있다 (선택)
-
-```json
-"@typescript-eslint/consistent-type-imports": "error"
-```
-
-- 타입만 사용했는데 일반 import 썼으면 에러
-- 타입 import인데 일반 import를 했으면 자동 고침 제안
-
-VSCode에서 자동으로 fix가 된다.
 
 ---
 
-**date**: 2025-12-17
-**version**: 1.0.0
+## 6. 업로드 / 미들웨어 규칙
+
+### multer 업로드
+
+- `multer()` 생성과 `upload.single(...)`은 컨트롤러에 두지 않습니다.
+- 모듈별 `*.upload.ts` 파일로 분리합니다.
+
+좋은 예:
+
+```ts
+// users.upload.ts
+const upload = multer();
+
+export const usersUpload = upload.single('image');
+```
+
+### 업로드 요청 타입
+
+- `req.file`을 사용하는 요청 타입은 모듈 `types/`에 둡니다.
+
+좋은 예:
+
+```ts
+export type UsersMulterRequest = AuthenticatedRequest & {
+  file?: Express.Multer.File;
+};
+```
+
+---
+
+## 7. 에러 처리 규칙
+
+### 글로벌 에러 핸들러 사용
+
+- 에러 응답은 공통 에러 핸들러에서 처리합니다.
+- 컨트롤러에서 직접 `try/catch`를 두지 않습니다.
+- 라우트에서 `withAsync`로 감쌉니다.
+
+좋은 예:
+
+```ts
+usersRouter.patch('/me', authenticate(), usersUpload, withAsync(updateMe));
+```
+
+### 커스텀 에러 사용
+
+- `BadRequestError`
+- `UnauthorizedError`
+- `ForbiddenError`
+- `NotFoundError`
+- `ConflictError`
+
+서비스/유틸에서 명확한 메시지와 함께 throw 합니다.
+
+### 공통 에러 응답 형태
+
+```ts
+{
+  message: '...',
+  error: 'Bad Request',
+  statusCode: 400,
+}
+```
+
+필드 순서는 아래 순서로 고정합니다.
+
+1. `message`
+2. `error`
+3. `statusCode`
+
+---
+
+## 8. 응답 조립 규칙
+
+### 응답 객체는 가능한 mapper에서 조립
+
+- 서비스/레포지토리에서 큰 `return { ... }` 블록을 직접 만들지 않습니다.
+- 응답 DTO 조립은 `mapper`로 분리합니다.
+
+좋은 예:
+
+```ts
+return toProductDetailResponse(product, average, reviewSummary);
+```
+
+피해야 하는 예:
+
+```ts
+return {
+  id: product.id,
+  name: product.name,
+  image: product.imageUrl ?? '',
+  ...
+};
+```
+
+### 필드 순서
+
+- 가능하면 Swagger / DTO 선언 순서에 맞춰 응답 객체를 조립합니다.
+- 특히 공통 에러 응답, 주요 응답 DTO는 순서까지 통일합니다.
+
+---
+
+## 9. 폴더 구조 기준
+
+현재 프로젝트 권장 구조는 아래와 같습니다.
+
+```bash
+src/
+  modules/
+    users/
+      dto/
+      entities/
+      queries/
+      structs/
+      types/
+      utils/
+      users.controller.ts
+      users.service.ts
+      users.repository.ts
+      users.module.ts
+      users.upload.ts
+```
+
+### 역할별 디렉터리
+
+- `dto/` : API 계약
+- `entities/` : 응답 표현 엔터티(있을 경우)
+- `queries/` : Prisma `include`, `select` 상수
+- `structs/` : `superstruct` 스키마
+- `types/` : 내부 타입
+- `utils/` : mapper, service.util, 일반 util
+
+---
+
+## 10. 코드 스타일 원칙
+
+### Early Return
+
+- 조건이 맞지 않으면 빠르게 종료합니다.
+- 중첩 `if`를 줄입니다.
+
+좋은 예:
+
+```ts
+if (!user) {
+  throw new UnauthorizedError();
+}
+
+if (user.type !== 'SELLER') {
+  throw new ForbiddenError();
+}
+```
+
+### 매직 넘버 지양
+
+- 반복되는 숫자/문자열은 상수로 분리합니다.
+
+좋은 예:
+
+```ts
+const TOP_SALES_LIMIT = 5;
+const DEFAULT_PAGE_SIZE = 20;
+```
+
+### 불필요한 this / 접근제어자 지양
+
+- 현재 프로젝트 기준으로 `private`, `public`, `protected`를 적극적으로 사용하지 않습니다.
+- 클래스 내부에서도 불필요한 `this` 의존을 줄입니다.
+- 가능한 경우 순수 함수/유틸로 분리합니다.
+
+---
+
+## 11. 체크리스트
+
+새 기능 구현 전/후 아래를 확인합니다.
+
+- 컨트롤러가 비즈니스 로직을 직접 갖고 있지 않은가?
+- 요청 검증이 `superstruct`로 이루어지는가?
+- DTO와 내부 타입이 분리되어 있는가?
+- `to...` 응답 조립 함수가 mapper에 있는가?
+- 레포지토리에서 불필요한 `async`를 쓰고 있지 않은가?
+- `multer` 생성이 컨트롤러에 남아 있지 않은가?
+- 공통 타입이 `src/types`로 정리되어 있는가?
+- 에러 응답 순서가 `message -> error -> statusCode`인가?
+
+---
+
+## 12. 현재 프로젝트에서 허용되는 예외
+
+- 파일 내부 전용 타입은 과도하게 `src/types`로 옮기지 않습니다.
+- `reduce`, `map` 같은 콜백의 arrow function은 허용합니다.
+- 레포지토리에서 매우 단순한 Prisma 호출은 그대로 두되, 쿼리 옵션이 커지면 `queries`로 분리합니다.
+
+---
+
+이 문서는 현재 `codiit` 코드베이스 기준입니다.
+팀에서 새 규칙을 합의하면 이 문서를 먼저 갱신하고, 이후 코드에 반영합니다.

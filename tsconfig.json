@@ -4,7 +4,8 @@
     "target": "es2021",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true

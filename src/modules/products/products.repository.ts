@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 import { PrismaClient } from '@prisma/client';
 import { CreateProductDto } from './dto/create-product.dto';
 
@@ -60,3 +62,4 @@ export class ProductsRepository {
     });
   }
 }
+>>>>>>> origin/dev

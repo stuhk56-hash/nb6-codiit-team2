@@ -1,5 +1,6 @@
 import { LoginRequest, LoginResponse, RefreshResponse, SignupRequest, SignupResponse } from "@/types/auth";
 import axios from "axios";
+import { useApiStore } from "@/stores/useApiStore";
 import { getAxiosInstance } from "./axiosInstance";
 
 // 회원가입
@@ -18,8 +19,9 @@ export const postLogin = async (data: LoginRequest): Promise<LoginResponse> => {
 
 // Access Token 재발급
 export const postRefresh = async (): Promise<RefreshResponse> => {
+  const baseURL = useApiStore.getState().baseURL || process.env.NEXT_PUBLIC_API_BASE_URL || "";
   const response = await axios.post(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/refresh`,
+    `${baseURL}/auth/refresh`,
     {},
     {
       withCredentials: true,

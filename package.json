@@ -6,7 +6,14 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/main.js",
+<<<<<<< HEAD
+    "start:dev": "tsc-watch --onSuccess \"node dist/main.js\"",
+    "prisma:generate": "prisma generate --schema src/prisma/schema.prisma",
+    "db:push": "prisma db push --schema src/prisma/schema.prisma",
+    "seed:mock": "npm run prisma:generate && node scripts/seed-mock.js",
+=======
     "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+>>>>>>> origin/dev
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -32,12 +39,24 @@
     "@aws-sdk/client-s3": "^3.993.0",
     "@nestjs/testing": "^11.1.14",
     "@prisma/client": "^6.19.0",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/jsonwebtoken": "^9.0.10",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
+<<<<<<< HEAD
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "jsonwebtoken": "^9.0.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+=======
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",
     "express": "^4.19.2",
     "multer": "^2.0.2",
+>>>>>>> origin/dev
     "superstruct": "^2.0.2",
     "uuid": "^13.0.0"
   }

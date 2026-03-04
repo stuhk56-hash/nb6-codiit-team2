@@ -1,68 +1,42 @@
+import { Request, Response } from 'express';
+import { create as structCreate } from 'superstruct';
+import { requireAuthUser } from '../../lib/request/auth-user';
+import { AuthenticatedRequest } from '../../middlewares/authenticate';
 import {
-  Controller,
-  Post,
-  Body,
-  Patch,
-  UseInterceptors,
-  UploadedFile,
-} from '@nestjs/common';
-import {
-  ApiConsumes,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UserResponse } from './dto/user-response.dto';
-import { UserConflictDto } from './dto/user-conflict.dto';
-import { UsersService } from './users.service';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { Express } from 'express';
-import { UserNotFoundDto } from './dto/user-not-found.dto';
+  CreateUserBodyStruct,
+  UpdateMeBodyStruct,
+} from './structs/users.struct';
+import { UsersMulterRequest } from './types/users.type';
+import { usersService } from './users.service';
 
-@ApiTags('users')
-@Controller('api/users')
-export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+export async function create(req: Request, res: Response) {
+  const body = structCreate(req.body, CreateUserBodyStruct);
+  const user = await usersService.create(body);
+  res.status(201).send(user);
+}
 
-  @Post()
-  @ApiOperation({ summary: '회원가입' })
-  @ApiResponse({
-    status: 201,
-    description: '회원 가입 성공',
-    type: UserResponse,
-  })
-  @ApiResponse({
-    status: 409,
-    description: '이미 존재하는 유저',
-    type: UserConflictDto,
-  })
-  async signUp(@Body() createUserDto: CreateUserDto): Promise<UserResponse> {
-    return this.usersService.create(createUserDto);
-  }
+export async function getMe(req: AuthenticatedRequest, res: Response) {
+  const authUser = requireAuthUser(req);
+  const user = await usersService.getMe(authUser.id);
+  res.send(user);
+}
 
-  @Patch('me')
-  @ApiOperation({ summary: '내 정보 수정' })
-  @ApiResponse({
-    status: 200,
-    description: '내 정보 수정 성공 및 수정된 유저 정보 반환',
-    type: UserResponse,
-  })
-  @ApiResponse({
-    status: 404,
-    description: '존재하지 않는 유저 입니다.',
-    type: UserNotFoundDto,
-  })
-  @ApiConsumes('multipart/form-data')
-  // @UseGuards(JwtAuthGuard) // Add this back when auth is ready
-  @UseInterceptors(FileInterceptor('image'))
-  async updateMe(
-    @Body() updateUserDto: UpdateUserDto,
-    @UploadedFile() file: Express.Multer.File,
-    // @GetUser() user: User, // Add this back when auth is ready
-  ): Promise<UserResponse> {
-    const mockUserId = 'cuid-mock-user-id'; // Replace with real user ID from token
-    return this.usersService.update(mockUserId, updateUserDto, file);
-  }
+export async function updateMe(req: UsersMulterRequest, res: Response) {
+  const authUser = requireAuthUser(req);
+  const image = req.file;
+  const body = structCreate(req.body, UpdateMeBodyStruct);
+  const user = await usersService.updateMe(authUser.id, body, image);
+  res.send(user);
+}
+
+export async function deleteUser(req: AuthenticatedRequest, res: Response) {
+  const authUser = requireAuthUser(req);
+  await usersService.deleteUser(authUser.id);
+  res.status(200).send({ message: '회원 탈퇴 성공' });
+}
+
+export async function getLikedStores(req: AuthenticatedRequest, res: Response) {
+  const authUser = requireAuthUser(req);
+  const stores = await usersService.getLikedStores(authUser.id);
+  res.send(stores);
 }

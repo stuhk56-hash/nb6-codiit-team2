@@ -1,20 +1,28 @@
 import 'dotenv/config';
 import express from 'express';
-import cors from 'cors';
-import router from './routes';
+import cookieParser from 'cookie-parser';
+import { setupRoutes } from './app.module';
+import {
+  defaultNotFoundHandler,
+  globalErrorHandler,
+} from './middlewares/errorHandler';
+import { corsMiddleware } from './middlewares/cors';
 
-async function bootstrap() {
-  const app = express();
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
-  app.use(cors());
+const app = express();
 
-  app.use('/api', router);
+app.use(express.json());
+app.use(
+  express.urlencoded({
+    extended: true,
+  }),
+);
 
-  const port = process.env.PORT || 3000;
+app.use(corsMiddleware);
+app.use(cookieParser());
 
-  app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-  });
-}
-bootstrap();
+setupRoutes(app);
+app.use(defaultNotFoundHandler);
+app.use(globalErrorHandler);
+
+const port = Number(process.env.PORT ?? '3000');
+app.listen(port);
