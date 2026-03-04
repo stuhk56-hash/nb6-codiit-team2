@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
-import { ProductsModule } from './modules/products/products.module';
-import { PrismaModule } from './prisma/prisma.module';
+import { Express } from 'express';
+import { authRouter } from './modules/auth/auth.module';
+import { usersRouter } from './modules/users/users.module';
 
-@Module({
-  imports: [ProductsModule, PrismaModule],
-})
-export class AppModule {}
+export function setupRoutes(app: Express) {
+  app.use('/api/auth', authRouter);
+  app.use('/api/users', usersRouter);
+}

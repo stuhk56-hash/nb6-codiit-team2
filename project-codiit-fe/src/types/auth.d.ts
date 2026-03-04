@@ -17,7 +17,7 @@ export interface User {
   name: string;
   type: "BUYER" | "SELLER";
   points: number;
-  image: string;
+  image: string | null;
   grade: {
     id: string;
     name: string;

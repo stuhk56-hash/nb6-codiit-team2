@@ -4,12 +4,13 @@ import StockAlertPopover from "./StockAlertPopover";
 
 interface ProfileProps {
   name: string;
-  image: string;
+  image: string | null;
   role: "BUYER" | "SELLER";
 }
 
 export default function Profile({ name, image, role }: ProfileProps) {
-  // const profileImgSrc = role === "BUYER" ? "/images/profile-buyer.png" : "/images/profile-seller.png";
+  const defaultProfileImage = role === "BUYER" ? "/images/profile-buyer.png" : "/images/profile-seller.png";
+  const profileImageSrc = image && image.trim() !== "" ? image : defaultProfileImage;
   const roleText = role === "BUYER" ? "바이어" : "셀러";
   const href = role === "BUYER" ? "/buyer/mypage" : "/seller/stores";
 
@@ -23,7 +24,7 @@ export default function Profile({ name, image, role }: ProfileProps) {
       >
         <Image
           className="h-10 w-10 rounded-full"
-          src={image}
+          src={profileImageSrc}
           alt=""
           width={40}
           height={40}
