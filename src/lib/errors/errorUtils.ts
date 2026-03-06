@@ -1,4 +1,6 @@
-//굳이 타입을 types로 옮기지 않은 이유는, 이 함수는 에러 핸들링 미들웨어에서만 사용되고, 다른 곳에서는 사용되지 않기 때문
+import { UnauthorizedError } from './customErrors';
+import type { AuthenticateOptions } from '../../types/authenticate.type';
+
 interface SyntaxJsonError extends SyntaxError {
   status?: number;
   body?: unknown;
@@ -12,4 +14,15 @@ export function isSyntaxJsonError(err: unknown): err is SyntaxJsonError {
   if (!(err instanceof SyntaxError)) return false;
   if (!isObject(err)) return false;
   return typeof err.status === 'number' && 'body' in err;
+}
+
+export function makeUnauthorizedError(
+  options?: AuthenticateOptions,
+  message?: string,
+) {
+  if (options?.useDefaultMessage) {
+    return new UnauthorizedError();
+  }
+
+  return new UnauthorizedError(message);
 }

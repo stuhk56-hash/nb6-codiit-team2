@@ -1,4 +1,9 @@
-import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../../../lib/errors/customErrors';
+import {
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+} from '../../../lib/errors/customErrors';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { usersRepository } from '../users.repository';
@@ -8,17 +13,29 @@ export function validateCreateUserInput(data: CreateUserDto) {
   if (!data.name || !data.email || !data.password) {
     throw new BadRequestError('필수 입력값이 누락되었습니다.');
   }
+  if (data.name.length < 2) {
+    throw new BadRequestError('이름은 최소 2자 이상이어야 합니다.');
+  }
+  if (data.name.length > 10) {
+    throw new BadRequestError('이름은 최대 10자까지 가능합니다.');
+  }
   if (data.type && data.type !== 'SELLER' && data.type !== 'BUYER') {
     throw new BadRequestError('회원 유형이 올바르지 않습니다.');
   }
   if (data.password.length < 8) {
     throw new BadRequestError('비밀번호는 최소 8자 이상이어야 합니다.');
   }
+  if (data.password.length > 20) {
+    throw new BadRequestError('비밀번호는 최대 20자까지 가능합니다.');
+  }
 }
 
 export function validateUpdatePassword(password?: string) {
   if (password !== undefined && password.length < 8) {
     throw new BadRequestError('비밀번호는 최소 8자 이상이어야 합니다.');
+  }
+  if (password !== undefined && password.length > 20) {
+    throw new BadRequestError('비밀번호는 최대 20자까지 가능합니다.');
   }
 }
 
@@ -44,7 +61,10 @@ export async function requireUserById(userId: string): Promise<UserWithGrade> {
   return user;
 }
 
-export function toUserUpdateData(data: UpdateUserDto, imageUrl?: string): UserUpdateData {
+export function toUserUpdateData(
+  data: UpdateUserDto,
+  imageUrl?: string,
+): UserUpdateData {
   return {
     ...(data.name !== undefined ? { name: data.name } : {}),
     ...(data.email !== undefined ? { email: data.email } : {}),
