@@ -39,11 +39,11 @@ enum PaymentStatus {
 // 회원 정보
 model User {
   // 사용자 고유 ID
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   // 사용자 타입(SELLER/BUYER)
   type         UserType
   // 로그인 이메일(중복 불가)
-  email        String   @unique
+  email        String    @unique
   // 닉네임/이름
   name         String
   // 비밀번호 해시값(원문 비밀번호 저장 금지)
@@ -53,7 +53,7 @@ model User {
   // 이미지 저장소 키(S3 key 등)
   imageKey     String?
   // 보유 포인트
-  points       Int      @default(0)
+  points       Int       @default(0)
   // 삭제(탈퇴) 시각
   deletedAt    DateTime?
 
@@ -162,8 +162,8 @@ model StoreFavorite {
 
 // 상품 카테고리
 model Category {
-  // 카테고리 ID (자동 증가)
-  id   Int    @id @default(autoincrement())
+  // 카테고리 ID (고유ID)
+  id   String @id @default(cuid())
   // 카테고리 이름(중복 불가)
   name String @unique
 
@@ -209,7 +209,7 @@ model Product {
   isSoldOut Boolean @default(false)
 
   // 카테고리 ID
-  categoryId Int
+  categoryId String
   // 카테고리 관계
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
