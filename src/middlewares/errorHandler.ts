@@ -43,14 +43,6 @@ export function globalErrorHandler(
   }
 
   if (err instanceof UnauthorizedError) {
-    if (err.message === 'Authorization 헤더가 없습니다.') {
-      return res.status(401).send({
-        message: err.message,
-        error: 'Unauthorized',
-        statusCode: 401,
-      });
-    }
-
     return res.status(401).send(makeErrorResponse(401, err.message));
   }
 

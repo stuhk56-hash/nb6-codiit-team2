@@ -43,10 +43,6 @@ export class UsersService {
     ensureCurrentPassword(data.currentPassword, user.passwordHash);
     validateUpdatePassword(data.password);
 
-    if (data.email && data.email !== user.email) {
-      await ensureEmailAvailable(data.email);
-    }
-
     const imageUrl = image ? undefined : undefined;
     const updated = await usersRepository.updateById(
       userId,

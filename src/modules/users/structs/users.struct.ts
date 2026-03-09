@@ -11,6 +11,5 @@ export const CreateUserBodyStruct = s.type({
 export const UpdateMeBodyStruct = s.type({
   currentPassword: s.size(s.string(), 8, 20),
   name: s.optional(s.size(s.string(), 2, 10)),
-  email: s.optional(emailString),
   password: s.optional(s.size(s.string(), 8, 20)),
 });

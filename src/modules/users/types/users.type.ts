@@ -7,7 +7,6 @@ export type UserWithGrade = UserEntity & {
 
 export type UserUpdateData = {
   name?: string;
-  email?: string;
   passwordHash?: string;
   imageUrl?: string | null;
 };

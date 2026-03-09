@@ -55,7 +55,7 @@ export async function ensureEmailAvailable(email: string) {
 export async function requireUserById(userId: string): Promise<UserWithGrade> {
   const user = await usersRepository.findById(userId);
   if (!user) {
-    throw new NotFoundError('존재하지 않는 유저 입니다.');
+    throw new NotFoundError('유저를 찾을 수 없습니다.');
   }
 
   return user;
@@ -67,7 +67,6 @@ export function toUserUpdateData(
 ): UserUpdateData {
   return {
     ...(data.name !== undefined ? { name: data.name } : {}),
-    ...(data.email !== undefined ? { email: data.email } : {}),
     ...(data.password !== undefined ? { passwordHash: data.password } : {}),
     ...(imageUrl !== undefined ? { imageUrl } : {}),
   };
