@@ -1,234 +1,182 @@
 import { InquiryStatus } from '@prisma/client';
-import {
-  InquiryForbiddenError,
-  InquiryNotFoundError,
-  InquiryUnauthorizedError,
-  InquiryValidationError,
-} from './inquiries.errors';
-import { INQUIRY_STATUS_API_to_DB } from '../../utils/enum-mapper';
+import { InquiryValidationError } from './inquiries.errors';
 import type { CreateInquiryReplyDto } from './dto/create-inquiry-reply.dto';
 import type { CreateInquiryDto } from './dto/create-inquiry.dto';
 import type { InquiriesListQueryDto } from './dto/inquiries-list.dto';
 import type { UpdateInquiryReplyDto } from './dto/update-inquiry-reply.dto';
 import type { UpdateInquiryDto } from './dto/update-inquiry.dto';
-import { InquiryEntity } from './entities/inquiry.entity';
-import { ReplyEntity } from './entities/reply.entity';
 import type { InquiriesRepository } from './inquiries.repository';
-
-type AuthUser = {
-  id: string | number;
-  role?: 'BUYER' | 'SELLER' | 'ADMIN';
-};
-
-const normalizeText = (value: string | undefined, fieldName: string) => {
-  const normalized = (value ?? '').trim();
-  if (!normalized) throw new InquiryValidationError(`${fieldName}은(는) 비워둘 수 없습니다.`);
-  return normalized;
-};
+import type { AuthUser } from './types/inquiries.type';
+import {
+  toInquiryDetail,
+  toInquiryListItem,
+  toReplyResponse,
+} from './utils/inquiries.mapper';
+import {
+  assertCanCreateReply,
+  assertCanManageInquiry,
+  assertCanManageReply,
+  assertCanReadInquiry,
+  assertInquiryExists,
+  assertReplyExists,
+  getUserRole,
+  requireAuth,
+  requireRole,
+} from './utils/inquiries.service.util';
+import {
+  normalizeRequiredText,
+  parseInquiryStatus,
+  parsePositiveInteger,
+} from './utils/inquiries.util';
 
 export class InquiriesService {
   constructor(private readonly inquiriesRepository: InquiriesRepository) {}
 
   async createInquiry(user: AuthUser | undefined, dto: CreateInquiryDto) {
-    this.ensureAuthenticated(user);
-    this.ensureRole(user, ['BUYER', 'ADMIN']);
+    requireAuth(user);
+    requireRole(user, ['BUYER', 'ADMIN']);
 
-    const title = normalizeText(dto.title, 'title');
-    const content = normalizeText(dto.content, 'content');
-
-    const created = await this.inquiriesRepository.createInquiry({
+    const createdInquiry = await this.inquiriesRepository.createInquiry({
       productId: dto.productId,
       buyerId: String(user.id),
-      title,
-      content,
+      title: normalizeRequiredText(dto.title, 'title'),
+      content: normalizeRequiredText(dto.content, 'content'),
       isSecret: dto.isSecret ?? false,
     });
 
-    return InquiryEntity.toDetail(created as any);
+    return toInquiryDetail(createdInquiry);
   }
 
-  // 목록 조회 권한: BUYER=본인 문의, SELLER=본인 스토어 상품 문의
   async getMyInquiries(user: AuthUser | undefined, query: InquiriesListQueryDto) {
-    this.ensureAuthenticated(user);
-    const role = this.getRole(user);
-
-    const page = this.parsePositiveInt(query.page, 1, 'page');
-    const pageSize = this.parsePositiveInt(query.pageSize, 16, 'pageSize');
-    const status = this.parseStatus(query.status);
+    requireAuth(user);
 
     const result = await this.inquiriesRepository.findManyMyInquiries({
       userId: String(user.id),
-      role,
-      page,
-      pageSize,
-      status,
+      role: getUserRole(user),
+      page: parsePositiveInteger(query.page, 1, 'page'),
+      pageSize: parsePositiveInteger(query.pageSize, 16, 'pageSize'),
+      status: parseInquiryStatus(query.status),
     });
 
     return {
-      list: result.list.map((item) => InquiryEntity.toListItem(item as any)),
+      list: result.list.map(toInquiryListItem),
       totalCount: result.totalCount,
     };
   }
 
   async getInquiryDetail(user: AuthUser | undefined, inquiryId: string) {
-    this.ensureAuthenticated(user);
-    const inquiry = await this.inquiriesRepository.findInquiryById(inquiryId);
-    if (!inquiry) throw new InquiryNotFoundError('문의가 존재하지 않습니다.');
+    requireAuth(user);
 
-    // 비밀글 포함 조회 권한 검사
-    this.assertCanReadInquiry(user, inquiry);
-    return InquiryEntity.toDetail(inquiry as any);
+    const inquiry = await this.inquiriesRepository.findInquiryById(inquiryId);
+    assertInquiryExists(inquiry, '문의가 존재하지 않습니다.');
+
+    assertCanReadInquiry(user, inquiry);
+    return toInquiryDetail(inquiry);
   }
 
   async updateInquiry(user: AuthUser | undefined, inquiryId: string, dto: UpdateInquiryDto) {
-    this.ensureAuthenticated(user);
+    requireAuth(user);
+
     const inquiry = await this.inquiriesRepository.findInquiryById(inquiryId);
-    if (!inquiry) throw new InquiryNotFoundError('문의가 존재하지 않습니다.');
+    assertInquiryExists(inquiry, '문의가 존재하지 않습니다.');
 
-    const role = this.getRole(user);
-    const userId = String(user.id);
-    if (role !== 'ADMIN' && inquiry.buyerId !== userId) {
-      throw new InquiryForbiddenError('본인이 작성한 문의만 수정할 수 있습니다.');
-    }
-    // 답변 완료 문의는 구매자가 원문 수정할 수 없음
-    if (inquiry.status === InquiryStatus.CompletedAnswer) {
-      throw new InquiryValidationError('답변 완료된 문의는 수정할 수 없습니다.');
-    }
+    assertCanManageInquiry(user, inquiry, '수정');
+    assertInquiryEditable(inquiry.status);
 
-    const payload: { title?: string; content?: string; isSecret?: boolean } = {};
-    if (dto.title !== undefined) payload.title = normalizeText(dto.title, 'title');
-    if (dto.content !== undefined) payload.content = normalizeText(dto.content, 'content');
-    if (dto.isSecret !== undefined) payload.isSecret = dto.isSecret;
+    const payload = buildInquiryUpdatePayload(dto);
+    const updatedInquiry = await this.inquiriesRepository.updateInquiry(inquiryId, payload);
 
-    if (Object.keys(payload).length === 0) {
-      throw new InquiryValidationError('수정할 항목이 없습니다.');
-    }
-
-    const updated = await this.inquiriesRepository.updateInquiry(inquiryId, payload);
-    return InquiryEntity.toDetail(updated as any);
+    return toInquiryDetail(updatedInquiry);
   }
 
   async deleteInquiry(user: AuthUser | undefined, inquiryId: string) {
-    this.ensureAuthenticated(user);
+    requireAuth(user);
+
     const inquiry = await this.inquiriesRepository.findInquiryById(inquiryId);
-    if (!inquiry) throw new InquiryNotFoundError('문의가 존재하지 않습니다.');
+    assertInquiryExists(inquiry, '문의가 존재하지 않습니다.');
 
-    const role = this.getRole(user);
-    const userId = String(user.id);
-    if (role !== 'ADMIN' && inquiry.buyerId !== userId) {
-      throw new InquiryForbiddenError('본인이 작성한 문의만 삭제할 수 있습니다.');
-    }
+    assertCanManageInquiry(user, inquiry, '삭제');
 
-    const deleted = await this.inquiriesRepository.deleteInquiry(inquiryId);
-    return InquiryEntity.toDetail(deleted as any);
+    const deletedInquiry = await this.inquiriesRepository.deleteInquiry(inquiryId);
+    return toInquiryDetail(deletedInquiry);
   }
 
-  async createReply(user: AuthUser | undefined, inquiryId: string, dto: CreateInquiryReplyDto) {
-    this.ensureAuthenticated(user);
-    this.ensureRole(user, ['SELLER', 'ADMIN']);
+  async createReply(
+    user: AuthUser | undefined,
+    inquiryId: string,
+    dto: CreateInquiryReplyDto,
+  ) {
+    requireAuth(user);
+    requireRole(user, ['SELLER', 'ADMIN']);
 
     const inquiry = await this.inquiriesRepository.findInquiryById(inquiryId);
-    if (!inquiry) throw new InquiryNotFoundError('문의가 존재하지 않습니다.');
+    assertInquiryExists(inquiry, '문의가 존재하지 않습니다.');
+    assertCanCreateReply(user, inquiry);
 
-    const role = this.getRole(user);
-    const userId = String(user.id);
-    if (role !== 'ADMIN' && inquiry.product.store.sellerId !== userId) {
-      throw new InquiryForbiddenError('해당 상품의 판매자만 답변할 수 있습니다.');
-    }
-    if (inquiry.answer) {
-      throw new InquiryValidationError('이미 답변이 등록된 문의입니다.');
-    }
+    const createdReply = await this.inquiriesRepository.createReply(
+      inquiryId,
+      String(user.id),
+      normalizeRequiredText(dto.content, 'content'),
+    );
 
-    const content = normalizeText(dto.content, 'content');
-    const reply = await this.inquiriesRepository.createReply(inquiryId, userId, content);
-    return ReplyEntity.fromReply(reply as any);
+    return toReplyResponse(createdReply);
   }
 
   async updateReply(user: AuthUser | undefined, replyId: string, dto: UpdateInquiryReplyDto) {
-    this.ensureAuthenticated(user);
-    this.ensureRole(user, ['SELLER', 'ADMIN']);
+    requireAuth(user);
+    requireRole(user, ['SELLER', 'ADMIN']);
 
     const reply = await this.inquiriesRepository.findReplyById(replyId);
-    if (!reply) throw new InquiryNotFoundError('답변이 존재하지 않습니다.');
+    assertReplyExists(reply, '답변이 존재하지 않습니다.');
 
-    const role = this.getRole(user);
-    const userId = String(user.id);
-    const ownerSellerId = reply.inquiry.product.store.sellerId;
-    // 답변 작성자 또는 해당 상품 판매자(또는 ADMIN)만 수정 가능
-    if (role !== 'ADMIN' && reply.sellerId !== userId && ownerSellerId !== userId) {
-      throw new InquiryForbiddenError('해당 답변을 수정할 권한이 없습니다.');
-    }
+    assertCanManageReply(user, reply, '수정');
 
-    const content = normalizeText(dto.content, 'content');
-    const updated = await this.inquiriesRepository.updateReply(replyId, content);
-    return ReplyEntity.fromReply(updated as any);
+    const updatedReply = await this.inquiriesRepository.updateReply(
+      replyId,
+      normalizeRequiredText(dto.content, 'content'),
+    );
+
+    return toReplyResponse(updatedReply);
   }
 
   async deleteReply(user: AuthUser | undefined, replyId: string) {
-    this.ensureAuthenticated(user);
-    this.ensureRole(user, ['SELLER', 'ADMIN']);
+    requireAuth(user);
+    requireRole(user, ['SELLER', 'ADMIN']);
 
     const reply = await this.inquiriesRepository.findReplyById(replyId);
-    if (!reply) throw new InquiryNotFoundError('답변이 존재하지 않습니다.');
+    assertReplyExists(reply, '답변이 존재하지 않습니다.');
 
-    const role = this.getRole(user);
-    const userId = String(user.id);
-    const ownerSellerId = reply.inquiry.product.store.sellerId;
-    if (role !== 'ADMIN' && reply.sellerId !== userId && ownerSellerId !== userId) {
-      throw new InquiryForbiddenError('해당 답변을 삭제할 권한이 없습니다.');
-    }
+    assertCanManageReply(user, reply, '삭제');
 
-    // 답변 삭제 시 repository에서 문의 상태도 WaitingAnswer로 함께 복구
-    const deleted = await this.inquiriesRepository.deleteReply(replyId);
-    return ReplyEntity.fromReply(deleted as any);
+    const deletedReply = await this.inquiriesRepository.deleteReply(replyId);
+    return toReplyResponse(deletedReply);
+  }
+}
+
+function assertInquiryEditable(status: InquiryStatus) {
+  if (status === InquiryStatus.CompletedAnswer) {
+    throw new InquiryValidationError('답변 완료된 문의는 수정할 수 없습니다.');
+  }
+}
+
+function buildInquiryUpdatePayload(dto: UpdateInquiryDto) {
+  const payload: { title?: string; content?: string; isSecret?: boolean } = {};
+
+  if (dto.title !== undefined) {
+    payload.title = normalizeRequiredText(dto.title, 'title');
   }
 
-  private parsePositiveInt(value: string | undefined, fallback: number, field: string) {
-    if (value === undefined || value === '') return fallback;
-    const parsed = Number(value);
-    if (!Number.isInteger(parsed) || parsed <= 0) {
-      throw new InquiryValidationError(`${field}는 1 이상의 정수여야 합니다.`);
-    }
-    return parsed;
+  if (dto.content !== undefined) {
+    payload.content = normalizeRequiredText(dto.content, 'content');
   }
 
-  // status 문자열은 API 표기와 DB enum 표기를 모두 허용
-  private parseStatus(value?: string): InquiryStatus | undefined {
-    if (!value) return undefined;
-    if (Object.values(InquiryStatus).includes(value as InquiryStatus)) {
-      return value as InquiryStatus;
-    }
-
-    const key = value as keyof typeof INQUIRY_STATUS_API_to_DB;
-    if (key in INQUIRY_STATUS_API_to_DB) return INQUIRY_STATUS_API_to_DB[key];
-
-    throw new InquiryValidationError('status 값이 올바르지 않습니다.');
+  if (dto.isSecret !== undefined) {
+    payload.isSecret = dto.isSecret;
   }
 
-  private ensureAuthenticated(user?: AuthUser): asserts user is AuthUser {
-    if (!user) throw new InquiryUnauthorizedError('로그인이 필요합니다.');
+  if (Object.keys(payload).length === 0) {
+    throw new InquiryValidationError('수정할 항목이 없습니다.');
   }
 
-  private getRole(user: AuthUser): 'BUYER' | 'SELLER' | 'ADMIN' {
-    if (!user.role) throw new InquiryUnauthorizedError('사용자 권한 정보를 확인할 수 없습니다.');
-    return user.role;
-  }
-
-  private ensureRole(user: AuthUser, roles: Array<'BUYER' | 'SELLER' | 'ADMIN'>) {
-    if (!roles.includes(this.getRole(user))) {
-      throw new InquiryForbiddenError('허용되지 않은 사용자 유형입니다.');
-    }
-  }
-
-  private assertCanReadInquiry(user: AuthUser, inquiry: any) {
-    const userId = String(user.id);
-    const role = this.getRole(user);
-    const isBuyerOwner = inquiry.buyerId === userId;
-    const isSellerOwner = inquiry.product.store.sellerId === userId;
-    const isAdmin = role === 'ADMIN';
-
-    if (!isBuyerOwner && !isSellerOwner && !isAdmin) {
-      throw new InquiryForbiddenError('문의를 조회할 권한이 없습니다.');
-    }
-  }
+  return payload;
 }

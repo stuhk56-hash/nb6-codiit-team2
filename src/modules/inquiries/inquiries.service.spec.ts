@@ -5,19 +5,21 @@ import {
   InquiryUnauthorizedError,
   InquiryValidationError,
 } from './inquiries.errors';
-import { InquiriesService } from './inquiries.service'
+import { InquiriesService } from './inquiries.service';
 
-const makeRepositoryMock = () => ({
-  findManyMyInquiries: jest.fn(),
-  findInquiryById: jest.fn(),
-  createInquiry: jest.fn(),
-  updateInquiry: jest.fn(),
-  deleteInquiry: jest.fn(),
-  createReply: jest.fn(),
-  findReplyById: jest.fn(),
-  updateReply: jest.fn(),
-  deleteReply: jest.fn(),
-});
+function makeRepositoryMock() {
+  return {
+    findManyMyInquiries: jest.fn(),
+    findInquiryById: jest.fn(),
+    createInquiry: jest.fn(),
+    updateInquiry: jest.fn(),
+    deleteInquiry: jest.fn(),
+    createReply: jest.fn(),
+    findReplyById: jest.fn(),
+    updateReply: jest.fn(),
+    deleteReply: jest.fn(),
+  };
+}
 
 describe('InquiriesService', () => {
   const buyer = { id: 'buyer-1', role: 'BUYER' as const };

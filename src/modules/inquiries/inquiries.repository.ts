@@ -1,20 +1,43 @@
 import { InquiryStatus, Prisma } from '@prisma/client';
 import prisma from '../../configs/prisma';
+import type { InquiriesListFilter } from './types/inquiries.type';
 
-type InquiryRole = 'BUYER' | 'SELLER' | 'ADMIN';
+const inquiryListInclude = {
+  product: {
+    select: {
+      id: true,
+      name: true,
+      imageUrl: true,
+      store: { select: { id: true, name: true } },
+    },
+  },
+  buyer: { select: { id: true, name: true } },
+};
+
+const inquiryDetailInclude = {
+  product: {
+    select: {
+      id: true,
+      store: { select: { id: true, sellerId: true, name: true } },
+    },
+  },
+  buyer: { select: { id: true, name: true } },
+  answer: {
+    include: {
+      seller: { select: { id: true, name: true } },
+    },
+  },
+};
+
+const replyInclude = {
+  seller: { select: { id: true, name: true } },
+};
 
 export class InquiriesRepository {
-  async findManyMyInquiries(params: {
-    userId: string;
-    role: InquiryRole;
-    page: number;
-    pageSize: number;
-    status?: InquiryStatus;
-  }) {
+  async findManyMyInquiries(params: InquiriesListFilter) {
     const { userId, role, page, pageSize, status } = params;
     const skip = (page - 1) * pageSize;
 
-    // 역할에 따라 조회 범위를 분기
     const where: Prisma.InquiryWhereInput = {
       ...(status ? { status } : {}),
       ...(role === 'BUYER'
@@ -30,17 +53,7 @@ export class InquiriesRepository {
         skip,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              imageUrl: true,
-              store: { select: { id: true, name: true } },
-            },
-          },
-          buyer: { select: { id: true, name: true } },
-        },
+        include: inquiryListInclude,
       }),
       prisma.inquiry.count({ where }),
     ]);
@@ -51,20 +64,7 @@ export class InquiriesRepository {
   findInquiryById(inquiryId: string) {
     return prisma.inquiry.findUnique({
       where: { id: inquiryId },
-      include: {
-        product: {
-          select: {
-            id: true,
-            store: { select: { id: true, sellerId: true, name: true } },
-          },
-        },
-        buyer: { select: { id: true, name: true } },
-        answer: {
-          include: {
-            seller: { select: { id: true, name: true } },
-          },
-        },
-      },
+      include: inquiryDetailInclude,
     });
   }
 
@@ -77,11 +77,7 @@ export class InquiriesRepository {
   }) {
     return prisma.inquiry.create({
       data,
-      include: {
-        answer: {
-          include: { seller: { select: { id: true, name: true } } },
-        },
-      },
+      include: inquiryDetailInclude,
     });
   }
 
@@ -92,31 +88,22 @@ export class InquiriesRepository {
     return prisma.inquiry.update({
       where: { id: inquiryId },
       data,
-      include: {
-        answer: {
-          include: { seller: { select: { id: true, name: true } } },
-        },
-      },
+      include: inquiryDetailInclude,
     });
   }
 
   deleteInquiry(inquiryId: string) {
     return prisma.inquiry.delete({
       where: { id: inquiryId },
-      include: {
-        answer: {
-          include: { seller: { select: { id: true, name: true } } },
-        },
-      },
+      include: inquiryDetailInclude,
     });
   }
 
   async createReply(inquiryId: string, sellerId: string, content: string) {
-    // 답변 생성과 문의 상태 변경을 하나의 트랜잭션으로 처리
     return prisma.$transaction(async (tx) => {
-      const reply = await tx.inquiryAnswer.create({
+      const createdReply = await tx.inquiryAnswer.create({
         data: { inquiryId, sellerId, content },
-        include: { seller: { select: { id: true, name: true } } },
+        include: replyInclude,
       });
 
       await tx.inquiry.update({
@@ -124,7 +111,7 @@ export class InquiriesRepository {
         data: { status: InquiryStatus.CompletedAnswer },
       });
 
-      return reply;
+      return createdReply;
     });
   }
 
@@ -150,18 +137,15 @@ export class InquiriesRepository {
     return prisma.inquiryAnswer.update({
       where: { id: replyId },
       data: { content },
-      include: { seller: { select: { id: true, name: true } } },
+      include: replyInclude,
     });
   }
 
   async deleteReply(replyId: string) {
-    // 답변 삭제와 문의 상태 복구를 하나의 트랜잭션으로 처리
     return prisma.$transaction(async (tx) => {
       const deletedReply = await tx.inquiryAnswer.delete({
         where: { id: replyId },
-        include: {
-          seller: { select: { id: true, name: true } },
-        },
+        include: replyInclude,
       });
 
       await tx.inquiry.update({
