@@ -9,10 +9,13 @@ function getErrorName(statusCode: number) {
   return 'Internal Server Error';
 }
 
-export function makeErrorResponse(statusCode: number, message: string): ErrorResponse {
+export function makeErrorResponse(
+  statusCode: number,
+  message: string,
+): ErrorResponse {
   return {
+    statusCode,
     message,
     error: getErrorName(statusCode),
-    statusCode,
   };
 }
