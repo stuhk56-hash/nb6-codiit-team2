@@ -2,6 +2,7 @@ import { NextFunction, Response } from 'express';
 import { prisma } from '../lib/constants/prismaClient';
 import { parseUserIdFromToken } from '../lib/constants/token';
 import { makeUnauthorizedError } from '../lib/errors/errorUtils';
+import { extractAccessToken } from '../modules/auth/utils/auth.util';
 import { AuthenticatedRequest } from '../types/auth-request.type';
 import { AuthenticateOptions } from '../types/authenticate.type';
 
@@ -13,14 +14,10 @@ export function authenticate(options?: AuthenticateOptions) {
     _res: Response,
     next: NextFunction,
   ) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
+    const token = extractAccessToken(req);
+    if (!token) {
       throw makeUnauthorizedError(options, 'Authorization 헤더가 없습니다.');
     }
-
-    const token = authHeader?.startsWith('Bearer ')
-      ? authHeader.slice(7)
-      : null;
     const userId = parseUserIdFromToken(token, 'access');
 
     if (!userId) {

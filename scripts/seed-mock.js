@@ -5,6 +5,7 @@ const {
   OrderStatus,
   PaymentStatus,
 } = require('@prisma/client');
+const { randomBytes, scryptSync } = require('crypto');
 
 const prisma = new PrismaClient();
 
@@ -15,6 +16,14 @@ const ORDERS_PER_BUYER = 5;
 const INQUIRIES_PER_BUYER = 5;
 const NOTIFICATIONS_PER_USER = 5;
 const DEFAULT_PASSWORD = 'codiit1234';
+const SCRYPT_KEYLEN = 64;
+const SALT_BYTES = 16;
+
+function hashPassword(password) {
+  const salt = randomBytes(SALT_BYTES).toString('hex');
+  const hash = scryptSync(password, salt, SCRYPT_KEYLEN).toString('hex');
+  return `scrypt$${salt}$${hash}`;
+}
 
 const categoryNames = ['TOP', 'BOTTOM', 'OUTER', 'DRESS', 'SKIRT', 'SHOES', 'ACC'];
 const sizeDefs = [
@@ -71,7 +80,7 @@ async function seedUsers(grades) {
         type: UserType.SELLER,
         email: `seller${i}@codiit.com`,
         name: `셀러${i}`,
-        passwordHash: DEFAULT_PASSWORD,
+        passwordHash: hashPassword(DEFAULT_PASSWORD),
         imageUrl: `https://picsum.photos/seed/seller-${i}/200/200`,
       },
     });
@@ -82,7 +91,7 @@ async function seedUsers(grades) {
         type: UserType.BUYER,
         email: `buyer${i}@codiit.com`,
         name: `바이어${i}`,
-        passwordHash: DEFAULT_PASSWORD,
+        passwordHash: hashPassword(DEFAULT_PASSWORD),
         imageUrl: `https://picsum.photos/seed/buyer-${i}/200/200`,
         points: i * 5000,
         gradeId: grades[(i - 1) % grades.length].id,
