@@ -1,4 +1,5 @@
 import { usersRepository } from './users.repository';
+import { hashPassword } from '../../lib/constants/password';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LikeStoreResponseDto } from './dto/like-store-response.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -22,7 +23,7 @@ export class UsersService {
       type: data.type ?? 'BUYER',
       name: data.name,
       email: data.email,
-      passwordHash: data.password,
+      passwordHash: hashPassword(data.password),
       gradeId: (await usersRepository.findLowestGrade())?.id,
     });
 
@@ -47,10 +48,12 @@ export class UsersService {
       await ensureEmailAvailable(data.email);
     }
 
+    const nextPasswordHash =
+      data.password !== undefined ? hashPassword(data.password) : undefined;
     const imageUrl = image ? undefined : undefined;
     const updated = await usersRepository.updateById(
       userId,
-      toUserUpdateData(data, imageUrl),
+      toUserUpdateData(data, imageUrl, nextPasswordHash),
     );
 
     return toUserResponse(updated);

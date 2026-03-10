@@ -1,10 +1,11 @@
 import { postRefresh } from "@/lib/api/auth";
+import { normalizeApiBaseUrl } from "@/lib/functions/normalizeApiBaseUrl";
 import { useApiStore } from "@/stores/useApiStore";
 import { useUserStore } from "@/stores/userStore";
 import axios from "axios";
 
 export const getAxiosInstance = () => {
-  const baseURL = useApiStore.getState().baseURL;
+  const baseURL = normalizeApiBaseUrl(useApiStore.getState().baseURL);
 
   const instance = axios.create({
     baseURL,

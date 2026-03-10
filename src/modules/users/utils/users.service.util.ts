@@ -4,6 +4,7 @@ import {
   ForbiddenError,
   NotFoundError,
 } from '../../../lib/errors/customErrors';
+import { verifyPassword } from '../../../lib/constants/password';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { usersRepository } from '../users.repository';
@@ -40,7 +41,7 @@ export function validateUpdatePassword(password?: string) {
 }
 
 export function ensureCurrentPassword(input?: string, passwordHash?: string) {
-  if (!input || input !== passwordHash) {
+  if (!input || !passwordHash || !verifyPassword(input, passwordHash)) {
     throw new ForbiddenError('현재 비밀번호가 올바르지 않습니다.');
   }
 }
@@ -64,11 +65,12 @@ export async function requireUserById(userId: string): Promise<UserWithGrade> {
 export function toUserUpdateData(
   data: UpdateUserDto,
   imageUrl?: string,
+  passwordHash?: string,
 ): UserUpdateData {
   return {
     ...(data.name !== undefined ? { name: data.name } : {}),
     ...(data.email !== undefined ? { email: data.email } : {}),
-    ...(data.password !== undefined ? { passwordHash: data.password } : {}),
+    ...(passwordHash !== undefined ? { passwordHash } : {}),
     ...(imageUrl !== undefined ? { imageUrl } : {}),
   };
 }

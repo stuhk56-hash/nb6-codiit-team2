@@ -1,3 +1,4 @@
+import { verifyPassword } from '../../../lib/constants/password';
 import { parseUserIdFromToken } from '../../../lib/constants/token';
 import { UnauthorizedError } from '../../../lib/errors/customErrors';
 import { LoginInput, RefreshTokenRow } from '../types/auth.type';
@@ -6,7 +7,7 @@ export function ensureLoginMatched(
   user: { passwordHash: string } | null,
   input: LoginInput,
 ) {
-  if (!user || user.passwordHash !== input.password) {
+  if (!user || !verifyPassword(input.password, user.passwordHash)) {
     throw new UnauthorizedError('이메일 또는 비밀번호가 올바르지 않습니다.');
   }
 }
