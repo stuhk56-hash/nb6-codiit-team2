@@ -85,7 +85,9 @@ model User {
   updatedAt      DateTime        @updatedAt
   // 셀러가 작성한 문의 답변 목록
   inquiryAnswers InquiryAnswer[]
-}
+  // 구매 시 가격 기본값 0원
+  lifetimeSpend  Int             @default(0)
+  }
 
 // 회원 등급 정보
 model Grade {
