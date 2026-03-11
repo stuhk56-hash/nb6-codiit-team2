@@ -197,38 +197,74 @@ export async function createOrderWithTransaction(
       });
     }
 
-    //5. 적립 포인트 계산, lifetimeSpend 업데이트
+    // 5. 현재 등급으로 포인트 적립 및 lifetimeSpend 업데이트
     const finalPrice = totalPrice - usePoint;
-    const userGrade = await tx.grade.findFirst({
-      where: {
-        users: {
-          some: { id: buyerId },
-        },
-      },
-    });
-
-    //현재 등급 적립률로 포인트 계산
-    const earnedPoints = Math.floor(
-      finalPrice * ((userGrade?.rate ?? 0) / 100),
-    );
-
-    //사용자 정보 조회
     const user = await tx.user.findUnique({
       where: { id: buyerId },
+      include: {
+        grade: true, // 현재 등급 조회
+      },
     });
 
     if (!user) {
       throw new Error('사용자를 찾을 수 없습니다.');
     }
 
-    // 5. 결제 생성
+    // 현재 등급의 적립률로 포인트 계산 (구매 전 등급)
+    const earnedPoints = Math.floor(
+      finalPrice * ((user.grade?.rate ?? 0) / 100),
+    );
+
+    // 새로운 lifetimeSpend 계산
+    const newLifetimeSpend = (user.lifetimeSpend || 0) + finalPrice;
+
+    // 사용자 정보 업데이트 (lifetimeSpend, 포인트 적립)
+    await tx.user.update({
+      where: { id: buyerId },
+      data: {
+        lifetimeSpend: newLifetimeSpend,
+        points: {
+          increment: earnedPoints,
+        },
+      },
+    });
+
+    // 6. 새로운 등급 찾기 및 업데이트 (lifetimeSpend 변경 후)
+    const newGrade = await tx.grade.findFirst({
+      where: {
+        minAmount: {
+          lte: newLifetimeSpend,
+        },
+      },
+      orderBy: {
+        minAmount: 'desc',
+      },
+    });
+
+    // 등급이 변경되었으면 업데이트
+    if (newGrade && newGrade.id !== user.gradeId) {
+      await tx.user.update({
+        where: { id: buyerId },
+        data: {
+          gradeId: newGrade.id,
+        },
+      });
+    }
+
+    // 7. 결제 생성
+    await tx.payment.create({
+      data: {
+        orderId: createdOrder.id,
+        price: finalPrice,
+        status: 'Paid' as PaymentStatus,
+      },
+    });
 
     return createdOrder.id;
   });
 
   return findOrderById(orderId);
 }
-
 //주문 정보 수정
 export async function updateOrder(
   orderId: string,

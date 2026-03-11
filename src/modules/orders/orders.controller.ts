@@ -50,6 +50,9 @@ export async function cancelOrder(req: AuthenticatedRequest, res: Response) {
   const buyerId = req.user!.id;
   const { orderId } = req.params;
 
+  console.log('orderId:', orderId);
+  console.log('buyerId:', buyerId);
+
   const result = await ordersService.cancelOrder(buyerId, orderId);
   return res.status(200).send(result);
 }
