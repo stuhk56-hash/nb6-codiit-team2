@@ -197,15 +197,31 @@ export async function createOrderWithTransaction(
       });
     }
 
-    // 5. 결제 생성
+    //5. 적립 포인트 계산, lifetimeSpend 업데이트
     const finalPrice = totalPrice - usePoint;
-    await tx.payment.create({
-      data: {
-        orderId: createdOrder.id,
-        price: finalPrice,
-        status: 'Paid' as PaymentStatus,
+    const userGrade = await tx.grade.findFirst({
+      where: {
+        users: {
+          some: { id: buyerId },
+        },
       },
     });
+
+    //현재 등급 적립률로 포인트 계산
+    const earnedPoints = Math.floor(
+      finalPrice * ((userGrade?.rate ?? 0) / 100),
+    );
+
+    //사용자 정보 조회
+    const user = await tx.user.findUnique({
+      where: { id: buyerId },
+    });
+
+    if (!user) {
+      throw new Error('사용자를 찾을 수 없습니다.');
+    }
+
+    // 5. 결제 생성
 
     return createdOrder.id;
   });
