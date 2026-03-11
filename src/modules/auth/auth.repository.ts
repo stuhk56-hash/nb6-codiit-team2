@@ -27,10 +27,9 @@ export class AuthRepository {
   }
 
   revokeRefreshToken(tokenHash: string) {
-    return prisma.refreshToken.updateMany({
+    return prisma.refreshToken.update({
       where: {
         tokenHash,
-        revokedAt: null,
       },
       data: {
         revokedAt: new Date(),
