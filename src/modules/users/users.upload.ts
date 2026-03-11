@@ -17,10 +17,6 @@ const noopUpload: UploadMiddleware = (
 let usersUpload: UploadMiddleware = noopUpload;
 
 try {
-  // `multer` is optional in some local environments.
-  // If it is installed, image upload works as expected.
-  // If not, API still runs and skips multipart parsing.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
   const multer = require('multer');
   usersUpload = multer().single('image');
 } catch {

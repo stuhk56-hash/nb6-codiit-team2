@@ -61,7 +61,7 @@ export class UsersService {
 
   async deleteUser(userId: string) {
     await requireUserById(userId);
-    await usersRepository.deleteById(userId);
+    await usersRepository.softDeleteById(userId);
   }
 
   async getLikedStores(userId: string): Promise<LikeStoreResponseDto[]> {

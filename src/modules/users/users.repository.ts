@@ -1,8 +1,9 @@
+import { UserType } from '@prisma/client';
 import { prisma } from '../../lib/constants/prismaClient';
 
 export class UsersRepository {
   create(data: {
-    type: 'SELLER' | 'BUYER';
+    type: UserType;
     name: string;
     email: string;
     passwordHash: string;
@@ -44,9 +45,12 @@ export class UsersRepository {
     });
   }
 
-  deleteById(id: string) {
-    return prisma.user.delete({
+  softDeleteById(id: string) {
+    return prisma.user.update({
       where: { id },
+      data: {
+        deletedAt: new Date(),
+      },
     });
   }
 
