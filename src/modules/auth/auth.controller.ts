@@ -3,6 +3,7 @@ import { create as structCreate } from 'superstruct';
 import { authService } from './auth.service';
 import { LoginBodyStruct } from './structs/auth.struct';
 import {
+  REFRESH_TOKEN_COOKIE_KEY,
   extractRefreshToken,
   getRefreshCookieClearOptions,
   getRefreshCookieOptions,
@@ -13,7 +14,7 @@ export async function login(req: Request, res: Response) {
   const { email, password } = body;
   const result = await authService.login({ email, password });
 
-  res.cookie('refreshToken', result.refreshToken, getRefreshCookieOptions());
+  res.cookie(REFRESH_TOKEN_COOKIE_KEY, result.refreshToken, getRefreshCookieOptions());
 
   res.status(201).send({
     user: result.user,
@@ -31,6 +32,6 @@ export async function refresh(req: Request, res: Response) {
 export async function logout(req: Request, res: Response) {
   const refreshToken = extractRefreshToken(req);
   await authService.logout(refreshToken);
-  res.clearCookie('refreshToken', getRefreshCookieClearOptions());
+  res.clearCookie(REFRESH_TOKEN_COOKIE_KEY, getRefreshCookieClearOptions());
   res.send({ message: '성공적으로 로그아웃되었습니다.' });
 }

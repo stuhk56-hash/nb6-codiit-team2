@@ -46,8 +46,10 @@ export function extractAccessToken(req: Request) {
   return token.length > 0 ? token : null;
 }
 
+export const REFRESH_TOKEN_COOKIE_KEY = 'refreshToken';
+
 export function extractRefreshToken(req: Request) {
-  const token = req.cookies?.refreshToken;
+  const token = req.cookies?.[REFRESH_TOKEN_COOKIE_KEY];
   if (!token || typeof token !== 'string') return null;
   const trimmed = token.trim();
   return trimmed.length > 0 ? trimmed : null;

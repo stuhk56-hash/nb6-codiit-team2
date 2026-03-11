@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { login, logout, refresh } from './auth.controller';
 import { authService } from './auth.service';
+import { REFRESH_TOKEN_COOKIE_KEY } from './utils/auth.util';
 
 jest.mock('./auth.service', () => ({
   authService: {
@@ -8,6 +9,11 @@ jest.mock('./auth.service', () => ({
     refresh: jest.fn(),
     logout: jest.fn(),
   },
+}));
+
+jest.mock('./utils/auth.util', () => ({
+  ...jest.requireActual('./utils/auth.util'),
+  REFRESH_TOKEN_COOKIE_KEY: 'refreshToken',
 }));
 
 function makeResponse() {
@@ -43,7 +49,7 @@ describe('auth.controller', () => {
       password: 'codiit1234',
     });
     expect(res.cookie).toHaveBeenCalledWith(
-      'refreshToken',
+      REFRESH_TOKEN_COOKIE_KEY,
       'refresh-token',
       expect.objectContaining({ httpOnly: true, path: '/' }),
     );
@@ -56,7 +62,7 @@ describe('auth.controller', () => {
 
   it('refresh should use cookie token and return refreshed access token', async () => {
     const req = {
-      cookies: { refreshToken: 'refresh-token' },
+      cookies: { [REFRESH_TOKEN_COOKIE_KEY]: 'refresh-token' },
     } as unknown as Request;
     const res = makeResponse();
 
@@ -72,7 +78,7 @@ describe('auth.controller', () => {
 
   it('logout should revoke refresh token and clear cookie', async () => {
     const req = {
-      cookies: { refreshToken: 'refresh-token' },
+      cookies: { [REFRESH_TOKEN_COOKIE_KEY]: 'refresh-token' },
     } as unknown as Request;
     const res = makeResponse();
 
@@ -82,7 +88,7 @@ describe('auth.controller', () => {
 
     expect(authService.logout).toHaveBeenCalledWith('refresh-token');
     expect(res.clearCookie).toHaveBeenCalledWith(
-      'refreshToken',
+      REFRESH_TOKEN_COOKIE_KEY,
       expect.objectContaining({ path: '/' }),
     );
     expect(res.send).toHaveBeenCalledWith({
