@@ -1,0 +1,37 @@
+{
+  "data": { ... },
+  "meta": {
+    "request_id": "req_123",
+    "timestamp": "2026-03-11T10:15:30Z",
+    "membership": {
+      "new_member": false,
+      "tier": {
+        "code": "BLACK",
+        "name": "Black",
+        "rank": 2
+      },
+      "lifetime_spend": {
+        "currency": "KRW",
+        "current": 620000
+      },
+      "tiers": [
+        { "code": "VIP", "name": "VIP", "min_spend": 1000000, "rank": 1 },
+        { "code": "BLACK", "name": "Black", "min_spend": 500000, "rank": 2 },
+        { "code": "RED", "name": "Red", "min_spend": 300000, "rank": 3 },
+        { "code": "ORANGE", "name": "Orange", "min_spend": 100000, "rank": 4 }
+      ],
+      "next_tier": {
+        "code": "VIP",
+        "name": "VIP",
+        "required_spend": 1000000,
+        "remaining_spend": 380000,
+        "progress_ratio": 0.62
+      },
+      "new_member_tier": {
+        "code": "GREEN",
+        "name": "Green",
+        "condition": "new_member_only"
+      }
+    }
+  }
+}
