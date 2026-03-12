@@ -5,25 +5,25 @@ export class GradeResponseDto {
    * 등급 ID
    * @example "grade_green"
    */
-  id: string;
+  readonly id: string;
 
   /**
    * 등급 이름
    * @example "Green"
    */
-  name: string;
+  readonly name: string;
 
   /**
    * 적립률(%)
    * @example 1
    */
-  rate: number;
+  readonly rate: number;
 
   /**
    * 해당 등급 최소 누적 구매금액
    * @example 0
    */
-  minAmount: number;
+  readonly minAmount: number;
 
   constructor(grade: Grade) {
     this.id = grade.id;
