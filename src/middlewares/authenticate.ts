@@ -5,7 +5,6 @@ import { makeUnauthorizedError } from '../lib/errors/errorUtils';
 import { extractAccessToken } from '../modules/auth/utils/auth.util';
 import { AuthenticatedRequest } from '../types/auth-request.type';
 import { AuthenticateOptions } from '../types/authenticate.type';
-
 export type { AuthenticatedRequest } from '../types/auth-request.type';
 
 export function authenticate(options?: AuthenticateOptions) {
