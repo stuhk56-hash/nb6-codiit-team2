@@ -1,11 +1,11 @@
+import type { GradeResponseDto } from './dto/grade-response.dto';
 import { metadataRepository } from './metadata.repository';
-import { toGradeResponse } from './utils/metadata.mapper';
-import { GradeResponseDto } from './dto/grade-response.dto';
+import { toGradeResponseDto } from './utils/metadata.mapper';
 
 export class MetadataService {
-  async getGrades(): Promise<GradeResponseDto[]> {
-    const grades = await metadataRepository.findAllGrades();
-    return grades.map(toGradeResponse);
+  async getGrade(): Promise<GradeResponseDto[]> {
+    const grades = await metadataRepository.findGrades();
+    return grades.map(toGradeResponseDto);
   }
 }
 
