@@ -1,8 +1,7 @@
 import { Router } from 'express';
-import { metadataRouter } from './metadata.controller';
+import { withAsync } from '../../lib/withAsync';
+import { getGrade } from './metadata.controller';
 
-export const MetadataModule = (router: Router) => {
-  router.use('/metadata', metadataRouter);
-};
+export const metadataRouter = Router();
 
-export default MetadataModule;
+metadataRouter.get('/grade', withAsync(getGrade));
