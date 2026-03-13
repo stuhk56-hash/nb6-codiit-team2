@@ -1,13 +1,12 @@
 import { NextFunction, Response } from 'express';
 import { prisma } from '../lib/constants/prismaClient';
 import { parseUserIdFromToken } from '../lib/constants/token';
-import { makeUnauthorizedError } from '../lib/errors/errorUtils';
+import { UnauthorizedError } from '../lib/errors/customErrors';
 import { extractAccessToken } from '../modules/auth/utils/auth.util';
 import { AuthenticatedRequest } from '../types/auth-request.type';
-import { AuthenticateOptions } from '../types/authenticate.type';
 export type { AuthenticatedRequest } from '../types/auth-request.type';
 
-export function authenticate(options?: AuthenticateOptions) {
+export function authenticate() {
   return async function authenticateMiddleware(
     req: AuthenticatedRequest,
     _res: Response,
@@ -15,17 +14,17 @@ export function authenticate(options?: AuthenticateOptions) {
   ) {
     const token = extractAccessToken(req);
     if (!token) {
-      throw makeUnauthorizedError(options, 'Authorization 헤더가 없습니다.');
+      throw new UnauthorizedError();
     }
     const userId = parseUserIdFromToken(token, 'access');
 
     if (!userId) {
-      throw makeUnauthorizedError(options, '유효하지 않은 액세스 토큰입니다.');
+      throw new UnauthorizedError();
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
-      throw makeUnauthorizedError(options, '인증된 사용자를 찾을 수 없습니다.');
+      throw new UnauthorizedError();
     }
 
     req.user = user;
