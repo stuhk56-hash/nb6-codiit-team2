@@ -5,6 +5,7 @@ import { LikeStoreResponseDto } from './dto/like-store-response.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { toLikeStoreResponse, toUserResponse } from './utils/users.mapper';
+import { s3Service } from '../s3/s3.service';
 import {
   ensureCurrentPassword,
   ensureEmailAvailable,
@@ -27,12 +28,12 @@ export class UsersService {
       gradeId: (await usersRepository.findLowestGrade())?.id,
     });
 
-    return toUserResponse(created);
+    return await toUserResponse(created);
   }
 
   async getMe(userId: string): Promise<UserResponseDto> {
     const user = await requireUserById(userId);
-    return toUserResponse(user);
+    return await toUserResponse(user);
   }
 
   async updateMe(
@@ -50,16 +51,22 @@ export class UsersService {
 
     const nextPasswordHash =
       data.password !== undefined ? hashPassword(data.password) : undefined;
-    const imageUrl = image ? undefined : undefined;
+    const uploadedImage = image ? await s3Service.uploadFile(image) : null;
+
     const updated = await usersRepository.updateById(
       userId,
-      toUserUpdateData(data, imageUrl, nextPasswordHash),
+      toUserUpdateData(
+        data,
+        uploadedImage?.url,
+        nextPasswordHash,
+        uploadedImage?.key,
+      ),
     );
 
-    return toUserResponse(updated);
+    return await toUserResponse(updated);
   }
 
-  async deleteUser(userId: string) {
+  async deleteUser(userId: string): Promise<void> {
     await requireUserById(userId);
     await usersRepository.softDeleteById(userId);
   }
@@ -67,7 +74,7 @@ export class UsersService {
   async getLikedStores(userId: string): Promise<LikeStoreResponseDto[]> {
     await requireUserById(userId);
     const likes = await usersRepository.findLikedStores(userId);
-    return likes.map((favorite) => toLikeStoreResponse(favorite));
+    return await Promise.all(likes.map((favorite) => toLikeStoreResponse(favorite)));
   }
 }
 

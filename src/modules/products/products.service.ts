@@ -1,7 +1,10 @@
 import { requireBuyer, requireSeller } from '../../lib/request/auth-user';
 import { AuthUser } from '../../types/auth-request.type';
+import { s3Service } from '../s3/s3.service';
 import { DetailProductResponseDto } from './dto/detail-product-response.dto';
 import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
+import { ProductInquiryListResponseDto } from './dto/product-inquiry-list-response.dto';
+import { ProductInquiryResponseDto } from './dto/product-inquiry-response.dto';
 import { ProductListResponseDto } from './dto/product-list-response.dto';
 import { productsRepository } from './products.repository';
 import {
@@ -20,7 +23,6 @@ import {
   requireProducts,
   ensureSellerStore,
   filterProductInquiries,
-  filterProducts,
   normalizeProductListQuery,
   normalizeProductInquiryListQuery,
   paginateProductInquiries,
@@ -49,13 +51,20 @@ export class ProductsService {
     );
     ensureCategory(category?.id);
 
+    const uploadedImage = image ? await s3Service.uploadFile(image) : null;
+
     const created = await productsRepository.create({
       storeId: store!.id,
       categoryId: category!.id,
       name: data.name,
       price: data.price,
       content: data.content,
-      imageUrl: image?.originalname,
+      ...(uploadedImage
+        ? {
+            imageUrl: uploadedImage.url,
+            imageKey: uploadedImage.key,
+          }
+        : {}),
       discountRate: data.discountRate,
       discountStartTime: data.discountStartTime
         ? new Date(data.discountStartTime)
@@ -66,7 +75,7 @@ export class ProductsService {
       stocks: data.stocks,
     });
 
-    return toDetailProductResponseDto(created);
+    return await toDetailProductResponseDto(created);
   }
 
   async findList(query: ProductListQuery): Promise<ProductListResponseDto> {
@@ -89,7 +98,7 @@ export class ProductsService {
       const paged = paginateProducts(sorted, normalized);
 
       return {
-        ...toProductListResponseDto(paged),
+        ...(await toProductListResponseDto(paged)),
         totalCount: filtered.length,
       };
     }
@@ -99,7 +108,7 @@ export class ProductsService {
     requireProducts(products);
 
     return {
-      ...toProductListResponseDto(products),
+      ...(await toProductListResponseDto(products)),
       totalCount,
     };
   }
@@ -108,7 +117,7 @@ export class ProductsService {
     const product = requireProduct(
       await productsRepository.findById(productId),
     );
-    return toDetailProductResponseDto(product);
+    return await toDetailProductResponseDto(product);
   }
 
   async update(
@@ -133,13 +142,20 @@ export class ProductsService {
       ensureCategory(category?.id);
     }
 
+    const uploadedImage = image ? await s3Service.uploadFile(image) : null;
+
     const updated = requireProduct(
       await productsRepository.update(productId, {
+        ...(uploadedImage
+          ? {
+              imageUrl: uploadedImage.url,
+              imageKey: uploadedImage.key,
+            }
+          : {}),
         categoryId: category?.id,
         name: data.name,
         price: data.price,
         content: data.content,
-        imageUrl: image?.originalname,
         discountRate: data.discountRate,
         discountStartTime:
           data.discountStartTime !== undefined
@@ -157,10 +173,10 @@ export class ProductsService {
       }),
     );
 
-    return toDetailProductResponseDto(updated);
+    return await toDetailProductResponseDto(updated);
   }
 
-  async remove(user: AuthUser, productId: string) {
+  async remove(user: AuthUser, productId: string): Promise<void> {
     requireSeller(user);
     const product = requireProduct(
       await productsRepository.findById(productId),
@@ -174,11 +190,9 @@ export class ProductsService {
     user: AuthUser,
     productId: string,
     data: { title: string; content: string; isSecret?: boolean },
-  ) {
+  ): Promise<ProductInquiryResponseDto> {
     requireBuyer(user);
-    const product = requireProduct(
-      await productsRepository.findById(productId),
-    );
+    requireProduct(await productsRepository.findById(productId));
 
     const inquiry = await productsRepository.createInquiry({
       productId,
@@ -191,7 +205,10 @@ export class ProductsService {
     return toProductInquiryResponseDto(inquiry);
   }
 
-  async getListInquiry(productId: string, query: ProductInquiryListQuery) {
+  async getListInquiry(
+    productId: string,
+    query: ProductInquiryListQuery,
+  ): Promise<ProductInquiryListResponseDto> {
     requireProduct(await productsRepository.findById(productId));
     const inquiries = await productsRepository.findProductInquiries(productId);
     const normalized = normalizeProductInquiryListQuery(query);

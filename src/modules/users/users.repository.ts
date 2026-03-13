@@ -36,6 +36,7 @@ export class UsersRepository {
       email?: string;
       passwordHash?: string;
       imageUrl?: string | null;
+      imageKey?: string | null;
     },
   ) {
     return prisma.user.update({

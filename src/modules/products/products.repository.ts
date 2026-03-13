@@ -76,6 +76,7 @@ export class ProductsRepository {
     price: number;
     content?: string;
     imageUrl?: string;
+    imageKey?: string;
     discountRate?: number;
     discountStartTime?: Date;
     discountEndTime?: Date;
@@ -91,6 +92,7 @@ export class ProductsRepository {
         price: data.price,
         content: data.content,
         imageUrl: data.imageUrl,
+        imageKey: data.imageKey,
         discountRate: data.discountRate,
         discountStartTime: data.discountStartTime,
         discountEndTime: data.discountEndTime,
@@ -111,6 +113,7 @@ export class ProductsRepository {
       price?: number;
       content?: string;
       imageUrl?: string;
+      imageKey?: string;
       discountRate?: number;
       discountStartTime?: Date | null;
       discountEndTime?: Date | null;
@@ -133,6 +136,7 @@ export class ProductsRepository {
           ...(data.price !== undefined ? { price: data.price } : {}),
           ...(data.content !== undefined ? { content: data.content } : {}),
           ...(data.imageUrl !== undefined ? { imageUrl: data.imageUrl } : {}),
+          ...(data.imageKey !== undefined ? { imageKey: data.imageKey } : {}),
           ...(data.discountRate !== undefined
             ? { discountRate: data.discountRate }
             : {}),

@@ -19,3 +19,23 @@ export type LoginUser = UserEntity & {
     rate: number;
   } | null;
 };
+
+export type LoginUserPayloadDto = {
+  id: string;
+  email: string;
+  name: string;
+  type: LoginUser['type'];
+  points: number;
+  image: string;
+  grade: LoginUser['grade'];
+};
+
+export type LoginResponseDto = {
+  user: LoginUserPayloadDto;
+  accessToken: string;
+  refreshToken: string;
+};
+
+export type RefreshResponseDto = {
+  accessToken: string;
+};

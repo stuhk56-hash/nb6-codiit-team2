@@ -1,8 +1,11 @@
 import { DetailProductResponseDto } from '../dto/detail-product-response.dto';
+import { ProductInquiryListResponseDto } from '../dto/product-inquiry-list-response.dto';
+import { ProductInquiryResponseDto } from '../dto/product-inquiry-response.dto';
 import { ProductDto } from '../dto/product.dto';
 import { ProductListDto } from '../dto/product-list.dto';
 import { ProductListResponseDto } from '../dto/product-list-response.dto';
 import { StockDto } from '../dto/stock.dto';
+import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 import {
   ProductInquiryWithAnswer,
   ProductWithRelations,
@@ -87,15 +90,19 @@ export function toProductDto(product: ProductWithRelations): ProductDto {
   };
 }
 
-export function toProductListDto(
+export async function toProductListDto(
   product: ProductWithRelations,
-): ProductListDto {
+): Promise<ProductListDto> {
   return {
     id: product.id,
     storeId: product.storeId,
     storeName: product.store.name,
     name: product.name,
-    image: toRequiredImage(product.imageUrl),
+    image: await resolveS3ImageUrl(
+      product.imageUrl,
+      product.imageKey,
+      '/images/Mask-group.svg',
+    ),
     price: product.price,
     discountPrice: calculateDiscountPrice(
       product.price,
@@ -124,18 +131,18 @@ export function toProductListDto(
   };
 }
 
-export function toProductListResponseDto(
+export async function toProductListResponseDto(
   list: ProductWithRelations[],
-): ProductListResponseDto {
+): Promise<ProductListResponseDto> {
   return {
-    list: list.map((product) => toProductListDto(product)),
+    list: await Promise.all(list.map((product) => toProductListDto(product))),
     totalCount: list.length,
   };
 }
 
-export function toDetailProductResponseDto(
+export async function toDetailProductResponseDto(
   product: ProductWithRelations,
-): DetailProductResponseDto {
+): Promise<DetailProductResponseDto> {
   const rate1Length = product.reviews.filter(
     (review) => review.rating === 1,
   ).length;
@@ -156,7 +163,11 @@ export function toDetailProductResponseDto(
   return {
     id: product.id,
     name: product.name,
-    image: toRequiredImage(product.imageUrl),
+    image: await resolveS3ImageUrl(
+      product.imageUrl,
+      product.imageKey,
+      '/images/Mask-group.svg',
+    ),
     content: toRequiredText(product.content),
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
@@ -195,7 +206,9 @@ export function toDetailProductResponseDto(
   };
 }
 
-export function toProductInquiryListItem(inquiry: ProductInquiryWithAnswer) {
+export function toProductInquiryListItem(
+  inquiry: ProductInquiryWithAnswer,
+): ProductInquiryResponseDto {
   return {
     id: inquiry.id,
     productId: inquiry.productId,
@@ -225,13 +238,15 @@ export function toProductInquiryListItem(inquiry: ProductInquiryWithAnswer) {
   };
 }
 
-export function toProductInquiryResponseDto(inquiry: ProductInquiryWithAnswer) {
+export function toProductInquiryResponseDto(
+  inquiry: ProductInquiryWithAnswer,
+): ProductInquiryResponseDto {
   return toProductInquiryListItem(inquiry);
 }
 
 export function toProductInquiryListResponseDto(
   list: ProductInquiryWithAnswer[],
-) {
+): ProductInquiryListResponseDto {
   return {
     list: list.map((inquiry) => toProductInquiryListItem(inquiry)),
     totalCount: list.length,

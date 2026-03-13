@@ -51,3 +51,38 @@ export function requireS3Bucket() {
 export function requireS3Region() {
   return requireEnv('AWS_REGION');
 }
+
+function isHttpUrl(value: string) {
+  return value.startsWith('http://') || value.startsWith('https://');
+}
+
+function isRootPath(value: string) {
+  return value.startsWith('/');
+}
+
+export async function resolveS3ImageUrl(
+  imageUrl: string | null | undefined,
+  imageKey: string | null | undefined,
+  fallbackUrl: string,
+) {
+  if (imageKey) {
+    try {
+      const bucket = process.env.AWS_S3_BUCKET_NAME;
+      const region = process.env.AWS_REGION;
+      if (bucket && region) {
+        return createS3ObjectUrl(bucket, region, imageKey);
+      }
+    } catch {
+      // fall through to existing imageUrl/fallback resolution
+    }
+  }
+
+  if (typeof imageUrl === 'string') {
+    const trimmed = imageUrl.trim();
+    if (trimmed && (isHttpUrl(trimmed) || isRootPath(trimmed))) {
+      return trimmed;
+    }
+  }
+
+  return fallbackUrl;
+}

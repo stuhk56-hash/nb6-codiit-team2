@@ -6,6 +6,7 @@ import type {
   StoreDetailResponseDto,
   StoreResponseDto,
 } from './dto/store-response.dto';
+import { s3Service } from '../s3/s3.service';
 import { storesRepository } from './stores.repository';
 import type { MyStoreProductsQuery } from './types/stores.type';
 import {
@@ -39,15 +40,20 @@ export class StoresService {
   ): Promise<StoreResponseDto> {
     const existing = await storesRepository.findBySellerId(sellerId);
     ensureSellerStoreMissing(existing);
+    const uploadedImage = image ? await s3Service.uploadFile(image) : null;
 
     const store = await storesRepository.create({
       sellerId,
       ...data,
-      imageUrl: image?.originalname,
-      imageKey: image?.originalname,
+      ...(uploadedImage
+        ? {
+            imageUrl: uploadedImage.url,
+            imageKey: uploadedImage.key,
+          }
+        : {}),
     });
 
-    return toStoreResponseDto(store);
+    return await toStoreResponseDto(store);
   }
 
   async update(
@@ -65,30 +71,31 @@ export class StoresService {
     ensureStoreUpdateInput(data, image);
     const store = requireStore(await storesRepository.findById(storeId));
     ensureStoreOwner(sellerId, { userId: store.sellerId });
+    const uploadedImage = image ? await s3Service.uploadFile(image) : null;
 
     const updated = await storesRepository.update(storeId, {
       ...data,
-      ...(image
+      ...(uploadedImage
         ? {
-            imageUrl: image.originalname,
-            imageKey: image.originalname,
+            imageUrl: uploadedImage.url,
+            imageKey: uploadedImage.key,
           }
         : {}),
     });
 
-    return toStoreResponseDto(updated);
+    return await toStoreResponseDto(updated);
   }
 
   async findStore(storeId: string): Promise<StoreDetailResponseDto> {
     const store = requireStore(await storesRepository.findById(storeId));
-    return toStoreDetailResponseDto(store);
+    return await toStoreDetailResponseDto(store);
   }
 
   async myStore(sellerId: string): Promise<MyStoreResponseDto> {
     const store = requireMyStore(
       await storesRepository.findMyStoreBySellerId(sellerId),
     );
-    return toMyStoreResponseDto(store);
+    return await toMyStoreResponseDto(store);
   }
 
   async myStoreProduct(
@@ -100,7 +107,7 @@ export class StoresService {
     const { products, totalCount } =
       await storesRepository.findMyProductsBySellerId(sellerId, normalized);
 
-    return toMyStoreProductResponseDto(products, totalCount);
+    return await toMyStoreProductResponseDto(products, totalCount);
   }
 
   async favoriteStoreRegister(
@@ -111,7 +118,7 @@ export class StoresService {
     const store = requireStore(
       await storesRepository.registerFavorite(userId, storeId),
     );
-    return toFavoriteStoreRegisterResponseDto(store);
+    return await toFavoriteStoreRegisterResponseDto(store);
   }
 
   async favoriteStoreDelete(
@@ -122,7 +129,7 @@ export class StoresService {
     const store = requireStore(
       await storesRepository.deleteFavorite(userId, storeId),
     );
-    return toFavoriteStoreDeleteResponseDto(store);
+    return await toFavoriteStoreDeleteResponseDto(store);
   }
 }
 
