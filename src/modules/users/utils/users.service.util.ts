@@ -66,11 +66,13 @@ export function toUserUpdateData(
   data: UpdateUserDto,
   imageUrl?: string,
   passwordHash?: string,
+  imageKey?: string,
 ): UserUpdateData {
   return {
     ...(data.name !== undefined ? { name: data.name } : {}),
     ...(data.email !== undefined ? { email: data.email } : {}),
     ...(passwordHash !== undefined ? { passwordHash } : {}),
     ...(imageUrl !== undefined ? { imageUrl } : {}),
+    ...(imageKey !== undefined ? { imageKey } : {}),
   };
 }

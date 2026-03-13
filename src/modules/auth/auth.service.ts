@@ -11,7 +11,7 @@ import {
   toLoginUserPayload,
   toRefreshResponse,
 } from './utils/auth.mapper';
-import { LoginInput } from './types/auth.type';
+import { LoginInput, LoginResponseDto, RefreshResponseDto } from './types/auth.type';
 import {
   ensureLoginMatched,
   ensureRefreshTokenRowValid,
@@ -20,7 +20,7 @@ import {
 } from './utils/auth.service.util';
 
 export class AuthService {
-  async login(data: LoginInput) {
+  async login(data: LoginInput): Promise<LoginResponseDto> {
     const user = await authRepository.findUserByEmailWithGrade(data.email);
     ensureLoginMatched(user, data);
 
@@ -37,13 +37,13 @@ export class AuthService {
     });
 
     return toLoginResponse(
-      toLoginUserPayload(user),
+      await toLoginUserPayload(user),
       makeAccessToken(user.id),
       refreshToken,
     );
   }
 
-  async refresh(refreshToken?: string | null) {
+  async refresh(refreshToken?: string | null): Promise<RefreshResponseDto> {
     const userId = requireRefreshUserId(refreshToken);
 
     const tokenRow = await authRepository.findRefreshTokenByHash(
@@ -57,7 +57,7 @@ export class AuthService {
     return toRefreshResponse(makeAccessToken(user.id));
   }
 
-  async logout(refreshToken?: string | null) {
+  async logout(refreshToken?: string | null): Promise<void> {
     if (!refreshToken) return;
 
     await authRepository.revokeRefreshToken(hashToken(refreshToken));

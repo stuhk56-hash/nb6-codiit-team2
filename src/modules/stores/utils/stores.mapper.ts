@@ -12,10 +12,12 @@ import type {
   MyStoreWithRelations,
   StoreWithCounts,
 } from '../types/stores.type';
-import { resolveStoreImage } from './stores.util';
 import { isDiscountActive } from '../../products/utils/products.util';
+import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 
-export function toStoreResponseDto(store: StoreWithCounts): StoreResponseDto {
+export async function toStoreResponseDto(
+  store: StoreWithCounts,
+): Promise<StoreResponseDto> {
   return {
     id: store.id,
     name: store.name,
@@ -26,22 +28,26 @@ export function toStoreResponseDto(store: StoreWithCounts): StoreResponseDto {
     detailAddress: store.detailAddress,
     phoneNumber: store.phoneNumber,
     content: store.content,
-    image: resolveStoreImage(store.imageUrl),
+    image: await resolveS3ImageUrl(
+      store.imageUrl,
+      store.imageKey,
+      '/images/Mask-group.svg',
+    ),
   };
 }
 
-export function toStoreDetailResponseDto(
+export async function toStoreDetailResponseDto(
   store: StoreWithCounts,
-): StoreDetailResponseDto {
+): Promise<StoreDetailResponseDto> {
   return {
-    ...toStoreResponseDto(store),
+    ...(await toStoreResponseDto(store)),
     favoriteCount: store._count.favoritedBy,
   };
 }
 
-export function toMyStoreResponseDto(
+export async function toMyStoreResponseDto(
   store: MyStoreWithRelations,
-): MyStoreResponseDto {
+): Promise<MyStoreResponseDto> {
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
@@ -67,7 +73,11 @@ export function toMyStoreResponseDto(
     detailAddress: store.detailAddress,
     phoneNumber: store.phoneNumber,
     content: store.content,
-    image: resolveStoreImage(store.imageUrl),
+    image: await resolveS3ImageUrl(
+      store.imageUrl,
+      store.imageKey,
+      '/images/Mask-group.svg',
+    ),
     productCount: store._count.products,
     favoriteCount: store._count.favoritedBy,
     monthFavoriteCount,
@@ -75,12 +85,16 @@ export function toMyStoreResponseDto(
   };
 }
 
-export function toMyStoreProductDto(
+export async function toMyStoreProductDto(
   product: MyStoreProductRow,
-): MyStoreProductDto {
+): Promise<MyStoreProductDto> {
   return {
     id: product.id,
-    image: resolveStoreImage(product.imageUrl),
+    image: await resolveS3ImageUrl(
+      product.imageUrl,
+      product.imageKey,
+      '/images/Mask-group.svg',
+    ),
     name: product.name,
     price: product.price,
     stock: product.stocks.reduce((sum, stock) => sum + stock.quantity, 0),
@@ -94,30 +108,30 @@ export function toMyStoreProductDto(
   };
 }
 
-export function toMyStoreProductResponseDto(
+export async function toMyStoreProductResponseDto(
   products: MyStoreProductRow[],
   totalCount: number,
-): MyStoreProductResponseDto {
+): Promise<MyStoreProductResponseDto> {
   return {
-    list: products.map(toMyStoreProductDto),
+    list: await Promise.all(products.map(toMyStoreProductDto)),
     totalCount,
   };
 }
 
-export function toFavoriteStoreRegisterResponseDto(
+export async function toFavoriteStoreRegisterResponseDto(
   store: StoreWithCounts,
-): FavoriteStoreRegisterResponseDto {
+): Promise<FavoriteStoreRegisterResponseDto> {
   return {
     type: 'register',
-    store: toStoreResponseDto(store),
+    store: await toStoreResponseDto(store),
   };
 }
 
-export function toFavoriteStoreDeleteResponseDto(
+export async function toFavoriteStoreDeleteResponseDto(
   store: StoreWithCounts,
-): FavoriteStoreDeleteResponseDto {
+): Promise<FavoriteStoreDeleteResponseDto> {
   return {
     type: 'delete',
-    store: toStoreResponseDto(store),
+    store: await toStoreResponseDto(store),
   };
 }

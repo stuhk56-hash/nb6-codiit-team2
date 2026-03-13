@@ -10,6 +10,7 @@ export type UserUpdateData = {
   email?: string;
   passwordHash?: string;
   imageUrl?: string | null;
+  imageKey?: string | null;
 };
 
 export type UsersMulterRequest = AuthenticatedRequest & {
@@ -28,6 +29,7 @@ export type StoreFavoriteWithStore = {
     phoneNumber: string;
     content: string;
     imageUrl: string | null;
+    imageKey: string | null;
     createdAt: Date;
     updatedAt: Date;
   };
