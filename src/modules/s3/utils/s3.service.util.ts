@@ -66,14 +66,10 @@ export async function resolveS3ImageUrl(
   fallbackUrl: string,
 ) {
   if (imageKey) {
-    try {
-      const bucket = process.env.AWS_S3_BUCKET_NAME;
-      const region = process.env.AWS_REGION;
-      if (bucket && region) {
-        return createS3ObjectUrl(bucket, region, imageKey);
-      }
-    } catch {
-      // fall through to existing imageUrl/fallback resolution
+    const bucket = process.env.AWS_S3_BUCKET_NAME;
+    const region = process.env.AWS_REGION;
+    if (bucket && region) {
+      return createS3ObjectUrl(bucket, region, imageKey);
     }
   }
 
