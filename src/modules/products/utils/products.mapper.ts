@@ -23,6 +23,7 @@ function canReadSecretInquiry(
   inquiry: ProductInquiryWithAnswer,
   viewer: InquiryViewerContext,
 ) {
+  // 비밀글이 아니면 누구나 조회 가능
   if (!inquiry.isSecret) {
     return true;
   }
@@ -32,6 +33,7 @@ function canReadSecretInquiry(
   }
 
   return (
+    // 비밀글은 작성자 또는 해당 상품의 판매자만 원문 조회 가능
     viewer.viewerId === inquiry.buyerId ||
     viewer.viewerId === viewer.productSellerId
   );

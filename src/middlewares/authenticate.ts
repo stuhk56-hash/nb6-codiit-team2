@@ -39,6 +39,7 @@ export function authenticateOptional() {
     _res: Response,
     next: NextFunction,
   ) {
+    // 비로그인 사용자도 통과시키되, 유효한 토큰이 있으면 req.user를 채워준다.
     const token = extractAccessToken(req);
     if (!token) {
       next();

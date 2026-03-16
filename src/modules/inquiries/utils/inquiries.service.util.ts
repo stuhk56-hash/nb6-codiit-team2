@@ -111,6 +111,7 @@ export function ensureReplyDeletable(inquiry: InquiryWithRelations) {
 }
 
 export function ensureInquiryUpdatable(inquiry: InquiryWithRelations) {
+  // 답변이 달린(CompletedAnswer) 문의는 수정할 수 없다.
   if (inquiry.status === 'CompletedAnswer' || inquiry.answer) {
     throw new BadRequestError();
   }
