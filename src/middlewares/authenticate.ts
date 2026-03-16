@@ -32,3 +32,30 @@ export function authenticate() {
     next();
   };
 }
+
+export function authenticateOptional() {
+  return async function authenticateOptionalMiddleware(
+    req: AuthenticatedRequest,
+    _res: Response,
+    next: NextFunction,
+  ) {
+    const token = extractAccessToken(req);
+    if (!token) {
+      next();
+      return;
+    }
+
+    const userId = parseUserIdFromToken(token, 'access');
+    if (!userId) {
+      next();
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (user) {
+      req.user = user;
+    }
+
+    next();
+  };
+}

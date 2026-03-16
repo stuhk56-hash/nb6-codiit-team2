@@ -215,14 +215,20 @@ export class ProductsService {
   async getListInquiry(
     productId: string,
     query: ProductInquiryListQuery,
+    viewer?: AuthUser,
   ): Promise<ProductInquiryListResponseDto> {
-    requireProduct(await productsRepository.findById(productId));
+    const product = requireProduct(
+      await productsRepository.findById(productId),
+    );
     const inquiries = await productsRepository.findProductInquiries(productId);
     const normalized = normalizeProductInquiryListQuery(query);
     const filtered = filterProductInquiries(inquiries, normalized.status);
     const sorted = sortProductInquiries(filtered, normalized.sort);
     const paged = paginateProductInquiries(sorted, normalized);
-    const response = toProductInquiryListResponseDto(paged);
+    const response = toProductInquiryListResponseDto(paged, {
+      viewerId: viewer?.id,
+      productSellerId: product.store.sellerId,
+    });
 
     return {
       ...response,

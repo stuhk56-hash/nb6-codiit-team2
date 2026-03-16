@@ -14,6 +14,29 @@ import {
   calculateDiscountPrice,
 } from './products.util';
 
+type InquiryViewerContext = {
+  viewerId?: string;
+  productSellerId?: string;
+};
+
+function canReadSecretInquiry(
+  inquiry: ProductInquiryWithAnswer,
+  viewer: InquiryViewerContext,
+) {
+  if (!inquiry.isSecret) {
+    return true;
+  }
+
+  if (!viewer.viewerId) {
+    return false;
+  }
+
+  return (
+    viewer.viewerId === inquiry.buyerId ||
+    viewer.viewerId === viewer.productSellerId
+  );
+}
+
 function toRequiredImage(value: string | null | undefined) {
   if (typeof value !== 'string') {
     return '/images/Mask-group.svg';
@@ -197,13 +220,16 @@ export function toDetailProductResponseDto(
 
 export function toProductInquiryListItem(
   inquiry: ProductInquiryWithAnswer,
+  viewer: InquiryViewerContext = {},
 ): ProductInquiryResponseDto {
+  const canRead = canReadSecretInquiry(inquiry, viewer);
+
   return {
     id: inquiry.id,
     productId: inquiry.productId,
     userId: inquiry.buyerId,
-    title: inquiry.title,
-    content: inquiry.content,
+    title: canRead ? inquiry.title : '비밀 문의입니다.',
+    content: canRead ? inquiry.content : '비밀 문의입니다.',
     isSecret: inquiry.isSecret,
     status: inquiry.status,
     createdAt: inquiry.createdAt.toISOString(),
@@ -212,7 +238,7 @@ export function toProductInquiryListItem(
       id: inquiry.buyer.id,
       name: inquiry.buyer.name,
     },
-    reply: inquiry.answer
+    reply: canRead && inquiry.answer
       ? {
           id: inquiry.answer.id,
           content: inquiry.answer.content,
@@ -229,15 +255,17 @@ export function toProductInquiryListItem(
 
 export function toProductInquiryResponseDto(
   inquiry: ProductInquiryWithAnswer,
+  viewer: InquiryViewerContext = {},
 ): ProductInquiryResponseDto {
-  return toProductInquiryListItem(inquiry);
+  return toProductInquiryListItem(inquiry, viewer);
 }
 
 export function toProductInquiryListResponseDto(
   list: ProductInquiryWithAnswer[],
+  viewer: InquiryViewerContext = {},
 ): ProductInquiryListResponseDto {
   return {
-    list: list.map((inquiry) => toProductInquiryListItem(inquiry)),
+    list: list.map((inquiry) => toProductInquiryListItem(inquiry, viewer)),
     totalCount: list.length,
   };
 }

@@ -110,6 +110,12 @@ export function ensureReplyDeletable(inquiry: InquiryWithRelations) {
   }
 }
 
+export function ensureInquiryUpdatable(inquiry: InquiryWithRelations) {
+  if (inquiry.status === 'CompletedAnswer' || inquiry.answer) {
+    throw new BadRequestError();
+  }
+}
+
 export function ensureUpdateInquiryInput(data: UpdateInquiryDto) {
   if (
     data.title === undefined &&

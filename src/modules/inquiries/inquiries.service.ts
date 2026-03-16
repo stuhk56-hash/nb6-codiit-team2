@@ -16,6 +16,7 @@ import {
   ensureInquiryAccessible,
   ensureInquiryBuyerOwner,
   ensureInquirySellerOwner,
+  ensureInquiryUpdatable,
   ensureReplyCreatable,
   ensureReplyDeletable,
   ensureReplySellerOwner,
@@ -67,6 +68,7 @@ export class InquiriesService {
       await inquiriesRepository.findById(inquiryId),
     );
     ensureInquiryBuyerOwner(userId, inquiry);
+    ensureInquiryUpdatable(inquiry);
 
     const updated = await inquiriesRepository.updateById(inquiryId, data);
     return toInquiryResponseDto(updated);
