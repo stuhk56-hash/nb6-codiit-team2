@@ -1,10 +1,15 @@
 import * as ordersRepository from '../orders.repository';
 import { CreateOrderDto } from '../dto/create-order.dto';
 import {
+  OrderWithRelations,
+  OrderItemWithRelations,
+} from '../types/orders.type';
+import {
   ConflictError,
   NotFoundError,
   BadRequestError,
 } from '../../../lib/errors/customErrors';
+import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 
 //주문 아이템 검증 및 가격 계산
 
@@ -30,7 +35,6 @@ export async function validateAndCalculateOrderItems(
 
     const itemTotal = stock.product.price * item.quantity;
     totalPrice += itemTotal;
-
     processedItems.push({
       productId: item.productId,
       sizeId: item.sizeId,
@@ -88,4 +92,24 @@ export function validateOrderCancellation(paymentStatus: string): void {
   if (paymentStatus !== 'Pending') {
     throw new BadRequestError('취소할 수 없는 주문입니다.');
   }
+}
+
+export async function resolveOrderItemImages(order: OrderWithRelations) {
+  await Promise.all(
+    order.items.map(async function (item: OrderItemWithRelations) {
+      if (!item.productImageUrl) {
+        item.productImageUrl = await resolveS3ImageUrl(
+          item.product.imageUrl,
+          null,
+          '/images/Mask-group.svg',
+        );
+      }
+    }),
+  );
+
+  return order;
+}
+
+export async function resolveOrdersItemImages(orders: OrderWithRelations[]) {
+  return Promise.all(orders.map(resolveOrderItemImages));
 }

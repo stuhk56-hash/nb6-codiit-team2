@@ -11,6 +11,7 @@ import type {
   InquiryWithRelations,
   NormalizedInquiriesQuery,
 } from '../types/inquiries.type';
+import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 import {
   DEFAULT_INQUIRIES_PAGE,
   DEFAULT_INQUIRIES_PAGE_SIZE,
@@ -123,4 +124,21 @@ export function ensureUpdateReplyInput(data: UpdateInquiryReplyDto) {
   if (data.content === undefined) {
     throw new BadRequestError();
   }
+}
+
+export async function resolveInquiryProductImage(inquiry: InquiryWithRelations) {
+  inquiry.product.imageUrl = await resolveS3ImageUrl(
+    inquiry.product.imageUrl,
+    inquiry.product.imageKey,
+    '/images/Mask-group.svg',
+  );
+
+  return inquiry;
+}
+
+export async function resolveInquiriesProductImages(
+  inquiries: InquiryWithRelations[],
+) {
+  await Promise.all(inquiries.map(resolveInquiryProductImage));
+  return inquiries;
 }

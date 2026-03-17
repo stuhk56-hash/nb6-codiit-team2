@@ -22,6 +22,8 @@ import {
   ensureStoreOwner,
   ensureStoreUpdateInput,
   normalizeMyStoreProductsQuery,
+  resolveMyStoreProductImages,
+  resolveStoreImage,
   requireMyStore,
   requireStore,
 } from './utils/stores.service.util';
@@ -53,7 +55,8 @@ export class StoresService {
         : {}),
     });
 
-    return await toStoreResponseDto(store);
+    const resolvedStore = await resolveStoreImage(store);
+    return toStoreResponseDto(resolvedStore);
   }
 
   async update(
@@ -83,19 +86,22 @@ export class StoresService {
         : {}),
     });
 
-    return await toStoreResponseDto(updated);
+    const resolvedStore = await resolveStoreImage(updated);
+    return toStoreResponseDto(resolvedStore);
   }
 
   async findStore(storeId: string): Promise<StoreDetailResponseDto> {
     const store = requireStore(await storesRepository.findById(storeId));
-    return await toStoreDetailResponseDto(store);
+    const resolvedStore = await resolveStoreImage(store);
+    return toStoreDetailResponseDto(resolvedStore);
   }
 
   async myStore(sellerId: string): Promise<MyStoreResponseDto> {
     const store = requireMyStore(
       await storesRepository.findMyStoreBySellerId(sellerId),
     );
-    return await toMyStoreResponseDto(store);
+    const resolvedStore = await resolveStoreImage(store);
+    return toMyStoreResponseDto(resolvedStore);
   }
 
   async myStoreProduct(
@@ -106,8 +112,9 @@ export class StoresService {
     const normalized = normalizeMyStoreProductsQuery(query);
     const { products, totalCount } =
       await storesRepository.findMyProductsBySellerId(sellerId, normalized);
+    const resolvedProducts = await resolveMyStoreProductImages(products);
 
-    return await toMyStoreProductResponseDto(products, totalCount);
+    return toMyStoreProductResponseDto(resolvedProducts, totalCount);
   }
 
   async favoriteStoreRegister(
@@ -118,7 +125,8 @@ export class StoresService {
     const store = requireStore(
       await storesRepository.registerFavorite(userId, storeId),
     );
-    return await toFavoriteStoreRegisterResponseDto(store);
+    const resolvedStore = await resolveStoreImage(store);
+    return toFavoriteStoreRegisterResponseDto(resolvedStore);
   }
 
   async favoriteStoreDelete(
@@ -129,7 +137,8 @@ export class StoresService {
     const store = requireStore(
       await storesRepository.deleteFavorite(userId, storeId),
     );
-    return await toFavoriteStoreDeleteResponseDto(store);
+    const resolvedStore = await resolveStoreImage(store);
+    return toFavoriteStoreDeleteResponseDto(resolvedStore);
   }
 }
 

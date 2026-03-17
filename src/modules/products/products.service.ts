@@ -30,6 +30,8 @@ import {
   requireProduct,
   sortProductInquiries,
   sortProducts,
+  resolveProductImage,
+  resolveProductsImage,
   validateCreateProductInput,
   validateUpdateProductInput,
 } from './utils/products.service.util';
@@ -75,7 +77,8 @@ export class ProductsService {
       stocks: data.stocks,
     });
 
-    return await toDetailProductResponseDto(created);
+    const resolvedProduct = await resolveProductImage(created);
+    return toDetailProductResponseDto(resolvedProduct);
   }
 
   async findList(query: ProductListQuery): Promise<ProductListResponseDto> {
@@ -96,9 +99,10 @@ export class ProductsService {
       requireProducts(filtered);
       const sorted = sortProducts(filtered, normalized.sort);
       const paged = paginateProducts(sorted, normalized);
+      const resolvedProducts = await resolveProductsImage(paged);
 
       return {
-        ...(await toProductListResponseDto(paged)),
+        ...toProductListResponseDto(resolvedProducts),
         totalCount: filtered.length,
       };
     }
@@ -106,9 +110,10 @@ export class ProductsService {
     const { products, totalCount } =
       await productsRepository.findPageByQuery(normalized);
     requireProducts(products);
+    const resolvedProducts = await resolveProductsImage(products);
 
     return {
-      ...(await toProductListResponseDto(products)),
+      ...toProductListResponseDto(resolvedProducts),
       totalCount,
     };
   }
@@ -117,7 +122,8 @@ export class ProductsService {
     const product = requireProduct(
       await productsRepository.findById(productId),
     );
-    return await toDetailProductResponseDto(product);
+    const resolvedProduct = await resolveProductImage(product);
+    return toDetailProductResponseDto(resolvedProduct);
   }
 
   async update(
@@ -173,7 +179,8 @@ export class ProductsService {
       }),
     );
 
-    return await toDetailProductResponseDto(updated);
+    const resolvedProduct = await resolveProductImage(updated);
+    return toDetailProductResponseDto(resolvedProduct);
   }
 
   async remove(user: AuthUser, productId: string): Promise<void> {

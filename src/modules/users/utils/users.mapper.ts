@@ -1,7 +1,27 @@
 import { LikeStoreResponseDto } from '../dto/like-store-response.dto';
 import { UserGradeDto, UserResponseDto } from '../dto/user-response.dto';
 import { StoreFavoriteWithStore, UserWithGrade } from '../types/users.type';
-import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
+
+function toRequiredImage(value: string | null | undefined, fallback: string) {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+
+  if (
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://')
+  ) {
+    return trimmed;
+  }
+
+  return fallback;
+}
 
 function toGradeResponse(
   grade: UserWithGrade['grade'],
@@ -18,7 +38,7 @@ function toGradeResponse(
   };
 }
 
-export async function toUserResponse(user: UserWithGrade): Promise<UserResponseDto> {
+export function toUserResponse(user: UserWithGrade): UserResponseDto {
   return {
     id: user.id,
     name: user.name,
@@ -28,17 +48,13 @@ export async function toUserResponse(user: UserWithGrade): Promise<UserResponseD
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
     grade: toGradeResponse(user.grade),
-    image: await resolveS3ImageUrl(
-      user.imageUrl,
-      user.imageKey,
-      '/images/profile-buyer.png',
-    ),
+    image: toRequiredImage(user.imageUrl, '/images/profile-buyer.png'),
   };
 }
 
-export async function toLikeStoreResponse(
+export function toLikeStoreResponse(
   favorite: StoreFavoriteWithStore,
-): Promise<LikeStoreResponseDto> {
+): LikeStoreResponseDto {
   return {
     storeId: favorite.storeId,
     userId: favorite.userId,
@@ -50,11 +66,7 @@ export async function toLikeStoreResponse(
       detailAddress: favorite.store.detailAddress,
       phoneNumber: favorite.store.phoneNumber,
       content: favorite.store.content,
-      image: await resolveS3ImageUrl(
-        favorite.store.imageUrl,
-        favorite.store.imageKey ?? null,
-        '/images/Mask-group.svg',
-      ),
+      image: toRequiredImage(favorite.store.imageUrl, '/images/Mask-group.svg'),
       createdAt: favorite.store.createdAt.toISOString(),
       updatedAt: favorite.store.updatedAt.toISOString(),
     },

@@ -11,9 +11,14 @@ import {
   toLoginUserPayload,
   toRefreshResponse,
 } from './utils/auth.mapper';
-import { LoginInput, LoginResponseDto, RefreshResponseDto } from './types/auth.type';
+import {
+  LoginInput,
+  LoginResponseDto,
+  RefreshResponseDto,
+} from './types/auth.type';
 import {
   ensureLoginMatched,
+  resolveLoginUserImage,
   ensureRefreshTokenRowValid,
   requireRefreshUser,
   requireRefreshUserId,
@@ -36,8 +41,10 @@ export class AuthService {
       expiresAt: refreshExpiresAt,
     });
 
+    const resolvedImage = await resolveLoginUserImage(user);
+
     return toLoginResponse(
-      await toLoginUserPayload(user),
+      toLoginUserPayload(user, resolvedImage),
       makeAccessToken(user.id),
       refreshToken,
     );

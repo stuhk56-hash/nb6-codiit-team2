@@ -12,6 +12,7 @@ import {
   ProductListQuery,
   ProductWithRelations,
 } from '../types/products.type';
+import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 
 function ensureValidDiscountRate(rate: number | undefined) {
   if (rate === undefined) {
@@ -282,4 +283,19 @@ export function paginateProductInquiries(
 ) {
   const start = (query.page - 1) * query.pageSize;
   return inquiries.slice(start, start + query.pageSize);
+}
+
+export async function resolveProductImage(product: ProductWithRelations) {
+  product.imageUrl = await resolveS3ImageUrl(
+    product.imageUrl,
+    product.imageKey,
+    '/images/Mask-group.svg',
+  );
+
+  return product;
+}
+
+export async function resolveProductsImage(products: ProductWithRelations[]) {
+  await Promise.all(products.map(resolveProductImage));
+  return products;
 }

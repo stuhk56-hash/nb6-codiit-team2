@@ -1,4 +1,3 @@
-import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 import {
   LoginResponseDto,
   LoginUser,
@@ -6,20 +5,17 @@ import {
   RefreshResponseDto,
 } from '../types/auth.type';
 
-export async function toLoginUserPayload(
+export function toLoginUserPayload(
   user: LoginUser,
-): Promise<LoginUserPayloadDto> {
+  image: string,
+): LoginUserPayloadDto {
   return {
     id: user.id,
     email: user.email,
     name: user.name,
     type: user.type,
     points: user.points,
-    image: await resolveS3ImageUrl(
-      user.imageUrl,
-      user.imageKey,
-      '/images/profile-buyer.png',
-    ),
+    image,
     grade: user.grade,
   };
 }
