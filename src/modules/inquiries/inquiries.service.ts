@@ -22,6 +22,7 @@ import {
   ensureUpdateInquiryInput,
   ensureUpdateReplyInput,
   normalizeInquiriesQuery,
+  resolveInquiriesProductImages,
   requireInquiry,
   requireReply,
 } from './utils/inquiries.service.util';
@@ -37,8 +38,9 @@ export class InquiriesService {
       user.type,
       normalized,
     );
+    const resolvedInquiries = await resolveInquiriesProductImages(inquiries);
 
-    return await toInquiryListResponseDto(inquiries, totalCount);
+    return toInquiryListResponseDto(resolvedInquiries, totalCount);
   }
 
   async findOneInquiry(

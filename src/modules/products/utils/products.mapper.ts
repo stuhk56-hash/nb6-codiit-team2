@@ -5,7 +5,6 @@ import { ProductDto } from '../dto/product.dto';
 import { ProductListDto } from '../dto/product-list.dto';
 import { ProductListResponseDto } from '../dto/product-list-response.dto';
 import { StockDto } from '../dto/stock.dto';
-import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 import {
   ProductInquiryWithAnswer,
   ProductWithRelations,
@@ -90,19 +89,13 @@ export function toProductDto(product: ProductWithRelations): ProductDto {
   };
 }
 
-export async function toProductListDto(
-  product: ProductWithRelations,
-): Promise<ProductListDto> {
+export function toProductListDto(product: ProductWithRelations): ProductListDto {
   return {
     id: product.id,
     storeId: product.storeId,
     storeName: product.store.name,
     name: product.name,
-    image: await resolveS3ImageUrl(
-      product.imageUrl,
-      product.imageKey,
-      '/images/Mask-group.svg',
-    ),
+    image: toRequiredImage(product.imageUrl),
     price: product.price,
     discountPrice: calculateDiscountPrice(
       product.price,
@@ -131,18 +124,18 @@ export async function toProductListDto(
   };
 }
 
-export async function toProductListResponseDto(
+export function toProductListResponseDto(
   list: ProductWithRelations[],
-): Promise<ProductListResponseDto> {
+): ProductListResponseDto {
   return {
-    list: await Promise.all(list.map((product) => toProductListDto(product))),
+    list: list.map(toProductListDto),
     totalCount: list.length,
   };
 }
 
-export async function toDetailProductResponseDto(
+export function toDetailProductResponseDto(
   product: ProductWithRelations,
-): Promise<DetailProductResponseDto> {
+): DetailProductResponseDto {
   const rate1Length = product.reviews.filter(
     (review) => review.rating === 1,
   ).length;
@@ -163,11 +156,7 @@ export async function toDetailProductResponseDto(
   return {
     id: product.id,
     name: product.name,
-    image: await resolveS3ImageUrl(
-      product.imageUrl,
-      product.imageKey,
-      '/images/Mask-group.svg',
-    ),
+    image: toRequiredImage(product.imageUrl),
     content: toRequiredText(product.content),
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),

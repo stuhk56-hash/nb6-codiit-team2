@@ -8,7 +8,12 @@ import { verifyPassword } from '../../../lib/constants/password';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { usersRepository } from '../users.repository';
-import { UserUpdateData, UserWithGrade } from '../types/users.type';
+import {
+  StoreFavoriteWithStore,
+  UserUpdateData,
+  UserWithGrade,
+} from '../types/users.type';
+import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 
 export function validateCreateUserInput(data: CreateUserDto) {
   if (!data.name || !data.email || !data.password) {
@@ -75,4 +80,28 @@ export function toUserUpdateData(
     ...(imageUrl !== undefined ? { imageUrl } : {}),
     ...(imageKey !== undefined ? { imageKey } : {}),
   };
+}
+
+export async function resolveUserImage(user: UserWithGrade) {
+  user.imageUrl = await resolveS3ImageUrl(
+    user.imageUrl,
+    user.imageKey,
+    '/images/profile-buyer.png',
+  );
+
+  return user;
+}
+
+export async function resolveLikedStoreImages(likes: StoreFavoriteWithStore[]) {
+  await Promise.all(
+    likes.map(async function (favorite) {
+      favorite.store.imageUrl = await resolveS3ImageUrl(
+        favorite.store.imageUrl,
+        favorite.store.imageKey,
+        '/images/Mask-group.svg',
+      );
+    }),
+  );
+
+  return likes;
 }

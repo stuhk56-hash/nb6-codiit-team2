@@ -7,7 +7,27 @@ import type {
   InquiryAnswerWithRelations,
   InquiryWithRelations,
 } from '../types/inquiries.type';
-import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
+
+function toRequiredImage(value: string | null | undefined) {
+  if (typeof value !== 'string') {
+    return '/images/Mask-group.svg';
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '/images/Mask-group.svg';
+  }
+
+  if (
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://')
+  ) {
+    return trimmed;
+  }
+
+  return '/images/Mask-group.svg';
+}
 
 function toDetailInquiryReplyDto(
   answer: InquiryWithRelations['answer'],
@@ -60,9 +80,7 @@ export function toInquiryReplyResponseDto(
   };
 }
 
-export async function toInquiryItemDto(
-  inquiry: InquiryWithRelations,
-): Promise<InquiryItemDto> {
+export function toInquiryItemDto(inquiry: InquiryWithRelations): InquiryItemDto {
   return {
     id: inquiry.id,
     title: inquiry.title,
@@ -71,11 +89,7 @@ export async function toInquiryItemDto(
     product: {
       id: inquiry.product.id,
       name: inquiry.product.name,
-      image: await resolveS3ImageUrl(
-        inquiry.product.imageUrl,
-        inquiry.product.imageKey,
-        '/images/Mask-group.svg',
-      ),
+      image: toRequiredImage(inquiry.product.imageUrl),
       store: {
         id: inquiry.product.store.id,
         name: inquiry.product.store.name,
@@ -89,12 +103,12 @@ export async function toInquiryItemDto(
   };
 }
 
-export async function toInquiryListResponseDto(
+export function toInquiryListResponseDto(
   inquiries: InquiryWithRelations[],
   totalCount: number,
-): Promise<InquiryListResponseDto> {
+): InquiryListResponseDto {
   return {
-    list: await Promise.all(inquiries.map(toInquiryItemDto)),
+    list: inquiries.map(toInquiryItemDto),
     totalCount,
   };
 }

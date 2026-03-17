@@ -17,14 +17,12 @@ export function toOrderDto(order: OrderWithRelations): OrderResponseDto {
     usedPoints: order.usedPoints,
     earnedPoints: order.earnedPoints,
     createdAt: order.createdAt.toISOString(),
-    orderItems: order.items.map((item) => toOrderItemDto(item)),
+    orderItems: order.items.map(toOrderItemDto),
     payments: toPaymentDto(order.payment),
   };
 }
 
-export function toOrderItemDto(
-  orderItem: OrderItemWithRelations,
-): OrderItemDto {
+export function toOrderItemDto(orderItem: OrderItemWithRelations): OrderItemDto {
   return {
     id: orderItem.id,
     price: orderItem.unitPrice,

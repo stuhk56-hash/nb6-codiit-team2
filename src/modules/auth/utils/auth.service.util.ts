@@ -2,6 +2,7 @@ import { verifyPassword } from '../../../lib/constants/password';
 import { parseUserIdFromToken } from '../../../lib/constants/token';
 import { UnauthorizedError } from '../../../lib/errors/customErrors';
 import { LoginInput, RefreshTokenRow } from '../types/auth.type';
+import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 
 export function ensureLoginMatched(
   user: { passwordHash: string } | null,
@@ -34,4 +35,15 @@ export function requireRefreshUser(user: { id: string } | null) {
   if (!user) {
     throw new UnauthorizedError('리프레시 토큰이 유효하지 않습니다.');
   }
+}
+
+export async function resolveLoginUserImage(user: {
+  imageUrl: string | null;
+  imageKey: string | null;
+}) {
+  return resolveS3ImageUrl(
+    user.imageUrl,
+    user.imageKey,
+    '/images/profile-buyer.png',
+  );
 }

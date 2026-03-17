@@ -10,6 +10,8 @@ import {
   ensureCurrentPassword,
   ensureEmailAvailable,
   requireUserById,
+  resolveLikedStoreImages,
+  resolveUserImage,
   toUserUpdateData,
   validateCreateUserInput,
   validateUpdatePassword,
@@ -28,12 +30,14 @@ export class UsersService {
       gradeId: (await usersRepository.findLowestGrade())?.id,
     });
 
-    return await toUserResponse(created);
+    const resolvedUser = await resolveUserImage(created);
+    return toUserResponse(resolvedUser);
   }
 
   async getMe(userId: string): Promise<UserResponseDto> {
     const user = await requireUserById(userId);
-    return await toUserResponse(user);
+    const resolvedUser = await resolveUserImage(user);
+    return toUserResponse(resolvedUser);
   }
 
   async updateMe(
@@ -63,7 +67,8 @@ export class UsersService {
       ),
     );
 
-    return await toUserResponse(updated);
+    const resolvedUser = await resolveUserImage(updated);
+    return toUserResponse(resolvedUser);
   }
 
   async deleteUser(userId: string): Promise<void> {
@@ -74,7 +79,8 @@ export class UsersService {
   async getLikedStores(userId: string): Promise<LikeStoreResponseDto[]> {
     await requireUserById(userId);
     const likes = await usersRepository.findLikedStores(userId);
-    return await Promise.all(likes.map((favorite) => toLikeStoreResponse(favorite)));
+    const resolvedLikes = await resolveLikedStoreImages(likes);
+    return resolvedLikes.map(toLikeStoreResponse);
   }
 }
 

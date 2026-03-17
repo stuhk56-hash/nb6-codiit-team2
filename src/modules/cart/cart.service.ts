@@ -11,6 +11,10 @@ import { CartItemDetailDto } from './dto/cart-item-detail.dto';
 import { CartItemDto } from './dto/cart-item.dto';
 import { UpdateCartBySizesDto } from './dto/update-cart-by-sizes.dto';
 import { NotFoundError, BadRequestError } from '../../lib/errors/customErrors';
+import {
+  resolveCartImages,
+  resolveCartItemDetailImage,
+} from './utils/cart.service.util';
 
 // 장바구니 생성
 export async function createCart(buyerId: string): Promise<CartResponseDto> {
@@ -31,7 +35,8 @@ export async function getCart(buyerId: string): Promise<CartWithItemsDto> {
     throw new NotFoundError('장바구니를 찾을 수 없습니다.');
   }
 
-  return toCartWithItemsDto(cart);
+  const resolvedCart = await resolveCartImages(cart);
+  return toCartWithItemsDto(resolvedCart);
 }
 
 //장바구니에 상품 추가 또는 수량 수정
@@ -108,7 +113,8 @@ export async function getCartItemDetail(
     throw new NotFoundError('장바구니 아이템을 찾을 수 없습니다.');
   }
 
-  return toCartItemDetailDto(cartItem);
+  const resolvedCartItem = await resolveCartItemDetailImage(cartItem);
+  return toCartItemDetailDto(resolvedCartItem);
 }
 
 //장바구니 아이템 삭제

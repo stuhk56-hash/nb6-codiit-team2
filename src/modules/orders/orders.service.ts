@@ -26,10 +26,11 @@ export async function getOrders(
     page,
     status,
   );
+  const resolvedOrders = await orderServiceUtil.resolveOrdersItemImages(orders);
   const totalPages = Math.ceil(total / limit);
 
   return {
-    data: orders.map((order) => toOrderDto(order)),
+    data: resolvedOrders.map(toOrderDto),
     meta: {
       total,
       page,
@@ -56,7 +57,8 @@ export async function getOrdersById(
 
   orderServiceUtil.validateOrderOwnership(order.buyerId, buyerId);
 
-  return toOrderDto(order);
+  const resolvedOrder = await orderServiceUtil.resolveOrderItemImages(order);
+  return toOrderDto(resolvedOrder);
 }
 
 //주문 생성 POST /api/orders (트랜잭션)
@@ -100,7 +102,8 @@ export async function createOrder(
     createOrderDto.usePoint,
   );
 
-  return toOrderDto(order!);
+  const resolvedOrder = await orderServiceUtil.resolveOrderItemImages(order!);
+  return toOrderDto(resolvedOrder);
 }
 
 //주문 정보 수정 PATCH /api/orders/{orderId}
@@ -129,7 +132,9 @@ export async function updateOrder(
 
   const updatedOrder = await orderRepository.updateOrder(orderId, updateData);
 
-  return toOrderDto(updatedOrder);
+  const resolvedOrder =
+    await orderServiceUtil.resolveOrderItemImages(updatedOrder);
+  return toOrderDto(resolvedOrder);
 }
 
 //주문 취소(트랜잭션) DELETE /api/orders/{orderId}

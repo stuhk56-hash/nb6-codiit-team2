@@ -5,11 +5,13 @@ import {
   NotFoundError,
 } from '../../../lib/errors/customErrors';
 import type {
+  MyStoreProductRow,
   MyStoreProductsQuery,
   MyStoreWithRelations,
   NormalizedMyStoreProductsQuery,
   StoreWithCounts,
 } from '../types/stores.type';
+import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 import {
   DEFAULT_MY_STORE_PRODUCTS_PAGE,
   DEFAULT_MY_STORE_PRODUCTS_PAGE_SIZE,
@@ -68,4 +70,28 @@ export function ensureStoreUpdateInput(
   if (!hasBody && !image) {
     throw new BadRequestError();
   }
+}
+
+export async function resolveStoreImage<T extends StoreWithCounts>(store: T) {
+  store.imageUrl = await resolveS3ImageUrl(
+    store.imageUrl,
+    store.imageKey,
+    '/images/Mask-group.svg',
+  );
+
+  return store;
+}
+
+export async function resolveMyStoreProductImages(products: MyStoreProductRow[]) {
+  await Promise.all(
+    products.map(async function (product) {
+      product.imageUrl = await resolveS3ImageUrl(
+        product.imageUrl,
+        product.imageKey,
+        '/images/Mask-group.svg',
+      );
+    }),
+  );
+
+  return products;
 }
