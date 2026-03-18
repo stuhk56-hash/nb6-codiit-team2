@@ -6,6 +6,7 @@ import { ordersRouter } from './modules/orders/orders.module';
 import { cartRouter } from './modules/cart/cart.module';
 import { s3Router } from './modules/s3/s3.module';
 import { productsRouter } from './modules/products/products.module';
+import { inquiriesRouter } from './modules/inquiries/inquiries.module';
 
 export function setupRoutes(app: Express) {
   app.use('/api/auth', authRouter);
@@ -13,6 +14,7 @@ export function setupRoutes(app: Express) {
   app.use('/api/orders', ordersRouter);
   app.use('/api/cart', cartRouter);
   app.use('/api/products', productsRouter);
+  app.use('/api/inquiries', inquiriesRouter);
   app.use('/api/metadata', metadataRouter);
   app.use('/api/s3', s3Router);
 }
