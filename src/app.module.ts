@@ -11,6 +11,7 @@ import {
   productReviewsRouter,
   reviewsRouter,
 } from './modules/reviews/reviews.module';
+import { inquiriesRouter } from './modules/inquiries/inquiries.module';
 
 export function setupRoutes(app: Express) {
   app.use('/api/auth', authRouter);
@@ -20,6 +21,7 @@ export function setupRoutes(app: Express) {
   app.use('/api/products', productsRouter);
   app.use('/api/inquiries', inquiriesRouter);
   app.use('/api/product', productReviewsRouter);
+  app.use('/api/inquiries', inquiriesRouter);
   app.use('/api/review', reviewsRouter);
   app.use('/api/metadata', metadataRouter);
   app.use('/api/s3', s3Router);
