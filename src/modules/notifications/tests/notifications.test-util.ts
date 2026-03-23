@@ -4,11 +4,13 @@ import {
   defaultNotFoundHandler,
   globalErrorHandler,
 } from '../../../middlewares/errorHandler';
+import { notificationsRouter } from '../notifications.module';
 
 export function createNotificationsTestApp() {
   const app = express();
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  app.use('/api/notifications', notificationsRouter);
   app.use(defaultNotFoundHandler);
   app.use(globalErrorHandler);
   return app;

@@ -1,4 +1,4 @@
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { create as structCreate } from 'superstruct';
 import { requireAuthUser } from '../../lib/request/auth-user';
 import type { AuthenticatedRequest } from '../../middlewares/authenticate';
@@ -24,22 +24,20 @@ export async function createReview(req: AuthenticatedRequest, res: Response) {
 }
 
 export async function findProductReviews(
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
 ) {
-  const authUser = requireAuthUser(req);
   const params = structCreate(req.params, ProductReviewParamsStruct);
   const query: ReviewsQuery = structCreate(req.query, ReviewListQueryStruct);
 
-  const reviews = await reviewsService.findProductReviews(authUser, params.productId, query);
+  const reviews = await reviewsService.findProductReviews(params.productId, query);
   res.send(reviews);
 }
 
-export async function findReviewDetail(req: AuthenticatedRequest, res: Response) {
-  const authUser = requireAuthUser(req);
+export async function findReviewDetail(req: Request, res: Response) {
   const params = structCreate(req.params, ReviewParamsStruct);
 
-  const review = await reviewsService.findReviewDetail(authUser, params.reviewId);
+  const review = await reviewsService.findReviewDetail(params.reviewId);
   res.send(review);
 }
 

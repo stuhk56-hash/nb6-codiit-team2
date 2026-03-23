@@ -12,7 +12,7 @@ import {
 export const reviewsRouter = Router();
 export const productReviewsRouter = Router();
 
-reviewsRouter.get('/:reviewId', authenticate(), withAsync(findReviewDetail));
+reviewsRouter.get('/:reviewId', withAsync(findReviewDetail));
 reviewsRouter.patch('/:reviewId', authenticate(), withAsync(updateReview));
 reviewsRouter.delete('/:reviewId', authenticate(), withAsync(deleteReview));
 
@@ -23,6 +23,5 @@ productReviewsRouter.post(
 );
 productReviewsRouter.get(
   '/:productId/reviews',
-  authenticate(),
   withAsync(findProductReviews),
 );

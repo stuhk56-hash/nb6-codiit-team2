@@ -8,6 +8,12 @@ import { s3Router } from './modules/s3/s3.module';
 import { productsRouter } from './modules/products/products.module';
 import { inquiriesRouter } from './modules/inquiries/inquiries.module';
 import {
+  dashboardRouter,
+} from './modules/dashboard/dashboard.module';
+import {
+  notificationsRouter,
+} from './modules/notifications/notifications.module';
+import {
   productReviewsRouter,
   reviewsRouter,
 } from './modules/reviews/reviews.module';
@@ -22,6 +28,8 @@ export function setupRoutes(app: Express) {
   app.use('/api/product', productReviewsRouter);
   app.use('/api/inquiries', inquiriesRouter);
   app.use('/api/review', reviewsRouter);
+  app.use('/api/dashboard', dashboardRouter);
+  app.use('/api/notifications', notificationsRouter);
   app.use('/api/metadata', metadataRouter);
   app.use('/api/s3', s3Router);
 }

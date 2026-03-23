@@ -64,7 +64,6 @@ export class ReviewsService {
   }
 
   async findProductReviews(
-    _user: AuthUser,
     productId: string,
     query: ReviewsQuery,
   ): Promise<ReviewListResponseDto> {
@@ -79,7 +78,6 @@ export class ReviewsService {
   }
 
   async findReviewDetail(
-    _user: AuthUser,
     reviewId: string,
   ): Promise<ReviewDetailResponseDto> {
     const review = requireReview(
