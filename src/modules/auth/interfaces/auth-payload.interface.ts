@@ -1,4 +1,3 @@
-/*2026-03-23*/
 export interface AuthPayload {
   id: string; // 유저의 고유 ID (CUID 등)
   email: string; // 유저 이메일

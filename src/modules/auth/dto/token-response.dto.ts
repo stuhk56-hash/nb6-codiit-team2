@@ -1,4 +1,3 @@
-/*2026-03-23 */
 import { IsNotEmpty, IsString, IsNumber, IsOptional } from 'class-validator';
 import { UserRole } from '../../users/enums/user-role.enum';
 

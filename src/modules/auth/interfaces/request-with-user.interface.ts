@@ -1,4 +1,3 @@
-/*2026-03-23*/
 import { Request } from 'express';
 import { AuthPayload } from './auth-payload.interface';
 
