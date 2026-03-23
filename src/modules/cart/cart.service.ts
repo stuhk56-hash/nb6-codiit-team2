@@ -29,7 +29,13 @@ export async function createCart(buyerId: string): Promise<CartResponseDto> {
 
 //장바구니 조회 (아이템 포함)
 export async function getCart(buyerId: string): Promise<CartWithItemsDto> {
-  const cart = await cartRepository.findCartByBuyerIdWithItems(buyerId);
+  let cart = await cartRepository.findCartByBuyerIdWithItems(buyerId);
+
+  // 장바구니가 없으면 생성
+  if (!cart) {
+    const newCart = await cartRepository.createCart(buyerId);
+    cart = await cartRepository.findCartByBuyerIdWithItems(newCart.id);
+  }
 
   if (!cart) {
     throw new NotFoundError('장바구니를 찾을 수 없습니다.');
@@ -50,6 +56,12 @@ export async function updateCart(
     updateDto.sizes.length === 0
   ) {
     throw new BadRequestError('잘못된 요청입니다.');
+  }
+
+  // 상품 존재 여부 확인
+  const product = await cartRepository.findProductById(updateDto.productId);
+  if (!product) {
+    throw new BadRequestError('존재하지 않는 상품입니다.');
   }
 
   const cart = await cartRepository.findCartByBuyerId(buyerId);
@@ -101,6 +113,7 @@ export async function updateCart(
 //장바구니 아이템 상세 조회
 
 export async function getCartItemDetail(
+  buyerId: string,
   cartItemId: string,
 ): Promise<CartItemDetailDto> {
   if (!cartItemId) {
@@ -113,13 +126,21 @@ export async function getCartItemDetail(
     throw new NotFoundError('장바구니 아이템을 찾을 수 없습니다.');
   }
 
+  // 현재 구매자의 장바구니에 속한 아이템인지 확인
+  if (cartItem.cart.buyerId !== buyerId) {
+    throw new NotFoundError('장바구니 아이템을 찾을 수 없습니다.');
+  }
+
   const resolvedCartItem = await resolveCartItemDetailImage(cartItem);
   return toCartItemDetailDto(resolvedCartItem);
 }
 
 //장바구니 아이템 삭제
 
-export async function deleteCartItem(cartItemId: string): Promise<void> {
+export async function deleteCartItem(
+  buyerId: string,
+  cartItemId: string,
+): Promise<void> {
   if (!cartItemId) {
     throw new BadRequestError('잘못된 요청입니다.');
   }
@@ -127,6 +148,11 @@ export async function deleteCartItem(cartItemId: string): Promise<void> {
   const cartItem = await cartRepository.findCartItemById(cartItemId);
 
   if (!cartItem) {
+    throw new NotFoundError('장바구니 아이템을 찾을 수 없습니다.');
+  }
+
+  // 현재 구매자의 장바구니에 속한 아이템인지 확인
+  if (cartItem.cart.buyerId !== buyerId) {
     throw new NotFoundError('장바구니 아이템을 찾을 수 없습니다.');
   }
 

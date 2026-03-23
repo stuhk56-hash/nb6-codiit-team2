@@ -80,6 +80,17 @@ export async function createOrder(
     throw new BadRequestError('주문 상품이 없습니다.');
   }
 
+  // quantity 검증 추가
+  for (const item of createOrderDto.orderItems) {
+    if (
+      !Number.isInteger(item.quantity) ||
+      item.quantity <= 0 ||
+      item.quantity > 999
+    ) {
+      throw new BadRequestError('유효하지 않은 수량입니다.');
+    }
+  }
+
   //상품검증, 가격계산
   const { processedItems, totalPrice } =
     await orderServiceUtil.validateAndCalculateOrderItems(
