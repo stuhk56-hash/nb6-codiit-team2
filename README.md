@@ -21,6 +21,28 @@ npm install
 npm run start
 ```
 
+### Test database
+
+```bash
+npm run test:db:up
+dotenv -e .env.test -- npm run prisma:migrate:deploy
+npm run test:auth:e2e
+```
+
+Stop and remove the test database with:
+
+```bash
+npm run test:db:down
+```
+
+If Docker is unavailable on macOS with Homebrew PostgreSQL installed, use:
+
+```bash
+npm run test:db:up:local
+dotenv -e .env.test -- npm run prisma:migrate:deploy
+npm run test:auth:e2e
+```
+
 ## Available Scripts
 
 - `build`: Compiles the TypeScript code.

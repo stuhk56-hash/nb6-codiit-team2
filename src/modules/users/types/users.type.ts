@@ -1,7 +1,7 @@
 import { AuthenticatedRequest } from '../../../middlewares/authenticate';
-import { UserEntity } from '../entities/user.entity';
+import { User } from '@prisma/client';
 
-export type UserWithGrade = UserEntity & {
+export type UserWithGrade = User & {
   grade: { id: string; name: string; rate: number; minAmount: number } | null;
 };
 

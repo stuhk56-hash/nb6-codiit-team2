@@ -1,7 +1,7 @@
 import { Request } from 'express';
-import { UserEntity } from '../modules/users/entities/user.entity';
+import { User } from '@prisma/client';
 
-export type AuthenticatedUser = UserEntity;
+export type AuthenticatedUser = User;
 
 export interface AuthenticatedRequest extends Request {
   user?: AuthenticatedUser;

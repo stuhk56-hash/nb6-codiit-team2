@@ -1,5 +1,6 @@
 import { LikeStoreResponseDto } from '../dto/like-store-response.dto';
 import { UserGradeDto, UserResponseDto } from '../dto/user-response.dto';
+import { UserGradeName } from '../enums/user-grade.enum';
 import { StoreFavoriteWithStore, UserWithGrade } from '../types/users.type';
 
 function toRequiredImage(value: string | null | undefined, fallback: string) {
@@ -35,6 +36,8 @@ function toGradeResponse(
     id: grade.id,
     rate: grade.rate,
     minAmount: grade.minAmount,
+    isGreenGrade: grade.name === UserGradeName.GREEN,
+    label: `${grade.name.toUpperCase()} (${grade.rate}%)`,
   };
 }
 

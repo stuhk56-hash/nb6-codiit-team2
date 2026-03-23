@@ -25,6 +25,9 @@ npm run dev
 NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/api
 ```
 
+환경변수를 만들지 않아도 프론트엔드는 기본적으로 `http://localhost:3001/api`를 사용합니다.
+다른 주소를 쓰려면 `.env` 또는 `http://localhost:3000/setting`에서 변경하면 됩니다.
+
 
 ## 프로덕션 실행
 

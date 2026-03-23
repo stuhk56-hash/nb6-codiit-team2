@@ -1,7 +1,29 @@
 import { NextFunction, Request, Response } from 'express';
 
+function parseAllowedOrigins() {
+  return (process.env.CORS_ORIGIN ?? '*')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+function resolveAllowedOrigin(req: Request) {
+  const requestOrigin = req.headers.origin;
+  const allowedOrigins = parseAllowedOrigins();
+
+  if (allowedOrigins.includes('*')) {
+    return requestOrigin ?? '*';
+  }
+
+  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    return requestOrigin;
+  }
+
+  return allowedOrigins[0] ?? '*';
+}
+
 export const corsMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const allowedOrigin = process.env.CORS_ORIGIN ?? '*';
+  const allowedOrigin = resolveAllowedOrigin(req);
 
   res.header('Access-Control-Allow-Origin', allowedOrigin);
   res.header('Vary', 'Origin');

@@ -1,4 +1,4 @@
-import { UserEntity } from '../../users/entities/user.entity';
+import { User } from '@prisma/client';
 
 export type LoginInput = {
   email: string;
@@ -11,7 +11,7 @@ export type RefreshTokenRow = {
   expiresAt: Date;
 };
 
-export type LoginUser = UserEntity & {
+export type LoginUser = User & {
   grade: {
     id: string;
     name: string;
