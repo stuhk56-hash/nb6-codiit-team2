@@ -1,9 +1,6 @@
 import { Router } from 'express';
 import { withAsync } from '../../lib/withAsync';
-import {
-  authenticate,
-  authenticateOptional,
-} from '../../middlewares/authenticate';
+import { authenticate } from '../../middlewares/authenticate';
 import {
   create,
   createInquiry,
@@ -32,8 +29,4 @@ productsRouter.post(
   authenticate(),
   withAsync(createInquiry),
 );
-productsRouter.get(
-  '/:productId/inquiries',
-  authenticateOptional(),
-  withAsync(getListInquiry),
-);
+productsRouter.get('/:productId/inquiries', withAsync(getListInquiry));

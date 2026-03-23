@@ -65,16 +65,9 @@ export async function createInquiry(req: AuthenticatedRequest, res: Response) {
   res.status(201).send(inquiry);
 }
 
-export async function getListInquiry(
-  req: AuthenticatedRequest,
-  res: Response,
-) {
+export async function getListInquiry(req: Request, res: Response) {
   const params = structCreate(req.params, ProductParamsStruct);
   const query = structCreate(req.query, ProductInquiryListQueryStruct);
-  const result = await productsService.getListInquiry(
-    params.productId,
-    query,
-    req.user,
-  );
+  const result = await productsService.getListInquiry(params.productId, query);
   res.send(result);
 }

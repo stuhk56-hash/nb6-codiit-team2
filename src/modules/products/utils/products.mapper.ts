@@ -14,31 +14,6 @@ import {
   calculateDiscountPrice,
 } from './products.util';
 
-type InquiryViewerContext = {
-  viewerId?: string;
-  productSellerId?: string;
-};
-
-function canReadSecretInquiry(
-  inquiry: ProductInquiryWithAnswer,
-  viewer: InquiryViewerContext,
-) {
-  // 비밀글이 아니면 누구나 조회 가능
-  if (!inquiry.isSecret) {
-    return true;
-  }
-
-  if (!viewer.viewerId) {
-    return false;
-  }
-
-  return (
-    // 비밀글은 작성자 또는 해당 상품의 판매자만 원문 조회 가능
-    viewer.viewerId === inquiry.buyerId ||
-    viewer.viewerId === viewer.productSellerId
-  );
-}
-
 function toRequiredImage(value: string | null | undefined) {
   if (typeof value !== 'string') {
     return '/images/Mask-group.svg';
@@ -114,7 +89,9 @@ export function toProductDto(product: ProductWithRelations): ProductDto {
   };
 }
 
-export function toProductListDto(product: ProductWithRelations): ProductListDto {
+export function toProductListDto(
+  product: ProductWithRelations,
+): ProductListDto {
   return {
     id: product.id,
     storeId: product.storeId,
@@ -222,16 +199,13 @@ export function toDetailProductResponseDto(
 
 export function toProductInquiryListItem(
   inquiry: ProductInquiryWithAnswer,
-  viewer: InquiryViewerContext = {},
 ): ProductInquiryResponseDto {
-  const canRead = canReadSecretInquiry(inquiry, viewer);
-
   return {
     id: inquiry.id,
     productId: inquiry.productId,
     userId: inquiry.buyerId,
-    title: canRead ? inquiry.title : '비밀 문의입니다.',
-    content: canRead ? inquiry.content : '비밀 문의입니다.',
+    title: inquiry.title,
+    content: inquiry.content,
     isSecret: inquiry.isSecret,
     status: inquiry.status,
     createdAt: inquiry.createdAt.toISOString(),
@@ -240,7 +214,7 @@ export function toProductInquiryListItem(
       id: inquiry.buyer.id,
       name: inquiry.buyer.name,
     },
-    reply: canRead && inquiry.answer
+    reply: inquiry.answer
       ? {
           id: inquiry.answer.id,
           content: inquiry.answer.content,
@@ -257,17 +231,15 @@ export function toProductInquiryListItem(
 
 export function toProductInquiryResponseDto(
   inquiry: ProductInquiryWithAnswer,
-  viewer: InquiryViewerContext = {},
 ): ProductInquiryResponseDto {
-  return toProductInquiryListItem(inquiry, viewer);
+  return toProductInquiryListItem(inquiry);
 }
 
 export function toProductInquiryListResponseDto(
   list: ProductInquiryWithAnswer[],
-  viewer: InquiryViewerContext = {},
 ): ProductInquiryListResponseDto {
   return {
-    list: list.map((inquiry) => toProductInquiryListItem(inquiry, viewer)),
+    list: list.map((inquiry) => toProductInquiryListItem(inquiry)),
     totalCount: list.length,
   };
 }

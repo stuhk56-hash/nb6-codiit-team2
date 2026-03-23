@@ -32,31 +32,3 @@ export function authenticate() {
     next();
   };
 }
-
-export function authenticateOptional() {
-  return async function authenticateOptionalMiddleware(
-    req: AuthenticatedRequest,
-    _res: Response,
-    next: NextFunction,
-  ) {
-    // 비로그인 사용자도 통과시키되, 유효한 토큰이 있으면 req.user를 채워준다.
-    const token = extractAccessToken(req);
-    if (!token) {
-      next();
-      return;
-    }
-
-    const userId = parseUserIdFromToken(token, 'access');
-    if (!userId) {
-      next();
-      return;
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (user) {
-      req.user = user;
-    }
-
-    next();
-  };
-}
