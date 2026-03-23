@@ -149,10 +149,6 @@ export async function createOrderWithTransaction(
         },
       });
 
-      if (!currentStock || currentStock.quantity < item.quantity) {
-        throw new Error('재고가 부족합니다. 주문이 취소되었습니다.');
-      }
-
       await tx.productStock.update({
         where: {
           productId_sizeId: {
@@ -205,10 +201,6 @@ export async function createOrderWithTransaction(
         grade: true, // 현재 등급 조회
       },
     });
-
-    if (!user) {
-      throw new Error('사용자를 찾을 수 없습니다.');
-    }
 
     // 현재 등급의 적립률로 포인트 계산 (구매 전 등급)
     const earnedPoints = Math.floor(

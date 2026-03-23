@@ -119,3 +119,10 @@ export async function deleteCartItem(cartItemId: string) {
     where: { id: cartItemId },
   });
 }
+
+// 상품 존재 여부 확인
+export async function findProductById(productId: string) {
+  return prisma.product.findUnique({
+    where: { id: productId },
+  });
+}
