@@ -832,7 +832,7 @@ describe('주문 API 통합 테스트', () => {
         await seedPayment({
           orderId: order1.id,
           price: 100000,
-          status: 'Paid',
+          status: 'CompletedPayment',
         });
 
         const order2 = await seedOrder({
@@ -854,7 +854,10 @@ describe('주문 API 통합 테스트', () => {
         expect(res.status).toBe(200);
         expect(res.body.data).toHaveLength(1);
         expect(res.body.data[0]).toHaveProperty('payments');
-        expect(res.body.data[0].payments).toHaveProperty('status', 'Paid');
+        expect(res.body.data[0].payments).toHaveProperty(
+          'status',
+          'CompletedPayment',
+        );
       });
 
       test('빈 주문 목록을 반환한다', async () => {
@@ -1071,7 +1074,11 @@ describe('주문 API 통합 테스트', () => {
           phoneNumber: '010-1234-5678',
           address: '서울시 강남구',
         });
-        await seedPayment({ orderId: order.id, price: 100000, status: 'Paid' });
+        await seedPayment({
+          orderId: order.id,
+          price: 100000,
+          status: 'CompletedPayment',
+        });
 
         const res = await request(app)
           .delete(`/api/orders/${order.id}`)

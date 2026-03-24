@@ -121,7 +121,7 @@ describe('주문 서비스 유닛 테스트', () => {
           id: 'payment-123',
           orderId: 'order-123',
           price: 99000,
-          status: 'Paid' as const,
+          status: 'CompletedPayment' as const,
           createdAt: now,
           updatedAt: now,
         },
@@ -379,7 +379,7 @@ describe('주문 서비스 유닛 테스트', () => {
             id: 'payment-123',
             orderId: 'order-123',
             price: 99000,
-            status: 'Paid' as const,
+            status: 'CompletedPayment' as const,
             createdAt: now,
             updatedAt: now,
           },
@@ -428,14 +428,19 @@ describe('주문 서비스 유닛 테스트', () => {
         total: 0,
       });
 
-      const result = await ordersService.getOrders(buyerId, 10, 1, 'Paid');
+      const result = await ordersService.getOrders(
+        buyerId,
+        10,
+        1,
+        'CompletedPayment',
+      );
 
       expect(result.data).toHaveLength(0);
       expect(mockedRepository.findOrdersByUserId).toHaveBeenCalledWith(
         buyerId,
         10,
         1,
-        'Paid',
+        'CompletedPayment',
       );
     });
   });
@@ -462,7 +467,7 @@ describe('주문 서비스 유닛 테스트', () => {
           id: 'payment-123',
           orderId,
           price: 99000,
-          status: 'Paid' as const,
+          status: 'CompletedPayment' as const,
           createdAt: now,
           updatedAt: now,
         },
@@ -511,7 +516,7 @@ describe('주문 서비스 유닛 테스트', () => {
           id: 'payment-123',
           orderId,
           price: 100000,
-          status: 'Paid' as const,
+          status: 'CompletedPayment' as const,
           createdAt: now,
           updatedAt: now,
         },
@@ -562,7 +567,7 @@ describe('주문 서비스 유닛 테스트', () => {
           id: 'payment-123',
           orderId,
           price: 99000,
-          status: 'Paid' as const,
+          status: 'CompletedPayment' as const,
           createdAt: now,
           updatedAt: now,
         },
@@ -616,7 +621,7 @@ describe('주문 서비스 유닛 테스트', () => {
           id: 'payment-123',
           orderId,
           price: 99000,
-          status: 'Paid' as const,
+          status: 'CompletedPayment' as const,
           createdAt: now,
           updatedAt: now,
         },
@@ -694,7 +699,7 @@ describe('주문 서비스 유닛 테스트', () => {
           id: 'payment-123',
           orderId,
           price: 100000,
-          status: 'Paid' as const,
+          status: 'CompletedPayment' as const,
           createdAt: now,
           updatedAt: now,
         },
@@ -827,7 +832,7 @@ describe('주문 서비스 유닛 테스트', () => {
           id: 'payment-123',
           orderId,
           price: 99000,
-          status: 'Paid' as const,
+          status: 'CompletedPayment' as const,
           createdAt: now,
           updatedAt: now,
         },
