@@ -18,7 +18,25 @@ npm install
 ### Running the application
 
 ```bash
-npm run start
+npm run db:setup
+npm run start:dev
+```
+
+`DATABASE_URL` in `.env` points to `postgresql://apple@localhost:5432/codiit`, so the development database must be started and migrated before the app can read schema metadata.
+
+### Development database
+
+```bash
+npm run db:up
+npm run db:migrate
+npm run prisma:generate
+```
+
+Reset and recreate the local development database with:
+
+```bash
+npm run db:reset
+npm run db:migrate
 ```
 
 ### Test database

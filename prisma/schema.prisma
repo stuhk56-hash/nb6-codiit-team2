@@ -30,10 +30,10 @@ enum OrderStatus {
 
 // 결제 상태(실결제 연동 없이 상태 흐름 테스트용)
 enum PaymentStatus {
-  Pending
-  Paid
-  Failed
-  Canceled
+  WaitingPayment      // 결제 대기
+  CompletedPayment    // 결제 완료
+  FailedPayment       // 결제 실패
+  CanceledPayment     // 결제 취소
 }
 
 // 회원 정보
@@ -501,7 +501,7 @@ model Payment {
   // 결제 금액
   price  Int
   // 결제 상태
-  status PaymentStatus @default(Pending)
+  status PaymentStatus @default(WaitingPayment)
 
   // 생성 시각
   createdAt DateTime @default(now())
