@@ -23,7 +23,20 @@ import {
   requireRefreshUser,
   requireRefreshUserId,
 } from './utils/auth.service.util';
+import { scryptSync, timingSafeEqual } from 'crypto';
 
+const HASH_PREFIX = 'scrypt';
+const SCRYPT_KEYLEN = 64;
+
+function verifyPassword(password: string, hash: string): boolean {
+  if (!hash.startsWith(`${HASH_PREFIX}$`)) {
+    return password === hash;
+  }
+  const [, salt, key] = hash.split('$');
+  const keyBuffer = Buffer.from(key, 'hex');
+  const derivedKey = scryptSync(password, salt, SCRYPT_KEYLEN);
+  return timingSafeEqual(keyBuffer, derivedKey);
+}
 export class AuthService {
   async login(data: LoginInput): Promise<LoginResponseDto> {
     const user = await authRepository.findUserByEmailWithGrade(data.email);
@@ -68,6 +81,15 @@ export class AuthService {
     if (!refreshToken) return;
 
     await authRepository.revokeRefreshToken(hashToken(refreshToken));
+  }
+
+  async validateUser(email: string, pass: string): Promise<any> {
+    const user = await authRepository.findUserByEmail(email);
+    if (user && verifyPassword(pass, user.passwordHash)) {
+      const { passwordHash, ...result } = user;
+      return result;
+    }
+    return null;
   }
 }
 

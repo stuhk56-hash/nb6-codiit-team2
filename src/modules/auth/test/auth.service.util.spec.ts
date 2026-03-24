@@ -1,6 +1,6 @@
 import { hashPassword } from '../../../lib/constants/password';
 import { UnauthorizedError } from '../../../lib/errors/customErrors';
-import { ensureLoginMatched } from './auth.service.util';
+import { ensureLoginMatched } from '../utils/auth.service.util';
 
 describe('auth.service.util', () => {
   describe('ensureLoginMatched', () => {

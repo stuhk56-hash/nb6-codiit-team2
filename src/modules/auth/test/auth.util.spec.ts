@@ -3,7 +3,7 @@ import {
   extractAccessToken,
   extractRefreshToken,
   getRefreshCookieOptions,
-} from './auth.util';
+} from '../utils/auth.util';
 
 describe('auth.util', () => {
   describe('extractAccessToken', () => {

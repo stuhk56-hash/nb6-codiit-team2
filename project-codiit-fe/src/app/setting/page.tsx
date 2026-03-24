@@ -2,6 +2,7 @@
 
 import Button from "@/components/button/Button";
 import Input from "@/components/input/Input";
+import { getApiBaseUrl } from "@/lib/functions/getApiBaseUrl";
 import { baseUrlSchema, urlFormData } from "@/lib/schemas/baseURL.schemas";
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { useApiStore } from "@/stores/useApiStore";
@@ -15,6 +16,9 @@ const SettingPage = () => {
     formState: { errors },
   } = useForm<urlFormData>({
     resolver: zodResolver(baseUrlSchema),
+    defaultValues: {
+      baseURL: getApiBaseUrl(useApiStore.getState().baseURL),
+    },
   });
 
   const setBaseURL = useApiStore((state) => state.setBaseURL); // ✅ 상태 설정 함수 가져오기

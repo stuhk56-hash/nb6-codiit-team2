@@ -3,6 +3,8 @@ export interface UserGradeDto {
   id: string;
   rate: number;
   minAmount: number;
+  isGreenGrade: boolean;
+  label: string;
 }
 
 export interface UserResponseDto {

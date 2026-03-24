@@ -1,6 +1,12 @@
 import { prisma } from '../../lib/constants/prismaClient';
 
 export class AuthRepository {
+  findUserByEmail(email: string) {
+    return prisma.user.findUnique({
+      where: { email },
+    });
+  }
+
   findUserByEmailWithGrade(email: string) {
     return prisma.user.findUnique({
       where: { email },

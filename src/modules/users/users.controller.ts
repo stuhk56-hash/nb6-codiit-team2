@@ -7,7 +7,9 @@ import {
   UpdateMeBodyStruct,
 } from './structs/users.struct';
 import { UsersMulterRequest } from './types/users.type';
-import { usersService } from './users.service';
+import { UsersService } from './users.service';
+
+const usersService = new UsersService();
 
 export async function create(req: Request, res: Response) {
   const body = structCreate(req.body, CreateUserBodyStruct);

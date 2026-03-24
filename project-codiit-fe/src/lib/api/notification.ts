@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from "@/lib/functions/getApiBaseUrl";
 import { useApiStore } from "@/stores/useApiStore";
 import { useUserStore } from "@/stores/userStore";
 import { NotificationResponse } from "@/types/notification";
@@ -7,7 +8,7 @@ import { getAxiosInstance } from "./axiosInstance";
 // SSE 연결
 export const connectNotificationSSE = () => {
   const token = useUserStore.getState().accessToken;
-  const baseURL = useApiStore.getState().baseURL;
+  const baseURL = getApiBaseUrl(useApiStore.getState().baseURL);
   return new EventSourcePolyfill(`${baseURL}/notifications/sse`, {
     headers: {
       Authorization: `Bearer ${token}`,

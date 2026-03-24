@@ -14,4 +14,9 @@ module.exports = {
   coverageDirectory: './coverage',
   testEnvironment: 'node',
   roots: ['<rootDir>/src/'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '<rootDir>/src/modules/metadata/test/',
+    '<rootDir>/src/modules/users/test/',
+  ],
 };

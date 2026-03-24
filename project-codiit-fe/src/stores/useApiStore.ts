@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { getApiBaseUrl } from "@/lib/functions/getApiBaseUrl";
 import { normalizeApiBaseUrl } from "@/lib/functions/normalizeApiBaseUrl";
 
 interface ApiStore {
@@ -10,7 +11,7 @@ interface ApiStore {
 export const useApiStore = create<ApiStore>()(
   persist(
     (set) => ({
-      baseURL: normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || ""),
+      baseURL: getApiBaseUrl(),
       setBaseURL: (url) => set({ baseURL: normalizeApiBaseUrl(url) }),
     }),
     {

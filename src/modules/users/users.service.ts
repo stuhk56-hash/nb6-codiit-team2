@@ -1,11 +1,14 @@
-import { usersRepository } from './users.repository';
 import { hashPassword } from '../../lib/constants/password';
-import { CreateUserDto } from './dto/create-user.dto';
-import { LikeStoreResponseDto } from './dto/like-store-response.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { UserResponseDto } from './dto/user-response.dto';
-import { toLikeStoreResponse, toUserResponse } from './utils/users.mapper';
 import { s3Service } from '../s3/s3.service';
+import type { CreateUserDto } from './dto/create-user.dto';
+import type { LikeStoreResponseDto } from './dto/like-store-response.dto';
+import type { UpdateUserDto } from './dto/update-user.dto';
+import type { UserResponseDto } from './dto/user-response.dto';
+import { usersRepository } from './users.repository';
+import {
+  toLikeStoreResponse,
+  toUserResponse,
+} from './utils/users.mapper';
 import {
   ensureCurrentPassword,
   ensureEmailAvailable,
@@ -22,12 +25,14 @@ export class UsersService {
     validateCreateUserInput(data);
     await ensureEmailAvailable(data.email);
 
+    const defaultGrade = await usersRepository.findLowestGrade();
+
     const created = await usersRepository.create({
       type: data.type ?? 'BUYER',
       name: data.name,
       email: data.email,
       passwordHash: hashPassword(data.password),
-      gradeId: (await usersRepository.findLowestGrade())?.id,
+      ...(defaultGrade ? { gradeId: defaultGrade.id } : {}),
     });
 
     const resolvedUser = await resolveUserImage(created);
@@ -45,24 +50,26 @@ export class UsersService {
     data: UpdateUserDto,
     image?: Express.Multer.File,
   ): Promise<UserResponseDto> {
-    const user = await requireUserById(userId);
-    ensureCurrentPassword(data.currentPassword, user.passwordHash);
     validateUpdatePassword(data.password);
 
-    if (data.email && data.email !== user.email) {
+    const currentUser = await requireUserById(userId);
+    ensureCurrentPassword(data.currentPassword, currentUser.passwordHash);
+
+    if (data.email && data.email !== currentUser.email) {
       await ensureEmailAvailable(data.email);
     }
 
-    const nextPasswordHash =
-      data.password !== undefined ? hashPassword(data.password) : undefined;
     const uploadedImage = image ? await s3Service.uploadFile(image) : null;
+    const passwordHash = data.password
+      ? hashPassword(data.password)
+      : undefined;
 
     const updated = await usersRepository.updateById(
       userId,
       toUserUpdateData(
         data,
         uploadedImage?.url,
-        nextPasswordHash,
+        passwordHash,
         uploadedImage?.key,
       ),
     );
@@ -81,6 +88,14 @@ export class UsersService {
     const likes = await usersRepository.findLikedStores(userId);
     const resolvedLikes = await resolveLikedStoreImages(likes);
     return resolvedLikes.map(toLikeStoreResponse);
+  }
+
+  async signUp(data: CreateUserDto): Promise<UserResponseDto> {
+    return this.create(data);
+  }
+
+  async getMyProfile(userId: string): Promise<UserResponseDto> {
+    return this.getMe(userId);
   }
 }
 
