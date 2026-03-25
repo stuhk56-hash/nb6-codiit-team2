@@ -30,10 +30,17 @@ enum OrderStatus {
 
 // 결제 상태(실결제 연동 없이 상태 흐름 테스트용)
 enum PaymentStatus {
-  WaitingPayment      // 결제 대기
-  CompletedPayment    // 결제 완료
-  FailedPayment       // 결제 실패
-  CanceledPayment     // 결제 취소
+  WaitingPayment // 결제 대기
+  CompletedPayment // 결제 완료
+  FailedPayment // 결제 실패
+  CanceledPayment // 결제 취소
+}
+
+// 결제 수단
+enum PaymentMethod {
+  BANK_TRANSFER
+  CREDIT_CARD
+  MOBILE_PHONE
 }
 
 // 회원 정보
@@ -87,7 +94,7 @@ model User {
   inquiryAnswers InquiryAnswer[]
   // 구매 시 가격 기본값 0원
   lifetimeSpend  Int             @default(0)
-  }
+}
 
 // 회원 등급 정보
 model Grade {
@@ -407,9 +414,10 @@ model Order {
   payment Payment?
 
   // 생성 시각
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   // 수정 시각
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime  @updatedAt
+  shipping  Shipping?
 
   // 사용자별 주문 조회 최적화
   @@index([buyerId])
@@ -503,6 +511,15 @@ model Payment {
   // 결제 상태
   status PaymentStatus @default(WaitingPayment)
 
+  // 결제 수단
+  paymentMethod PaymentMethod
+
+  // 결제 수단별 정보
+  cardNumber    String?
+  bankName      String?
+  phoneNumber   String?
+  transactionId String? @unique
+
   // 생성 시각
   createdAt DateTime @default(now())
   // 수정 시각
@@ -510,6 +527,7 @@ model Payment {
 
   // 상태별 결제 조회 최적화
   @@index([status])
+  @@index([orderId])
 }
 
 // 사용자 알림
@@ -558,4 +576,73 @@ model RefreshToken {
 
   // 사용자별 토큰 조회 최적화
   @@index([userId])
+}
+
+enum ShippingStatus {
+  ReadyToShip // 배송준비
+  InShipping // 배송중
+  Delivered // 배송완료
+}
+
+model Shipping {
+  // 배송 ID
+  id      String @id @default(cuid())
+  // 연결된 주��� ID(주문당 배송 1건)
+  orderId String @unique
+  // 주문 관계
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // 배송 상태
+  status ShippingStatus @default(ReadyToShip)
+
+  // Fake 송장번호 (예: 1031139172376)
+  trackingNumber String @unique
+
+  // 배송사 (로켓배송, CJ대한통운, 우체국 등)
+  carrier String @default("로켓배송")
+
+  // 배송준비 시작 시간
+  readyToShipAt DateTime?
+
+  // 배송 시작 시간
+  inShippingAt DateTime?
+
+  // 배송 완료 시간
+  deliveredAt DateTime?
+
+  // 생성 시각
+  createdAt         DateTime          @default(now())
+  // 수정 시각
+  updatedAt         DateTime          @updatedAt
+  shippingHistories ShippingHistory[]
+
+  // 상태별 배송 조회 최적화
+  @@index([status])
+  @@index([orderId])
+  @@index([trackingNumber])
+}
+
+// 배송 추적 이력 (상세 기록용, 선택사항)
+model ShippingHistory {
+  // 이력 ID
+  id         String   @id @default(cuid())
+  // 연결된 배송 ID
+  shippingId String
+  // 배송 관계
+  shipping   Shipping @relation(fields: [shippingId], references: [id], onDelete: Cascade)
+
+  // 이력 상태 (배송준비, 배송중, 배송완료 등)
+  status String
+
+  // 이력 설명 (예: "배송완료됨", "캠프도착", "짐꾼상차" 등)
+  description String
+
+  // 위치/지역 (선택사항)
+  location String?
+
+  // 생성 시각
+  createdAt DateTime @default(now())
+
+  // 배송별 이력 조회 최적화
+  @@index([shippingId])
 }

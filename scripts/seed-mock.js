@@ -4,6 +4,7 @@ const {
   InquiryStatus,
   OrderStatus,
   PaymentStatus,
+  PaymentMethod,
 } = require('@prisma/client');
 const { randomBytes, scryptSync } = require('crypto');
 
@@ -25,7 +26,15 @@ function hashPassword(password) {
   return `scrypt$${salt}$${hash}`;
 }
 
-const categoryNames = ['TOP', 'BOTTOM', 'OUTER', 'DRESS', 'SKIRT', 'SHOES', 'ACC'];
+const categoryNames = [
+  'TOP',
+  'BOTTOM',
+  'OUTER',
+  'DRESS',
+  'SKIRT',
+  'SHOES',
+  'ACC',
+];
 const sizeDefs = [
   { id: 1, name: 'XS', nameEn: 'XS', nameKo: 'XS' },
   { id: 2, name: 'S', nameEn: 'S', nameKo: 'S' },
@@ -42,8 +51,17 @@ const gradeDefs = [
   { id: 'grade_vip', name: 'VIP', rate: 5, minAmount: 1000000 },
 ];
 
+// 결제 수단 옵션
+const paymentMethods = [
+  PaymentMethod.CREDIT_CARD,
+  PaymentMethod.BANK_TRANSFER,
+  PaymentMethod.MOBILE_PHONE,
+];
+
 async function resetData() {
   await prisma.notification.deleteMany();
+  await prisma.shippingHistory.deleteMany();
+  await prisma.shipping.deleteMany();
   await prisma.inquiryAnswer.deleteMany();
   await prisma.inquiry.deleteMany();
   await prisma.review.deleteMany();
@@ -177,10 +195,19 @@ async function seedProducts(stores, categories, sizes) {
             name: `스토어${s + 1} ${category.name} 상품${p}`,
             content: `스토어${s + 1} ${category.name} 상품${p} 상세 설명`,
             price: basePrice,
-            imageUrl: p === 3 ? null : `https://picsum.photos/seed/product-${s + 1}-${category.name}-${p}/500/500`,
+            imageUrl:
+              p === 3
+                ? null
+                : `https://picsum.photos/seed/product-${s + 1}-${category.name}-${p}/500/500`,
             discountRate,
-            discountStartTime: discountRate > 0 ? new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) : null,
-            discountEndTime: discountRate > 0 ? new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) : null,
+            discountStartTime:
+              discountRate > 0
+                ? new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+                : null,
+            discountEndTime:
+              discountRate > 0
+                ? new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
+                : null,
             isSoldOut: soldOut,
           },
         });
@@ -227,7 +254,8 @@ async function seedCarts(buyers, products, sizes) {
     });
 
     for (let i = 0; i < CART_ITEMS_PER_BUYER; i += 1) {
-      const product = products[(b * CART_ITEMS_PER_BUYER + i) % products.length];
+      const product =
+        products[(b * CART_ITEMS_PER_BUYER + i) % products.length];
       const size = sizes[i % sizes.length];
       const stock = await prisma.productStock.findUnique({
         where: { productId_sizeId: { productId: product.id, sizeId: size.id } },
@@ -261,9 +289,19 @@ function getOrderStatus(index) {
 }
 
 function getPaymentStatus(orderStatus) {
-  if (orderStatus === OrderStatus.CompletedPayment) return PaymentStatus.Paid;
-  if (orderStatus === OrderStatus.Canceled) return PaymentStatus.Canceled;
-  return PaymentStatus.Pending;
+  if (orderStatus === OrderStatus.CompletedPayment)
+    return PaymentStatus.CompletedPayment;
+  if (orderStatus === OrderStatus.Canceled)
+    return PaymentStatus.CanceledPayment;
+  return PaymentStatus.WaitingPayment;
+}
+
+function generateTrackingNumber() {
+  return String(Math.floor(Math.random() * 10000000000000));
+}
+
+function getRandomPaymentMethod(index) {
+  return paymentMethods[index % paymentMethods.length];
 }
 
 async function seedOrdersAndReviews(buyers, products, sizes) {
@@ -272,7 +310,9 @@ async function seedOrdersAndReviews(buyers, products, sizes) {
   for (let b = 0; b < buyers.length; b += 1) {
     for (let i = 0; i < ORDERS_PER_BUYER; i += 1) {
       const status = getOrderStatus(i);
-      const createdAt = new Date(Date.now() - (b * ORDERS_PER_BUYER + i) * 24 * 60 * 60 * 1000);
+      const createdAt = new Date(
+        Date.now() - (b * ORDERS_PER_BUYER + i) * 24 * 60 * 60 * 1000,
+      );
 
       const order = await prisma.order.create({
         data: {
@@ -282,7 +322,8 @@ async function seedOrdersAndReviews(buyers, products, sizes) {
           phoneNumber: `010-2000-${String(1000 + b * 10 + i)}`,
           address: `서울시 주문로 ${b + 1}-${i + 1}`,
           usedPoints: i * 100,
-          earnedPoints: status === OrderStatus.CompletedPayment ? 500 + i * 50 : 0,
+          earnedPoints:
+            status === OrderStatus.CompletedPayment ? 500 + i * 50 : 0,
           createdAt,
           updatedAt: createdAt,
         },
@@ -292,10 +333,13 @@ async function seedOrdersAndReviews(buyers, products, sizes) {
       let totalPrice = 0;
 
       for (let k = 0; k < itemCount; k += 1) {
-        const product = products[(b * ORDERS_PER_BUYER + i + k) % products.length];
+        const product =
+          products[(b * ORDERS_PER_BUYER + i + k) % products.length];
         const size = sizes[(i + k) % sizes.length];
         const quantity = 1 + ((i + k) % 2);
-        const unitPrice = Math.floor(product.price * (1 - (product.discountRate ?? 0) / 100));
+        const unitPrice = Math.floor(
+          product.price * (1 - (product.discountRate ?? 0) / 100),
+        );
 
         const orderItem = await prisma.orderItem.create({
           data: {
@@ -310,18 +354,50 @@ async function seedOrdersAndReviews(buyers, products, sizes) {
         });
 
         totalPrice += unitPrice * quantity;
-        createdOrderItems.push({ orderItem, buyerId: buyers[b].id, orderStatus: status });
+        createdOrderItems.push({
+          orderItem,
+          buyerId: buyers[b].id,
+          orderStatus: status,
+        });
       }
+
+      const paymentMethod = getRandomPaymentMethod(b + i);
 
       await prisma.payment.create({
         data: {
           orderId: order.id,
           price: totalPrice - i * 100,
           status: getPaymentStatus(status),
+          paymentMethod: paymentMethod,
+          cardNumber:
+            paymentMethod === PaymentMethod.CREDIT_CARD ? '1234' : null,
+          bankName:
+            paymentMethod === PaymentMethod.BANK_TRANSFER ? '신한은행' : null,
+          phoneNumber:
+            paymentMethod === PaymentMethod.MOBILE_PHONE
+              ? `010-2000-${String(1000 + b)}`
+              : null,
           createdAt,
           updatedAt: createdAt,
         },
       });
+
+      // Shipping 데이터 생성
+      if (status === OrderStatus.CompletedPayment) {
+        await prisma.shipping.create({
+          data: {
+            orderId: order.id,
+            status: 'Delivered',
+            trackingNumber: generateTrackingNumber(),
+            carrier: '로켓배송',
+            readyToShipAt: new Date(createdAt.getTime() + 1 * 60 * 60 * 1000),
+            inShippingAt: new Date(createdAt.getTime() + 6 * 60 * 60 * 1000),
+            deliveredAt: new Date(createdAt.getTime() + 24 * 60 * 60 * 1000),
+            createdAt,
+            updatedAt: createdAt,
+          },
+        });
+      }
     }
   }
 
@@ -337,7 +413,7 @@ async function seedOrdersAndReviews(buyers, products, sizes) {
         productId: target.orderItem.productId,
         orderItemId: target.orderItem.id,
         rating: (i % 5) + 1,
-        content: `리뷰 테스트 ${i + 1}: 만족도 ${((i % 5) + 1)}점`,
+        content: `리뷰 테스트 ${i + 1}: 만족도 ${(i % 5) + 1}점`,
       },
     });
   }
@@ -358,7 +434,9 @@ async function seedInquiriesAndReplies(buyers, products) {
           title: `문의 제목 ${b + 1}-${i + 1}`,
           content: `문의 내용 ${b + 1}-${i + 1}`,
           isSecret: (b + i) % 3 === 0,
-          status: completed ? InquiryStatus.CompletedAnswer : InquiryStatus.WaitingAnswer,
+          status: completed
+            ? InquiryStatus.CompletedAnswer
+            : InquiryStatus.WaitingAnswer,
         },
       });
 
@@ -421,8 +499,12 @@ async function main() {
   await seedNotifications(sellers, buyers);
 
   console.log('Mock seed completed');
-  console.log(`Sellers: ${sellers.length}, Buyers: ${buyers.length}, Stores: ${stores.length}`);
-  console.log(`Products: ${products.length}, Categories: ${categories.length}, Sizes: ${sizes.length}`);
+  console.log(
+    `Sellers: ${sellers.length}, Buyers: ${buyers.length}, Stores: ${stores.length}`,
+  );
+  console.log(
+    `Products: ${products.length}, Categories: ${categories.length}, Sizes: ${sizes.length}`,
+  );
   console.log(`Login accounts (password: ${DEFAULT_PASSWORD})`);
   for (let i = 1; i <= COUNT; i += 1) {
     console.log(`- seller${i}@codiit.com`);
