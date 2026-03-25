@@ -29,13 +29,7 @@ export async function createCart(buyerId: string): Promise<CartResponseDto> {
 
 //장바구니 조회 (아이템 포함)
 export async function getCart(buyerId: string): Promise<CartWithItemsDto> {
-  let cart = await cartRepository.findCartByBuyerIdWithItems(buyerId);
-
-  // 장바구니가 없으면 생성
-  if (!cart) {
-    const newCart = await cartRepository.createCart(buyerId);
-    cart = await cartRepository.findCartByBuyerIdWithItems(newCart.id);
-  }
+  const cart = await cartRepository.findCartByBuyerIdWithItems(buyerId);
 
   if (!cart) {
     throw new NotFoundError('장바구니를 찾을 수 없습니다.');

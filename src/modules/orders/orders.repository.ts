@@ -248,7 +248,7 @@ export async function createOrderWithTransaction(
       data: {
         orderId: createdOrder.id,
         price: finalPrice,
-        status: 'Paid' as PaymentStatus,
+        status: 'CompletedPayment' as PaymentStatus,
       },
     });
 

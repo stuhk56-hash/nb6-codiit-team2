@@ -166,13 +166,13 @@ export async function seedOrder(input: {
 export async function seedPayment(input: {
   orderId: string;
   price: number;
-  status?: 'Pending' | 'Paid' | 'Failed' | 'Canceled';
+  status?: 'Pending' | 'CompletedPayment' | 'Failed' | 'Canceled';
 }) {
   return prisma.payment.create({
     data: {
       orderId: input.orderId,
       price: input.price,
-      status: input.status || 'Paid',
+      status: input.status || 'CompletedPayment',
     },
   });
 }
