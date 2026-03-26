@@ -7,12 +7,8 @@ import { cartRouter } from './modules/cart/cart.module';
 import { s3Router } from './modules/s3/s3.module';
 import { productsRouter } from './modules/products/products.module';
 import { inquiriesRouter } from './modules/inquiries/inquiries.module';
-import {
-  dashboardRouter,
-} from './modules/dashboard/dashboard.module';
-import {
-  notificationsRouter,
-} from './modules/notifications/notifications.module';
+import { dashboardRouter } from './modules/dashboard/dashboard.module';
+import { notificationsRouter } from './modules/notifications/notifications.module';
 import {
   productReviewsRouter,
   reviewsRouter,
@@ -26,7 +22,6 @@ export function setupRoutes(app: Express) {
   app.use('/api/products', productsRouter);
   app.use('/api/inquiries', inquiriesRouter);
   app.use('/api/product', productReviewsRouter);
-  app.use('/api/inquiries', inquiriesRouter);
   app.use('/api/review', reviewsRouter);
   app.use('/api/dashboard', dashboardRouter);
   app.use('/api/notifications', notificationsRouter);
