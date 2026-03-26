@@ -6,9 +6,12 @@ import type {
   StoreDetailResponseDto,
   StoreResponseDto,
 } from './dto/store-response.dto';
+import type { CreateStoreDto, UpdateStoreDto } from './dto/create-store.dto';
 import { s3Service } from '../s3/s3.service';
 import { storesRepository } from './stores.repository';
-import type { MyStoreProductsQuery } from './types/stores.type';
+import type {
+  MyStoreProductsQuery,
+} from './types/stores.type';
 import {
   toFavoriteStoreDeleteResponseDto,
   toFavoriteStoreRegisterResponseDto,
@@ -28,38 +31,38 @@ import {
   requireMyStore,
   requireStore,
 } from './utils/stores.service.util';
+import { encryptStoreBusinessInfoInput } from './utils/stores.crypto.util';
+import { toStoreAuditSnapshot } from './utils/stores.audit.util';
+import {
+  toCreateStoreRecordInput,
+  toUpdateStoreRecordInput,
+} from './utils/stores.payload.util';
 
 export class StoresService {
   async create(
     sellerId: string,
-    data: {
-      name: string;
-      address: string;
-      detailAddress: string;
-      phoneNumber: string;
-      content: string;
-      businessRegistrationNumber?: string;
-      businessPhoneNumber?: string;
-      mailOrderSalesNumber?: string;
-      representativeName?: string;
-      businessAddress?: string;
-    },
+    data: CreateStoreDto,
     image?: Express.Multer.File,
   ): Promise<StoreResponseDto> {
     const existing = await storesRepository.findBySellerId(sellerId);
     ensureSellerStoreMissing(existing);
     ensureStoreBusinessInfoValidity(data);
     const uploadedImage = image ? await s3Service.uploadFile(image) : null;
+    const encryptedData = encryptStoreBusinessInfoInput(data);
 
-    const store = await storesRepository.create({
+    const store = await storesRepository.create(
+      toCreateStoreRecordInput({
+        sellerId,
+        data: encryptedData,
+        uploadedImage,
+      }),
+    );
+
+    await storesRepository.createAuditLog({
+      storeId: store.id,
       sellerId,
-      ...data,
-      ...(uploadedImage
-        ? {
-            imageUrl: uploadedImage.url,
-            imageKey: uploadedImage.key,
-          }
-        : {}),
+      action: 'CREATED',
+      after: toStoreAuditSnapshot(store),
     });
 
     const resolvedStore = await resolveStoreImage(store);
@@ -69,18 +72,7 @@ export class StoresService {
   async update(
     sellerId: string,
     storeId: string,
-    data: {
-      name?: string;
-      address?: string;
-      detailAddress?: string;
-      phoneNumber?: string;
-      content?: string;
-      businessRegistrationNumber?: string;
-      businessPhoneNumber?: string;
-      mailOrderSalesNumber?: string;
-      representativeName?: string;
-      businessAddress?: string;
-    },
+    data: UpdateStoreDto,
     image?: Express.Multer.File,
   ): Promise<StoreResponseDto> {
     ensureStoreUpdateInput(data, image);
@@ -88,15 +80,22 @@ export class StoresService {
     const store = requireStore(await storesRepository.findById(storeId));
     ensureStoreOwner(sellerId, { userId: store.sellerId });
     const uploadedImage = image ? await s3Service.uploadFile(image) : null;
+    const encryptedData = encryptStoreBusinessInfoInput(data);
 
-    const updated = await storesRepository.update(storeId, {
-      ...data,
-      ...(uploadedImage
-        ? {
-            imageUrl: uploadedImage.url,
-            imageKey: uploadedImage.key,
-          }
-        : {}),
+    const updated = await storesRepository.update(
+      storeId,
+      toUpdateStoreRecordInput({
+        data: encryptedData,
+        uploadedImage,
+      }),
+    );
+
+    await storesRepository.createAuditLog({
+      storeId,
+      sellerId,
+      action: 'UPDATED',
+      before: toStoreAuditSnapshot(store),
+      after: toStoreAuditSnapshot(updated),
     });
 
     const resolvedStore = await resolveStoreImage(updated);

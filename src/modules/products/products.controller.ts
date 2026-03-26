@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { create as structCreate } from 'superstruct';
 import { requireAuthUser } from '../../lib/request/auth-user';
-import { AuthenticatedRequest } from '../../middlewares/authenticate';
+import type { AuthenticatedRequest } from '../../middlewares/authenticate';
 import { productsService } from './products.service';
 import {
   CreateProductBodyStruct,
@@ -11,7 +11,7 @@ import {
   ProductParamsStruct,
   UpdateProductBodyStruct,
 } from './structs/products.struct';
-import { ProductsMulterRequest } from './types/products.type';
+import type { ProductsMulterRequest } from './types/products.type';
 
 export async function create(req: ProductsMulterRequest, res: Response) {
   const authUser = requireAuthUser(req);

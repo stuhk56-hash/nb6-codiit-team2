@@ -9,6 +9,7 @@ import type {
   MyStoreProductsQuery,
   MyStoreWithRelations,
   NormalizedMyStoreProductsQuery,
+  StoreBusinessInfoInput,
   StoreWithCounts,
 } from '../types/stores.type';
 import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
@@ -68,7 +69,7 @@ export function ensureStoreUpdateInput(
 ) {
   const hasBody = Object.values(data).some((value) => value !== undefined);
   if (!hasBody && !image) {
-    throw new BadRequestError();
+    throw new BadRequestError('수정할 항목이 없습니다.');
   }
 }
 
@@ -106,30 +107,32 @@ function isValidMailOrderSalesNumber(value: string) {
   return /^\d{4}-[A-Za-z0-9가-힣]+-\d{4,6}$/.test(normalized);
 }
 
-export function ensureStoreBusinessInfoValidity(data: {
-  businessRegistrationNumber?: string;
-  businessPhoneNumber?: string;
-  mailOrderSalesNumber?: string;
-}) {
+export function ensureStoreBusinessInfoValidity(data: StoreBusinessInfoInput) {
   if (
     data.businessRegistrationNumber !== undefined &&
     !isValidBusinessRegistrationNumber(data.businessRegistrationNumber)
   ) {
-    throw new BadRequestError('사업자등록번호 형식이 올바르지 않습니다.');
+    throw new BadRequestError(
+      '사업자등록번호를 확인해주세요. 숫자 10자리(예: 123-45-67890) 형식이어야 합니다.',
+    );
   }
 
   if (
     data.businessPhoneNumber !== undefined &&
     !isValidBusinessPhoneNumber(data.businessPhoneNumber)
   ) {
-    throw new BadRequestError('사업자 연락처 형식이 올바르지 않습니다.');
+    throw new BadRequestError(
+      '사업자 연락처를 확인해주세요. 숫자 8~11자리(예: 02-1234-5678) 형식이어야 합니다.',
+    );
   }
 
   if (
     data.mailOrderSalesNumber !== undefined &&
     !isValidMailOrderSalesNumber(data.mailOrderSalesNumber)
   ) {
-    throw new BadRequestError('통신판매업 신고번호 형식이 올바르지 않습니다.');
+    throw new BadRequestError(
+      '통신판매업 신고번호를 확인해주세요. 예: 2024-서울강남-1234',
+    );
   }
 }
 

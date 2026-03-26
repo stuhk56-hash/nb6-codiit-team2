@@ -131,6 +131,35 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
           ["riseCm", "밑위"],
           ["hemCm", "밑단단면"],
         ] as const);
+  const stockSizeLabels = Array.from(
+    new Set(
+      data.stocks
+        .map((stock) => stock.size.name?.trim().toUpperCase())
+        .filter((label): label is string => Boolean(label))
+    )
+  );
+  const sizeSpecMap = new Map(
+    data.sizeSpecs.map((spec) => [spec.sizeLabel.trim().toUpperCase(), spec] as const)
+  );
+  const sizeGuideRows = stockSizeLabels.map((sizeLabel, index) => {
+    const existing = sizeSpecMap.get(sizeLabel);
+    if (existing) return existing;
+
+    return {
+      sizeLabel,
+      displayOrder: index,
+      totalLengthCm: null,
+      shoulderCm: null,
+      chestCm: null,
+      sleeveCm: null,
+      waistCm: null,
+      hipCm: null,
+      thighCm: null,
+      riseCm: null,
+      hemCm: null,
+    };
+  });
+  const hasSizeGuide = data.sizeGuideType !== "NONE" && sizeGuideRows.length > 0;
 
   const { data: cartData, refetch: refetchCartData } = useQuery({
     queryKey: ["cartData"],
@@ -348,6 +377,60 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
       </div>
       <div className="mt-10 space-y-10">
         <div>
+          <h3 className="mb-4 text-2xl leading-none font-extrabold">사이즈 정보</h3>
+          {hasSizeGuide ? (
+            <div>
+              <p className="mb-3 text-sm text-gray-600">
+                단위: cm | 측정 방식에 따라 1~3cm 오차가 발생할 수 있습니다.
+              </p>
+              <div
+                id="size-guide-section"
+                className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm"
+              >
+              <table className="w-full min-w-[760px] border-collapse text-sm">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border border-gray-200 px-3 py-2 text-left">cm</th>
+                    {sizeGuideColumns.map(([key, label]) => (
+                      <th
+                        key={key}
+                        className="border border-gray-200 px-3 py-2 text-left"
+                      >
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sizeGuideRows.map((row) => (
+                    <tr key={row.sizeLabel}>
+                      <td className="border border-gray-200 px-3 py-2 font-semibold">
+                        {row.sizeLabel}
+                      </td>
+                      {sizeGuideColumns.map(([key]) => (
+                        <td
+                          key={`${row.sizeLabel}-${key}`}
+                          className="border border-gray-200 px-3 py-2"
+                        >
+                          {typeof row[key] === "number" ? row[key] : "-"}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              </div>
+            </div>
+          ) : (
+            <div
+              id="size-guide-section"
+              className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600"
+            >
+              등록된 사이즈 정보가 없습니다.
+            </div>
+          )}
+        </div>
+        <div>
           <button
             type="button"
             className="mb-4 flex w-full items-center justify-between rounded-lg px-2 py-3 text-left"
@@ -380,42 +463,6 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
                   </div>
                 ))}
               </div>
-              {data.sizeGuideType !== "NONE" && data.sizeSpecs.length > 0 ? (
-                <div className="mt-6 overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-                  <table className="w-full min-w-[760px] border-collapse text-sm">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="border border-gray-200 px-3 py-2 text-left">cm</th>
-                        {sizeGuideColumns.map(([key, label]) => (
-                          <th
-                            key={key}
-                            className="border border-gray-200 px-3 py-2 text-left"
-                          >
-                            {label}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.sizeSpecs.map((row) => (
-                        <tr key={row.sizeLabel}>
-                          <td className="border border-gray-200 px-3 py-2 font-semibold">
-                            {row.sizeLabel}
-                          </td>
-                          {sizeGuideColumns.map(([key]) => (
-                            <td
-                              key={`${row.sizeLabel}-${key}`}
-                              className="border border-gray-200 px-3 py-2"
-                            >
-                              {typeof row[key] === "number" ? row[key] : "-"}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
             </>
           )}
         </div>

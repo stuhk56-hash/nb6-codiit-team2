@@ -55,6 +55,24 @@ describe('스토어 API 통합 테스트', () => {
         expect(res.body).toHaveProperty('id');
         expect(res.body.name).toBe('신규 스토어');
       });
+
+      test('사업자등록번호 형식이 잘못되면 400을 반환한다', async () => {
+        const seller = await createSeller();
+
+        const res = await request(app)
+          .post('/api/stores')
+          .set(authHeader(seller.id))
+          .send({
+            name: '신규 스토어',
+            address: '서울시 강남구',
+            detailAddress: '101호',
+            phoneNumber: '010-1111-2222',
+            content: '소개',
+            businessRegistrationNumber: '111-11-11111',
+          });
+
+        expect(res.status).toBe(400);
+      });
     });
 
     describe('GET /api/stores/detail/my', () => {
@@ -154,6 +172,20 @@ describe('스토어 API 통합 테스트', () => {
           .patch(`/api/stores/${store.id}`)
           .set(authHeader(seller.id))
           .send({});
+
+        expect(res.status).toBe(400);
+      });
+
+      test('통신판매업 신고번호 형식이 잘못되면 400을 반환한다', async () => {
+        const seller = await createSeller();
+        const store = await createStore(seller.id);
+
+        const res = await request(app)
+          .patch(`/api/stores/${store.id}`)
+          .set(authHeader(seller.id))
+          .send({
+            mailOrderSalesNumber: '서울강남-1234',
+          });
 
         expect(res.status).toBe(400);
       });

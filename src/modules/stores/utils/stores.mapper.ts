@@ -13,6 +13,7 @@ import type {
   StoreWithCounts,
 } from '../types/stores.type';
 import { isDiscountActive } from '../../products/utils/products.util';
+import { toDecryptedStoreBusinessInfo } from './stores.business-info.util';
 
 function toRequiredImage(value: string | null | undefined) {
   if (typeof value !== 'string') {
@@ -36,6 +37,8 @@ function toRequiredImage(value: string | null | undefined) {
 }
 
 export function toStoreResponseDto(store: StoreWithCounts): StoreResponseDto {
+  const businessInfo = toDecryptedStoreBusinessInfo(store);
+
   return {
     id: store.id,
     name: store.name,
@@ -46,11 +49,11 @@ export function toStoreResponseDto(store: StoreWithCounts): StoreResponseDto {
     detailAddress: store.detailAddress,
     phoneNumber: store.phoneNumber,
     content: store.content,
-    businessRegistrationNumber: store.businessRegistrationNumber,
-    businessPhoneNumber: store.businessPhoneNumber,
-    mailOrderSalesNumber: store.mailOrderSalesNumber,
-    representativeName: store.representativeName,
-    businessAddress: store.businessAddress,
+    businessRegistrationNumber: businessInfo.businessRegistrationNumber,
+    businessPhoneNumber: businessInfo.businessPhoneNumber,
+    mailOrderSalesNumber: businessInfo.mailOrderSalesNumber,
+    representativeName: businessInfo.representativeName,
+    businessAddress: businessInfo.businessAddress,
     image: toRequiredImage(store.imageUrl),
   };
 }
@@ -67,6 +70,8 @@ export function toStoreDetailResponseDto(
 export function toMyStoreResponseDto(
   store: MyStoreWithRelations,
 ): MyStoreResponseDto {
+  const businessInfo = toDecryptedStoreBusinessInfo(store);
+
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
@@ -92,11 +97,11 @@ export function toMyStoreResponseDto(
     detailAddress: store.detailAddress,
     phoneNumber: store.phoneNumber,
     content: store.content,
-    businessRegistrationNumber: store.businessRegistrationNumber,
-    businessPhoneNumber: store.businessPhoneNumber,
-    mailOrderSalesNumber: store.mailOrderSalesNumber,
-    representativeName: store.representativeName,
-    businessAddress: store.businessAddress,
+    businessRegistrationNumber: businessInfo.businessRegistrationNumber,
+    businessPhoneNumber: businessInfo.businessPhoneNumber,
+    mailOrderSalesNumber: businessInfo.mailOrderSalesNumber,
+    representativeName: businessInfo.representativeName,
+    businessAddress: businessInfo.businessAddress,
     image: toRequiredImage(store.imageUrl),
     productCount: store._count.products,
     favoriteCount: store._count.favoritedBy,

@@ -21,6 +21,10 @@ import {
   filterProductInquiries,
 } from '../utils/products.service.util';
 import {
+  toCreateProductPayload,
+  toUpdateProductPayload,
+} from '../utils/products.payload.util';
+import {
   toDetailProductResponseDto,
   toProductInquiryListResponseDto,
   toProductInquiryResponseDto,
@@ -70,6 +74,48 @@ jest.mock('../utils/products.service.util', () => ({
   resolveProductsImage: jest.fn(async (products: unknown[]) => products),
   validateCreateProductInput: jest.fn(),
   validateUpdateProductInput: jest.fn(),
+}));
+
+jest.mock('../utils/products.payload.util', () => ({
+  toCreateProductPayload: jest.fn((params: any) => ({
+    storeId: params.storeId,
+    categoryId: params.categoryId,
+    ...params.data,
+    ...(params.uploadedImage
+      ? {
+          imageUrl: params.uploadedImage.url,
+          imageKey: params.uploadedImage.key,
+        }
+      : {}),
+    discountStartTime: params.data.discountStartTime
+      ? new Date(params.data.discountStartTime)
+      : undefined,
+    discountEndTime: params.data.discountEndTime
+      ? new Date(params.data.discountEndTime)
+      : undefined,
+  })),
+  toUpdateProductPayload: jest.fn((params: any) => ({
+    categoryId: params.categoryId,
+    ...params.data,
+    ...(params.uploadedImage
+      ? {
+          imageUrl: params.uploadedImage.url,
+          imageKey: params.uploadedImage.key,
+        }
+      : {}),
+    discountStartTime:
+      params.data.discountStartTime !== undefined
+        ? params.data.discountStartTime
+          ? new Date(params.data.discountStartTime)
+          : null
+        : undefined,
+    discountEndTime:
+      params.data.discountEndTime !== undefined
+        ? params.data.discountEndTime
+          ? new Date(params.data.discountEndTime)
+          : null
+        : undefined,
+  })),
 }));
 
 jest.mock('../utils/products.mapper', () => ({
@@ -132,6 +178,13 @@ describe('상품 서비스 유닛 테스트', () => {
     expect(ensureSellerStore).toHaveBeenCalledWith('store-1');
     expect(ensureCategory).toHaveBeenCalledWith('cat-1');
     expect(mockedS3Service.uploadFile).toHaveBeenCalledWith(imageFile);
+    expect(toCreateProductPayload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storeId: 'store-1',
+        categoryId: 'cat-1',
+        data: createInput,
+      }),
+    );
     expect(mockedRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         storeId: 'store-1',
@@ -256,6 +309,12 @@ describe('상품 서비스 유닛 테스트', () => {
     expect(ensureProductOwner).toHaveBeenCalledWith('seller-1', existingProduct);
     expect(validateUpdateProductInput).toHaveBeenCalledWith(updateInput, existingProduct);
     expect(ensureCategory).toHaveBeenCalledWith('cat-2');
+    expect(toUpdateProductPayload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        categoryId: 'cat-2',
+        data: updateInput,
+      }),
+    );
     expect(mockedRepository.update).toHaveBeenCalledWith(
       'product-1',
       expect.objectContaining({

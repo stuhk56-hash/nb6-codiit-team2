@@ -7,6 +7,7 @@ import {
   globalErrorHandler,
 } from './middlewares/errorHandler';
 import { corsMiddleware } from './middlewares/cors';
+import { startStoreBusinessInfoPurgeScheduler } from './modules/stores/jobs/store-business-info-purge.job';
 
 const app = express();
 
@@ -26,3 +27,4 @@ app.use(globalErrorHandler);
 
 const port = Number(process.env.PORT ?? '3000');
 app.listen(port);
+startStoreBusinessInfoPurgeScheduler();

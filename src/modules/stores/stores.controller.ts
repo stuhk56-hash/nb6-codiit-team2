@@ -15,14 +15,14 @@ import type {
 } from './types/stores.type';
 
 export async function create(req: StoresMulterRequest, res: Response) {
-  const authUser = requireSeller(requireAuthUser(req), '접근 권한이 없습니다.');
+  const authUser = requireSeller(requireAuthUser(req));
   const body = structCreate(req.body, CreateStoreBodyStruct);
   const store = await storesService.create(authUser.id, body, req.file);
   res.status(201).send(store);
 }
 
 export async function update(req: StoresMulterRequest, res: Response) {
-  const authUser = requireSeller(requireAuthUser(req), '접근 권한이 없습니다.');
+  const authUser = requireSeller(requireAuthUser(req));
   const params = structCreate(req.params, StoreParamsStruct);
   const body = structCreate(req.body, UpdateStoreBodyStruct);
   const store = await storesService.update(
@@ -41,13 +41,13 @@ export async function findStore(req: AuthenticatedRequest, res: Response) {
 }
 
 export async function myStore(req: AuthenticatedRequest, res: Response) {
-  const authUser = requireSeller(requireAuthUser(req), '접근 권한이 없습니다.');
+  const authUser = requireSeller(requireAuthUser(req));
   const store = await storesService.myStore(authUser.id);
   res.send(store);
 }
 
 export async function myStoreProduct(req: AuthenticatedRequest, res: Response) {
-  const authUser = requireSeller(requireAuthUser(req), '접근 권한이 없습니다.');
+  const authUser = requireSeller(requireAuthUser(req));
   const query: MyStoreProductsQuery = structCreate(
     req.query,
     MyStoreProductsQueryStruct,

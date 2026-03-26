@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/constants/prismaClient';
 import {
   myStoreInclude,
@@ -5,6 +6,7 @@ import {
   storeInclude,
 } from './queries/stores.query';
 import type {
+  CreateStoreRecordInput,
   NormalizedMyStoreProductsQuery,
   UpdateStoreRecordInput,
 } from './types/stores.type';
@@ -31,21 +33,7 @@ export class StoresRepository {
     });
   }
 
-  create(data: {
-    sellerId: string;
-    name: string;
-    address: string;
-    detailAddress: string;
-    phoneNumber: string;
-    content: string;
-    businessRegistrationNumber?: string;
-    businessPhoneNumber?: string;
-    mailOrderSalesNumber?: string;
-    representativeName?: string;
-    businessAddress?: string;
-    imageUrl?: string;
-    imageKey?: string;
-  }) {
+  create(data: CreateStoreRecordInput) {
     return prisma.store.create({
       data,
       include: storeInclude,
@@ -57,6 +45,24 @@ export class StoresRepository {
       where: { id: storeId },
       data,
       include: storeInclude,
+    });
+  }
+
+  createAuditLog(data: {
+    storeId: string;
+    sellerId: string;
+    action: 'CREATED' | 'UPDATED';
+    before?: Prisma.InputJsonValue | null;
+    after: Prisma.InputJsonValue;
+  }) {
+    return prisma.storeAuditLog.create({
+      data: {
+        storeId: data.storeId,
+        sellerId: data.sellerId,
+        action: data.action,
+        before: data.before ?? null,
+        after: data.after,
+      },
     });
   }
 

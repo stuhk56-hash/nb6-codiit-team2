@@ -21,6 +21,8 @@
     "test:db:up:local": "sh scripts/test-db-up-local.sh",
     "test:db:down:local": "sh scripts/test-db-down-local.sh",
     "seed:mock": "npm run prisma:generate && node scripts/seed-mock.js",
+    "store:purge:business-info": "node scripts/purge-store-business-info.js",
+    "store:purge:business-info:dry": "node scripts/purge-store-business-info.js --dry-run",
     "prisma:migrate:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
     "password:migrate": "node scripts/migrate-password-hash.js",
     "password:migrate:dry": "node scripts/migrate-password-hash.js --dry-run",

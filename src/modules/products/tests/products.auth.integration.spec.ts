@@ -49,11 +49,56 @@ describe('상품 API 통합 테스트', () => {
             price: 10000,
             categoryName: category.name,
             stocks: [{ sizeId: size.id, quantity: 10 }],
+            sizeSpecs: [
+              {
+                sizeLabel: 'M',
+                totalLengthCm: 70,
+                shoulderCm: 45,
+                chestCm: 52,
+                sleeveCm: 60,
+              },
+            ],
           });
 
         expect(res.status).toBe(201);
         expect(res.body).toHaveProperty('id');
         expect(res.body.name).toBe('신규 상품');
+      });
+
+      test('TOP 계열 카테고리에서 sizeSpecs 없이 생성하면 400을 반환한다', async () => {
+        const { seller } = await seedSellerAndStore();
+        const category = await seedCategory('top');
+        const size = await seedSize();
+
+        const res = await request(app)
+          .post('/api/products')
+          .set(authHeader(seller.id))
+          .send({
+            name: '신규 상품',
+            price: 10000,
+            categoryName: category.name,
+            stocks: [{ sizeId: size.id, quantity: 10 }],
+          });
+
+        expect(res.status).toBe(400);
+      });
+
+      test('SHOES 카테고리에서는 sizeSpecs 없이 생성해도 201을 반환한다', async () => {
+        const { seller } = await seedSellerAndStore();
+        const category = await seedCategory('shoes');
+        const size = await seedSize();
+
+        const res = await request(app)
+          .post('/api/products')
+          .set(authHeader(seller.id))
+          .send({
+            name: '신규 신발',
+            price: 12000,
+            categoryName: category.name,
+            stocks: [{ sizeId: size.id, quantity: 5 }],
+          });
+
+        expect(res.status).toBe(201);
       });
     });
 
@@ -77,6 +122,15 @@ describe('상품 API 통합 테스트', () => {
           .send({
             name: '수정 상품',
             stocks: [{ sizeId: size.id, quantity: 3 }],
+            sizeSpecs: [
+              {
+                sizeLabel: 'M',
+                totalLengthCm: 72,
+                shoulderCm: 46,
+                chestCm: 53,
+                sleeveCm: 61,
+              },
+            ],
           });
 
         expect(res.status).toBe(200);

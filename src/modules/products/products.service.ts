@@ -35,6 +35,10 @@ import {
   validateCreateProductInput,
   validateUpdateProductInput,
 } from './utils/products.service.util';
+import {
+  toCreateProductPayload,
+  toUpdateProductPayload,
+} from './utils/products.payload.util';
 
 export class ProductsService {
   async create(
@@ -55,44 +59,14 @@ export class ProductsService {
 
     const uploadedImage = image ? await s3Service.uploadFile(image) : null;
 
-    const created = await productsRepository.create({
-      storeId: store!.id,
-      categoryId: category!.id,
-      name: data.name,
-      price: data.price,
-      content: data.content,
-      material: data.material,
-      color: data.color,
-      manufacturerName: data.manufacturerName,
-      manufactureCountry: data.manufactureCountry,
-      manufactureDate: data.manufactureDate,
-      caution: data.caution,
-      qualityGuaranteeStandard: data.qualityGuaranteeStandard,
-      asManagerName: data.asManagerName,
-      asPhoneNumber: data.asPhoneNumber,
-      shippingFee: data.shippingFee,
-      extraShippingFee: data.extraShippingFee,
-      shippingCompany: data.shippingCompany,
-      deliveryPeriod: data.deliveryPeriod,
-      returnExchangePolicy: data.returnExchangePolicy,
-      returnShippingFee: data.returnShippingFee,
-      exchangeShippingFee: data.exchangeShippingFee,
-      ...(uploadedImage
-        ? {
-            imageUrl: uploadedImage.url,
-            imageKey: uploadedImage.key,
-          }
-        : {}),
-      discountRate: data.discountRate,
-      discountStartTime: data.discountStartTime
-        ? new Date(data.discountStartTime)
-        : undefined,
-      discountEndTime: data.discountEndTime
-        ? new Date(data.discountEndTime)
-        : undefined,
-      stocks: data.stocks,
-      sizeSpecs: data.sizeSpecs,
-    });
+    const created = await productsRepository.create(
+      toCreateProductPayload({
+        storeId: store!.id,
+        categoryId: category!.id,
+        data,
+        uploadedImage,
+      }),
+    );
 
     const resolvedProduct = await resolveProductImage(created);
     return toDetailProductResponseDto(resolvedProduct);
@@ -168,49 +142,14 @@ export class ProductsService {
     const uploadedImage = image ? await s3Service.uploadFile(image) : null;
 
     const updated = requireProduct(
-      await productsRepository.update(productId, {
-        ...(uploadedImage
-          ? {
-              imageUrl: uploadedImage.url,
-              imageKey: uploadedImage.key,
-            }
-          : {}),
-        categoryId: category?.id,
-        name: data.name,
-        price: data.price,
-        content: data.content,
-        material: data.material,
-        color: data.color,
-        manufacturerName: data.manufacturerName,
-        manufactureCountry: data.manufactureCountry,
-        manufactureDate: data.manufactureDate,
-        caution: data.caution,
-        qualityGuaranteeStandard: data.qualityGuaranteeStandard,
-        asManagerName: data.asManagerName,
-        asPhoneNumber: data.asPhoneNumber,
-        shippingFee: data.shippingFee,
-        extraShippingFee: data.extraShippingFee,
-        shippingCompany: data.shippingCompany,
-        deliveryPeriod: data.deliveryPeriod,
-        returnExchangePolicy: data.returnExchangePolicy,
-        returnShippingFee: data.returnShippingFee,
-        exchangeShippingFee: data.exchangeShippingFee,
-        discountRate: data.discountRate,
-        discountStartTime:
-          data.discountStartTime !== undefined
-            ? data.discountStartTime
-              ? new Date(data.discountStartTime)
-              : null
-            : undefined,
-        discountEndTime:
-          data.discountEndTime !== undefined
-            ? data.discountEndTime
-              ? new Date(data.discountEndTime)
-              : null
-            : undefined,
-        stocks: data.stocks,
-        sizeSpecs: data.sizeSpecs,
-      }),
+      await productsRepository.update(
+        productId,
+        toUpdateProductPayload({
+          categoryId: category?.id,
+          data,
+          uploadedImage,
+        }),
+      ),
     );
 
     const resolvedProduct = await resolveProductImage(updated);

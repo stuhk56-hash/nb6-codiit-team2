@@ -14,7 +14,14 @@ import {
 } from '../types/products.type';
 import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 
-function ensureValidDiscountRate(rate: number | undefined) {
+const DEFAULT_PRODUCT_LIST_PAGE = 1;
+const DEFAULT_PRODUCT_LIST_PAGE_SIZE = 16;
+const DEFAULT_PRODUCT_INQUIRY_LIST_PAGE = 1;
+const DEFAULT_PRODUCT_INQUIRY_LIST_PAGE_SIZE = 10;
+const MIN_SIZE_SPEC_CM = 0;
+const MAX_SIZE_SPEC_CM = 300;
+
+function validateDiscountRate(rate: number | undefined) {
   if (rate === undefined) {
     return;
   }
@@ -28,7 +35,7 @@ function isValidDateString(value: string) {
   return !Number.isNaN(Date.parse(value));
 }
 
-function ensureValidDateInput(value: string | undefined) {
+function validateDateInput(value: string | undefined) {
   if (value === undefined || value === '') {
     return;
   }
@@ -38,7 +45,7 @@ function ensureValidDateInput(value: string | undefined) {
   }
 }
 
-function ensureValidDiscountPeriod(
+function validateDiscountPeriod(
   start: Date | null | undefined,
   end: Date | null | undefined,
 ) {
@@ -54,7 +61,7 @@ function ensureValidDiscountPeriod(
   }
 }
 
-function getSizeGuideType(categoryName: string): 'TOP' | 'BOTTOM' | 'NONE' {
+function toSizeGuideType(categoryName: string): 'TOP' | 'BOTTOM' | 'NONE' {
   const category = categoryName.trim().toLowerCase();
   if (category === 'top' || category === 'outer' || category === 'dress') {
     return 'TOP';
@@ -65,11 +72,25 @@ function getSizeGuideType(categoryName: string): 'TOP' | 'BOTTOM' | 'NONE' {
   return 'NONE';
 }
 
+function toNumericSizeSpecValues(spec: NonNullable<CreateProductDto['sizeSpecs']>[number]) {
+  return [
+    spec.totalLengthCm,
+    spec.shoulderCm,
+    spec.chestCm,
+    spec.sleeveCm,
+    spec.waistCm,
+    spec.hipCm,
+    spec.thighCm,
+    spec.riseCm,
+    spec.hemCm,
+  ];
+}
+
 function validateSizeSpecs(
   categoryName: string,
   sizeSpecs: CreateProductDto['sizeSpecs'] | undefined,
 ) {
-  const guideType = getSizeGuideType(categoryName);
+  const guideType = toSizeGuideType(categoryName);
   if (guideType === 'NONE') {
     return;
   }
@@ -85,6 +106,22 @@ function validateSizeSpecs(
       throw new BadRequestError();
     }
     labels.add(label);
+
+    const numericValues = toNumericSizeSpecValues(spec);
+
+    for (const value of numericValues) {
+      if (value === undefined || value === null) {
+        continue;
+      }
+
+      if (
+        !Number.isFinite(value) ||
+        value <= MIN_SIZE_SPEC_CM ||
+        value > MAX_SIZE_SPEC_CM
+      ) {
+        throw new BadRequestError();
+      }
+    }
   }
 }
 
@@ -93,15 +130,15 @@ export function validateCreateProductInput(data: CreateProductDto) {
     throw new BadRequestError();
   }
 
-  ensureValidDiscountRate(data.discountRate);
-  ensureValidDateInput(data.discountStartTime);
-  ensureValidDateInput(data.discountEndTime);
+  validateDiscountRate(data.discountRate);
+  validateDateInput(data.discountStartTime);
+  validateDateInput(data.discountEndTime);
 
   const start = data.discountStartTime
     ? new Date(data.discountStartTime)
     : undefined;
   const end = data.discountEndTime ? new Date(data.discountEndTime) : undefined;
-  ensureValidDiscountPeriod(start, end);
+  validateDiscountPeriod(start, end);
   validateSizeSpecs(data.categoryName, data.sizeSpecs);
 }
 
@@ -113,9 +150,9 @@ export function validateUpdateProductInput(
     throw new BadRequestError();
   }
 
-  ensureValidDiscountRate(data.discountRate);
-  ensureValidDateInput(data.discountStartTime);
-  ensureValidDateInput(data.discountEndTime);
+  validateDiscountRate(data.discountRate);
+  validateDateInput(data.discountStartTime);
+  validateDateInput(data.discountEndTime);
 
   const nextStart =
     data.discountStartTime !== undefined
@@ -130,7 +167,7 @@ export function validateUpdateProductInput(
         : null
       : currentProduct.discountEndTime;
 
-  ensureValidDiscountPeriod(nextStart, nextEnd);
+  validateDiscountPeriod(nextStart, nextEnd);
 
   const nextCategory = data.categoryName ?? currentProduct.category.name;
   validateSizeSpecs(nextCategory, data.sizeSpecs);
@@ -177,8 +214,12 @@ export function normalizeProductListQuery(
   query: ProductListQuery,
 ): NormalizedProductListQuery {
   return {
-    page: query.page && query.page > 0 ? query.page : 1,
-    pageSize: query.pageSize && query.pageSize > 0 ? query.pageSize : 16,
+    page:
+      query.page && query.page > 0 ? query.page : DEFAULT_PRODUCT_LIST_PAGE,
+    pageSize:
+      query.pageSize && query.pageSize > 0
+        ? query.pageSize
+        : DEFAULT_PRODUCT_LIST_PAGE_SIZE,
     search: query.search ?? '',
     sort: query.sort ?? 'recent',
     priceMin: query.priceMin ?? 0,
@@ -193,8 +234,14 @@ export function normalizeProductInquiryListQuery(
   query: ProductInquiryListQuery,
 ): NormalizedProductInquiryListQuery {
   return {
-    page: query.page && query.page > 0 ? query.page : 1,
-    pageSize: query.pageSize && query.pageSize > 0 ? query.pageSize : 10,
+    page:
+      query.page && query.page > 0
+        ? query.page
+        : DEFAULT_PRODUCT_INQUIRY_LIST_PAGE,
+    pageSize:
+      query.pageSize && query.pageSize > 0
+        ? query.pageSize
+        : DEFAULT_PRODUCT_INQUIRY_LIST_PAGE_SIZE,
     sort: query.sort ?? 'recent',
     status: query.status ?? '',
   };
@@ -262,8 +309,6 @@ export function sortProducts(
           b.reviews.reduce((sum, review) => sum + review.rating, 0) /
           (b.reviews.length || 1);
         return bRating - aRating;
-        //sort에서 비교 함수는 보통 음수면 a가 앞 양수면 b가 앞 0이면 순서 유지, 여기서는 highRating이므로 bRating - aRating으로 내림차순 정렬
-        //reduce는 배열의 여러 값을 하나로 누적해서 만드는 메서드, 리뷰의 배열을 돌면서 각 리뷰의 rating을 전부 더함, 그리고 리뷰의 개수로 나눠서 평균 평점을 구함
       }
       case 'salesRanking': {
         const aSales = a.orderItems.reduce(
@@ -288,8 +333,6 @@ export function paginateProducts(
   query: Pick<NormalizedProductListQuery, 'page' | 'pageSize'>,
 ) {
   const start = (query.page - 1) * query.pageSize;
-  //slice는 배열의 일부를 잘라서 새 배열로 반환(위치:인덱스로 잘라내는 것) 배열에서 몇 번째부터 몇 번째 전까지 가져올지를 정함
-  //시작 인덱스는 포함하지만 끝인덱스는 포함하지 않음 ex) arr.slice(0, 10)   // 0~9
   return products.slice(start, start + query.pageSize);
 }
 

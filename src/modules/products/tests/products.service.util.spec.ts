@@ -18,6 +18,10 @@ import {
   validateCreateProductInput,
   validateUpdateProductInput,
 } from '../utils/products.service.util';
+import {
+  toCreateProductPayload,
+  toUpdateProductPayload,
+} from '../utils/products.payload.util';
 
 jest.mock('../../s3/utils/s3.service.util', () => ({
   resolveS3ImageUrl: jest.fn(),
@@ -63,8 +67,32 @@ describe('상품 서비스 유틸 유닛 테스트', () => {
           categoryName: 'top',
           price: 1000,
           stocks: [{ sizeId: 1, quantity: 2 }],
+          sizeSpecs: [
+            {
+              sizeLabel: 'M',
+              totalLengthCm: 70,
+              shoulderCm: 45,
+            },
+          ],
         } as any),
       ).not.toThrow();
+    });
+
+    test('치수값이 범위를 벗어나면 BadRequestError를 던진다', () => {
+      expect(() =>
+        validateCreateProductInput({
+          name: '상품',
+          categoryName: 'top',
+          price: 1000,
+          stocks: [{ sizeId: 1, quantity: 2 }],
+          sizeSpecs: [
+            {
+              sizeLabel: 'M',
+              totalLengthCm: 999,
+            },
+          ],
+        } as any),
+      ).toThrow(BadRequestError);
     });
 
     test('할인율이 100 초과면 BadRequestError를 던진다', () => {
@@ -87,6 +115,43 @@ describe('상품 서비스 유틸 유닛 테스트', () => {
           price: 1000,
           discountStartTime: '2026-03-17T00:00:00.000Z',
           stocks: [{ sizeId: 1, quantity: 2 }],
+        } as any),
+      ).toThrow(BadRequestError);
+    });
+
+    test('TOP 계열 카테고리에서 sizeSpecs가 없으면 BadRequestError를 던진다', () => {
+      expect(() =>
+        validateCreateProductInput({
+          name: '상품',
+          categoryName: 'top',
+          price: 1000,
+          stocks: [{ sizeId: 1, quantity: 2 }],
+        } as any),
+      ).toThrow(BadRequestError);
+    });
+
+    test('SHOES 카테고리는 sizeSpecs가 없어도 허용한다', () => {
+      expect(() =>
+        validateCreateProductInput({
+          name: '신발',
+          categoryName: 'shoes',
+          price: 1000,
+          stocks: [{ sizeId: 1, quantity: 2 }],
+        } as any),
+      ).not.toThrow();
+    });
+
+    test('sizeSpecs sizeLabel이 중복되면 BadRequestError를 던진다', () => {
+      expect(() =>
+        validateCreateProductInput({
+          name: '상품',
+          categoryName: 'top',
+          price: 1000,
+          stocks: [{ sizeId: 1, quantity: 2 }],
+          sizeSpecs: [
+            { sizeLabel: 'M', totalLengthCm: 70 },
+            { sizeLabel: 'm', totalLengthCm: 71 },
+          ],
         } as any),
       ).toThrow(BadRequestError);
     });
@@ -209,5 +274,50 @@ describe('상품 서비스 유틸 유닛 테스트', () => {
       '/images/Mask-group.svg',
     );
     expect(result.imageUrl).toBe('https://cdn.example.com/product.png');
+  });
+
+  describe('products.payload.util', () => {
+    test('toCreateProductPayload는 업로드 이미지와 할인일자를 payload로 변환한다', () => {
+      const payload = toCreateProductPayload({
+        storeId: 'store-1',
+        categoryId: 'cat-1',
+        data: {
+          name: '상품',
+          categoryName: 'top',
+          price: 1000,
+          stocks: [{ sizeId: 1, quantity: 2 }],
+          sizeSpecs: [{ sizeLabel: 'M', totalLengthCm: 70 }],
+          discountStartTime: '2026-03-20T00:00:00.000Z',
+          discountEndTime: '2026-03-30T00:00:00.000Z',
+        } as any,
+        uploadedImage: {
+          url: 'https://cdn.example.com/p.png',
+          key: 'products/p.png',
+        },
+      });
+
+      expect(payload.storeId).toBe('store-1');
+      expect(payload.categoryId).toBe('cat-1');
+      expect(payload.imageUrl).toBe('https://cdn.example.com/p.png');
+      expect(payload.imageKey).toBe('products/p.png');
+      expect(payload.discountStartTime).toBeInstanceOf(Date);
+      expect(payload.discountEndTime).toBeInstanceOf(Date);
+    });
+
+    test('toUpdateProductPayload는 빈 할인일자를 null로 변환한다', () => {
+      const payload = toUpdateProductPayload({
+        categoryId: 'cat-2',
+        data: {
+          name: '수정 상품',
+          stocks: [{ sizeId: 1, quantity: 3 }],
+          discountStartTime: '',
+          discountEndTime: '',
+        } as any,
+      });
+
+      expect(payload.categoryId).toBe('cat-2');
+      expect(payload.discountStartTime).toBeNull();
+      expect(payload.discountEndTime).toBeNull();
+    });
   });
 });

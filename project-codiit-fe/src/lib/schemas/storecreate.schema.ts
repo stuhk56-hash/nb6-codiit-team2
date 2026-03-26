@@ -22,6 +22,9 @@ export const storeCreateSchema = z.object({
   mailOrderSalesNumber: z.string().optional(),
   representativeName: z.string().optional(),
   businessAddress: z.string().optional(),
+  disclosureAgreement: z.boolean().refine((value) => value, {
+    message: "공개 항목 및 약관 안내에 동의해야 저장할 수 있습니다",
+  }),
 });
 
 export type StoreCreateForm = z.infer<typeof storeCreateSchema>;

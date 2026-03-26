@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/constants/prismaClient';
-import { PaymentStatus, OrderStatus } from '@prisma/client';
+import { PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 
 const orderSelect = {
   id: true,
