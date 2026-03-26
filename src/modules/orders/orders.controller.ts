@@ -48,9 +48,23 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response) {
 
 //주문 취소 DELETE /api/orders/:orderId
 export async function cancelOrder(req: AuthenticatedRequest, res: Response) {
-  const buyerId = requireBuyer(req.user).id;
-  const { orderId } = req.params;
+  console.log('🔍 cancelOrder 진입');
+  console.log('  req.user:', req.user); // ✅ user 정보 확인
+  console.log('  orderId:', req.params.orderId);
 
-  const result = await ordersService.cancelOrder(buyerId, orderId);
-  return res.status(200).send(result);
+  try {
+    const buyerId = requireBuyer(req.user).id;
+    console.log('  buyerId:', buyerId);
+
+    const result = await ordersService.cancelOrder(buyerId, req.params.orderId);
+
+    return res.status(200).send({
+      success: true,
+      message: '주문이 취소되었습니다',
+      data: result,
+    });
+  } catch (error) {
+    console.error('❌ cancelOrder 에러:', error);
+    throw error;
+  }
 }

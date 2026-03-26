@@ -9,7 +9,9 @@ const orderSelect = {
   address: true,
   usedPoints: true,
   earnedPoints: true,
+  status: true,
   createdAt: true,
+  updatedAt: true,
   items: {
     select: {
       id: true,
@@ -43,13 +45,26 @@ const orderSelect = {
       id: true,
       price: true,
       status: true,
+      paymentMethod: true, //
       createdAt: true,
       updatedAt: true,
       orderId: true,
     },
   },
+  shipping: {
+    select: {
+      id: true,
+      status: true,
+      trackingNumber: true,
+      carrier: true,
+      readyToShipAt: true,
+      inShippingAt: true,
+      deliveredAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
 } as const;
-
 // buyerId로 주문 목록 조회 (페이지네이션)
 export async function findOrdersByUserId(
   buyerId: string,
@@ -99,13 +114,15 @@ export async function findOrdersByUserId(
 
 //orderId로 주문 조회
 export async function findOrderById(orderId: string) {
-  return prisma.order.findUnique({
+  const order = await prisma.order.findUnique({
     where: { id: orderId },
     select: orderSelect,
   });
+
+  return order;
 }
 
-//주문 생성 (트랜잭션)
+// ✅ 주문 생성 (트랜잭션) - 결제 생성은 제거!
 export async function createOrderWithTransaction(
   buyerId: string,
   data: {
@@ -134,21 +151,13 @@ export async function createOrderWithTransaction(
         phoneNumber: data.phoneNumber,
         address: data.address,
         usedPoints: data.usedPoints,
-        status: 'WaitingPayment' as OrderStatus,
+        earnedPoints: 0, // ✅ 초기값 0으로 설정 (나중에 업데이트)
+        status: 'WaitingPayment' as OrderStatus, // ✅ 결제 대기 상태!
       },
     });
 
     // 2. 재고 재검증 및 감소
     for (const item of processedItems) {
-      const currentStock = await tx.productStock.findUnique({
-        where: {
-          productId_sizeId: {
-            productId: item.productId,
-            sizeId: item.sizeId,
-          },
-        },
-      });
-
       await tx.productStock.update({
         where: {
           productId_sizeId: {
@@ -198,19 +207,24 @@ export async function createOrderWithTransaction(
     const user = await tx.user.findUnique({
       where: { id: buyerId },
       include: {
-        grade: true, // 현재 등급 조회
+        grade: true,
       },
     });
 
-    // 현재 등급의 적립률로 포인트 계산 (구매 전 등급)
     const earnedPoints = Math.floor(
       finalPrice * ((user.grade?.rate ?? 0) / 100),
     );
 
-    // 새로운 lifetimeSpend 계산
     const newLifetimeSpend = (user.lifetimeSpend || 0) + finalPrice;
 
-    // 사용자 정보 업데이트 (lifetimeSpend, 포인트 적립)
+    // ✅ 적립 포인트를 주문에 저장
+    await tx.order.update({
+      where: { id: createdOrder.id },
+      data: {
+        earnedPoints: earnedPoints, // ✅ earnedPoints 저장!
+      },
+    });
+
     await tx.user.update({
       where: { id: buyerId },
       data: {
@@ -221,7 +235,16 @@ export async function createOrderWithTransaction(
       },
     });
 
-    // 6. 새로운 등급 찾기 및 업데이트 (lifetimeSpend 변경 후)
+    const shipping = await tx.shipping.create({
+      data: {
+        orderId: createdOrder.id,
+        status: 'ReadyToShip',
+        trackingNumber: generateTrackingNumber(),
+        carrier: '로켓배송',
+      },
+    });
+
+    // 6. 새로운 등급 찾기 및 업데이트
     const newGrade = await tx.grade.findFirst({
       where: {
         minAmount: {
@@ -233,7 +256,6 @@ export async function createOrderWithTransaction(
       },
     });
 
-    // 등급이 변경되었으면 업데이트
     if (newGrade && newGrade.id !== user.gradeId) {
       await tx.user.update({
         where: { id: buyerId },
@@ -243,19 +265,54 @@ export async function createOrderWithTransaction(
       });
     }
 
-    // 7. 결제 생성
-    await tx.payment.create({
-      data: {
-        orderId: createdOrder.id,
-        price: finalPrice,
-        status: 'CompletedPayment' as PaymentStatus,
-      },
-    });
+    // ❌ 결제 생성 제거! (결제는 별도로 진행)
 
     return createdOrder.id;
   });
 
   return findOrderById(orderId);
+}
+
+// ✅ 주문 취소 (트랜잭션) - earnedPoints 복구 추가
+export async function cancelOrderWithTransaction(
+  buyerId: string,
+  orderId: string,
+) {
+  await prisma.$transaction(async (tx) => {
+    // 1. 취소할 주문 조회
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+    });
+
+    if (!order) {
+      throw new Error('주문을 찾을 수 없습니다');
+    }
+
+    // 2. 주문 상태 취소로 변경
+    await tx.order.update({
+      where: { id: orderId },
+      data: { status: 'Canceled' as OrderStatus },
+    });
+
+    // 3. 포인트 복구 (사용 포인트 + 적립 포인트) ✅ order에서 직접 가져오기
+    const totalPointsToRestore = order.usedPoints + order.earnedPoints;
+
+    if (totalPointsToRestore > 0) {
+      await tx.user.update({
+        where: { id: buyerId },
+        data: {
+          points: {
+            increment: totalPointsToRestore,
+          },
+        },
+      });
+    }
+  });
+}
+
+// ✅ 송장번호 생성 함수 추가
+function generateTrackingNumber(): string {
+  return String(Math.floor(Math.random() * 10000000000000));
 }
 //주문 정보 수정
 export async function updateOrder(
@@ -270,33 +327,6 @@ export async function updateOrder(
     where: { id: orderId },
     data,
     select: orderSelect,
-  });
-}
-
-//주문 취소 (트랜잭션)
-export async function cancelOrderWithTransaction(
-  buyerId: string,
-  orderId: string,
-  usedPoints: number,
-) {
-  await prisma.$transaction(async (tx) => {
-    // 1. 주문 상태 취소로 변경
-    await tx.order.update({
-      where: { id: orderId },
-      data: { status: 'Canceled' as OrderStatus },
-    });
-
-    // 2. 포인트 복구
-    if (usedPoints > 0) {
-      await tx.user.update({
-        where: { id: buyerId },
-        data: {
-          points: {
-            increment: usedPoints,
-          },
-        },
-      });
-    }
   });
 }
 

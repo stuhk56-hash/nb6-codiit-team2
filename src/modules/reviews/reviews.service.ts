@@ -32,7 +32,10 @@ export class ReviewsService {
     data: CreateReviewDto,
   ): Promise<ReviewResponseDto> {
     ensureCreateReviewInput(data);
-    requireProduct(await reviewsRepository.findProductById(productId), '상품을 찾지 못했습니다.');
+    requireProduct(
+      await reviewsRepository.findProductById(productId),
+      '상품을 찾지 못했습니다.',
+    );
 
     const orderItem = requireOrderItem(
       await reviewsRepository.findOrderItemById(data.orderItemId),
@@ -67,19 +70,25 @@ export class ReviewsService {
     productId: string,
     query: ReviewsQuery,
   ): Promise<ReviewListResponseDto> {
-    requireProduct(await reviewsRepository.findProductById(productId), '상품을 찾지 못했습니다.');
+    requireProduct(
+      await reviewsRepository.findProductById(productId),
+      '상품을 찾지 못했습니다.',
+    );
     const normalized = normalizeReviewsQuery(query);
     const { reviews, totalCount } = await reviewsRepository.findPageByProductId(
       productId,
       normalized,
     );
 
-    return toReviewListResponseDto(reviews, totalCount, normalized.page, normalized.limit);
+    return toReviewListResponseDto(
+      reviews,
+      totalCount,
+      normalized.page,
+      normalized.limit,
+    );
   }
 
-  async findReviewDetail(
-    reviewId: string,
-  ): Promise<ReviewDetailResponseDto> {
+  async findReviewDetail(reviewId: string): Promise<ReviewDetailResponseDto> {
     const review = requireReview(
       await reviewsRepository.findById(reviewId),
       '리뷰를 찾을 수 없습니다.',
@@ -100,6 +109,8 @@ export class ReviewsService {
       '리뷰를 찾을 수 없습니다.',
     );
     ensureReviewOwner(review, user.id);
+
+    // ✅ 이 부분 제거 (orderItemId가 DTO에 없으므로 변경 불가능)
 
     const updated = await reviewsRepository.updateById(reviewId, data);
     return toReviewResponseDto(updated);

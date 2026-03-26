@@ -462,39 +462,21 @@ model OrderItem {
 
 // 상품 리뷰
 model Review {
-  // 리뷰 ID
-  id          String  @id @default(cuid())
-  // 리뷰 작성 바이어 ID
+  id          String   @id @default(cuid())
   buyerId     String
-  // 리뷰 대상 상품 ID
   productId   String
-  // 어떤 주문아이템 구매건의 리뷰인지(없을 수도 있음)
-  orderItemId String?
+  orderItemId String   @unique // ✅ 추가
+  rating      Int
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // 별점(예: 1~5)
-  rating  Int
-  // 리뷰 본문
-  content String
+  buyer     User      @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
 
-  // 작성자 관계
-  buyer     User       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
-  // 상품 관계
-  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  // 주문아이템 관계
-  orderItem OrderItem? @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
-
-  // 생성 시각
-  createdAt DateTime @default(now())
-  // 수정 시각
-  updatedAt DateTime @updatedAt
-
-  // orderItemId가 존재하는 경우, 같은 주문아이템 리뷰 중복 작성 방지
-  // (PostgreSQL에서 nullable unique는 null끼리 중복 허용)
-  @@unique([orderItemId])
-  // 상품별 리뷰 조회 최적화
+  @@unique([buyerId, orderItemId]) // ✅ 추가
   @@index([productId])
-  // 작성자별 리뷰 조회 최적화
-  @@index([buyerId])
 }
 
 // 결제 정보(실결제 연동 없는 테스트용)

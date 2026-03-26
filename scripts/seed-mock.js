@@ -184,7 +184,7 @@ async function seedProducts(stores, categories, sizes) {
       const category = categories[c];
 
       for (let p = 1; p <= PRODUCTS_PER_CATEGORY; p += 1) {
-        const soldOut = p === PRODUCTS_PER_CATEGORY;
+        const soldOut = false; // ✅ 모두 재고 있음
         const basePrice = 20000 + s * 5000 + c * 4000 + p * 1500;
         const discountRate = p % 2 === 0 ? 10 : 0;
 
@@ -195,10 +195,8 @@ async function seedProducts(stores, categories, sizes) {
             name: `스토어${s + 1} ${category.name} 상품${p}`,
             content: `스토어${s + 1} ${category.name} 상품${p} 상세 설명`,
             price: basePrice,
-            imageUrl:
-              p === 3
-                ? null
-                : `https://picsum.photos/seed/product-${s + 1}-${category.name}-${p}/500/500`,
+            // ✅ 모두 이미지 포함
+            imageUrl: `https://picsum.photos/seed/product-${s + 1}-${category.name}-${p}/500/500`,
             discountRate,
             discountStartTime:
               discountRate > 0
@@ -217,7 +215,7 @@ async function seedProducts(stores, categories, sizes) {
             data: {
               productId: product.id,
               sizeId: sizes[i].id,
-              quantity: soldOut ? 0 : 10 + i + p,
+              quantity: 10 + i + p, // ✅ 모두 재고 있음
             },
           });
         }
@@ -277,39 +275,21 @@ async function seedCarts(buyers, products, sizes) {
   }
 }
 
-function getOrderStatus(index) {
-  const statuses = [
-    OrderStatus.CompletedPayment,
-    OrderStatus.WaitingPayment,
-    OrderStatus.Canceled,
-    OrderStatus.CompletedPayment,
-    OrderStatus.CompletedPayment,
-  ];
-  return statuses[index % statuses.length];
-}
-
-function getPaymentStatus(orderStatus) {
-  if (orderStatus === OrderStatus.CompletedPayment)
-    return PaymentStatus.CompletedPayment;
-  if (orderStatus === OrderStatus.Canceled)
-    return PaymentStatus.CanceledPayment;
-  return PaymentStatus.WaitingPayment;
+function getRandomPaymentMethod(index) {
+  return paymentMethods[index % paymentMethods.length];
 }
 
 function generateTrackingNumber() {
   return String(Math.floor(Math.random() * 10000000000000));
 }
 
-function getRandomPaymentMethod(index) {
-  return paymentMethods[index % paymentMethods.length];
-}
-
 async function seedOrdersAndReviews(buyers, products, sizes) {
-  const createdOrderItems = [];
+  let reviewCount = 0;
 
   for (let b = 0; b < buyers.length; b += 1) {
     for (let i = 0; i < ORDERS_PER_BUYER; i += 1) {
-      const status = getOrderStatus(i);
+      // ✅ 모든 Order를 CompletedPayment로 설정
+      const status = OrderStatus.CompletedPayment;
       const createdAt = new Date(
         Date.now() - (b * ORDERS_PER_BUYER + i) * 24 * 60 * 60 * 1000,
       );
@@ -317,13 +297,12 @@ async function seedOrdersAndReviews(buyers, products, sizes) {
       const order = await prisma.order.create({
         data: {
           buyerId: buyers[b].id,
-          status,
+          status, // ✅ CompletedPayment
           buyerName: buyers[b].name,
           phoneNumber: `010-2000-${String(1000 + b * 10 + i)}`,
           address: `서울시 주문로 ${b + 1}-${i + 1}`,
           usedPoints: i * 100,
-          earnedPoints:
-            status === OrderStatus.CompletedPayment ? 500 + i * 50 : 0,
+          earnedPoints: 500 + i * 50, // ✅ 모두 포인트 적립
           createdAt,
           updatedAt: createdAt,
         },
@@ -354,11 +333,20 @@ async function seedOrdersAndReviews(buyers, products, sizes) {
         });
 
         totalPrice += unitPrice * quantity;
-        createdOrderItems.push({
-          orderItem,
-          buyerId: buyers[b].id,
-          orderStatus: status,
-        });
+
+        // ✅ 각 OrderItem마다 최대 1개 리뷰만 생성
+        if (reviewCount < COUNT * COUNT) {
+          await prisma.review.create({
+            data: {
+              buyerId: buyers[b].id,
+              productId: product.id,
+              orderItemId: orderItem.id, // ✅ UNIQUE
+              rating: (reviewCount % 5) + 1,
+              content: `리뷰 테스트 ${reviewCount + 1}: 만족도 ${(reviewCount % 5) + 1}점`,
+            },
+          });
+          reviewCount += 1;
+        }
       }
 
       const paymentMethod = getRandomPaymentMethod(b + i);
@@ -367,7 +355,7 @@ async function seedOrdersAndReviews(buyers, products, sizes) {
         data: {
           orderId: order.id,
           price: totalPrice - i * 100,
-          status: getPaymentStatus(status),
+          status: PaymentStatus.CompletedPayment, // ✅ 모두 결제 완료
           paymentMethod: paymentMethod,
           cardNumber:
             paymentMethod === PaymentMethod.CREDIT_CARD ? '1234' : null,
@@ -382,40 +370,21 @@ async function seedOrdersAndReviews(buyers, products, sizes) {
         },
       });
 
-      // Shipping 데이터 생성
-      if (status === OrderStatus.CompletedPayment) {
-        await prisma.shipping.create({
-          data: {
-            orderId: order.id,
-            status: 'Delivered',
-            trackingNumber: generateTrackingNumber(),
-            carrier: '로켓배송',
-            readyToShipAt: new Date(createdAt.getTime() + 1 * 60 * 60 * 1000),
-            inShippingAt: new Date(createdAt.getTime() + 6 * 60 * 60 * 1000),
-            deliveredAt: new Date(createdAt.getTime() + 24 * 60 * 60 * 1000),
-            createdAt,
-            updatedAt: createdAt,
-          },
-        });
-      }
+      // ✅ 모든 Order에 Shipping 데이터 생성
+      await prisma.shipping.create({
+        data: {
+          orderId: order.id,
+          status: 'Delivered', // ✅ 모두 배송완료
+          trackingNumber: generateTrackingNumber(),
+          carrier: '로켓배송',
+          readyToShipAt: new Date(createdAt.getTime() + 1 * 60 * 60 * 1000),
+          inShippingAt: new Date(createdAt.getTime() + 6 * 60 * 60 * 1000),
+          deliveredAt: new Date(createdAt.getTime() + 24 * 60 * 60 * 1000),
+          createdAt,
+          updatedAt: createdAt,
+        },
+      });
     }
-  }
-
-  const reviewTargets = createdOrderItems
-    .filter((row) => row.orderStatus === OrderStatus.CompletedPayment)
-    .slice(0, COUNT * COUNT);
-
-  for (let i = 0; i < reviewTargets.length; i += 1) {
-    const target = reviewTargets[i];
-    await prisma.review.create({
-      data: {
-        buyerId: target.buyerId,
-        productId: target.orderItem.productId,
-        orderItemId: target.orderItem.id,
-        rating: (i % 5) + 1,
-        content: `리뷰 테스트 ${i + 1}: 만족도 ${(i % 5) + 1}점`,
-      },
-    });
   }
 }
 

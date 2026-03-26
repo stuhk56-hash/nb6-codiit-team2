@@ -1,5 +1,6 @@
 import { OrderItemDto } from './order-item.dto';
 import { PaymentDto } from './payment.dto';
+import { ShippingDto } from './shipping.dto';
 
 export interface OrderResponseDto {
   id: string;
@@ -8,7 +9,11 @@ export interface OrderResponseDto {
   address: string;
   usedPoints: number;
   earnedPoints: number;
+  status: string;
   createdAt: string;
-  orderItems: OrderItemDto[];
-  payments: PaymentDto;
+  updatedAt: string;
+  buyerId: string;
+  items?: OrderItemDto[];
+  payment?: PaymentDto | null;
+  shipping?: ShippingDto | null;
 }
