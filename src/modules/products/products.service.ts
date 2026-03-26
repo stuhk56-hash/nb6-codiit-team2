@@ -1,6 +1,7 @@
 import { requireBuyer, requireSeller } from '../../lib/request/auth-user';
 import { AuthUser } from '../../types/auth-request.type';
 import { s3Service } from '../s3/s3.service';
+import { notificationsRepository } from '../notifications/notifications.repository';
 import { DetailProductResponseDto } from './dto/detail-product-response.dto';
 import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 import { ProductInquiryListResponseDto } from './dto/product-inquiry-list-response.dto';
@@ -172,7 +173,7 @@ export class ProductsService {
     data: { title: string; content: string; isSecret?: boolean },
   ): Promise<ProductInquiryResponseDto> {
     requireBuyer(user);
-    requireProduct(await productsRepository.findById(productId));
+    const product = requireProduct(await productsRepository.findById(productId));
 
     const inquiry = await productsRepository.createInquiry({
       productId,
@@ -181,6 +182,11 @@ export class ProductsService {
       content: data.content,
       isSecret: data.isSecret,
     });
+
+    await notificationsRepository.create(
+      product.store.sellerId,
+      `상품 "${product.name}"에 새로운 문의가 등록되었습니다.`,
+    );
 
     return toProductInquiryResponseDto(inquiry);
   }

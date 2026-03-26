@@ -3,6 +3,25 @@ import type { NotificationsPageResult } from './types/notifications.type';
 import type { NormalizedNotificationsQuery } from './types/notifications.type';
 
 export class NotificationsRepository {
+  create(userId: string, content: string) {
+    return prisma.notification.create({
+      data: {
+        userId,
+        content,
+      },
+    });
+  }
+
+  createMany(data: Array<{ userId: string; content: string }>) {
+    if (data.length === 0) {
+      return Promise.resolve({ count: 0 });
+    }
+
+    return prisma.notification.createMany({
+      data,
+    });
+  }
+
   async findPageByUserId(
     userId: string,
     query: NormalizedNotificationsQuery,

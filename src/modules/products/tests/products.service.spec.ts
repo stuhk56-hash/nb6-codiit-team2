@@ -1,4 +1,5 @@
 import { requireBuyer, requireSeller } from '../../../lib/request/auth-user';
+import { notificationsRepository } from '../../notifications/notifications.repository';
 import { s3Service } from '../../s3/s3.service';
 import { productsRepository } from '../products.repository';
 import { ProductsService } from '../products.service';
@@ -39,6 +40,13 @@ jest.mock('../../../lib/request/auth-user', () => ({
 jest.mock('../../s3/s3.service', () => ({
   s3Service: {
     uploadFile: jest.fn(),
+  },
+}));
+
+jest.mock('../../notifications/notifications.repository', () => ({
+  notificationsRepository: {
+    create: jest.fn(),
+    createMany: jest.fn(),
   },
 }));
 
@@ -143,6 +151,8 @@ describe('상품 서비스 유닛 테스트', () => {
     typeof productsRepository
   >;
   const mockedS3Service = s3Service as jest.Mocked<typeof s3Service>;
+  const mockedNotificationsRepository =
+    notificationsRepository as jest.Mocked<typeof notificationsRepository>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -338,8 +348,13 @@ describe('상품 서비스 유닛 테스트', () => {
       title: '배송 문의',
     } as any;
 
-    mockedRepository.findById.mockResolvedValue({ id: 'product-1' } as any);
+    mockedRepository.findById.mockResolvedValue({
+      id: 'product-1',
+      name: '문의 상품',
+      store: { sellerId: 'seller-1' },
+    } as any);
     mockedRepository.createInquiry.mockResolvedValue(createdInquiry);
+    mockedNotificationsRepository.create.mockResolvedValue({ id: 'n1' } as any);
 
     const result = await service.createInquiry(buyerUser, 'product-1', inquiryInput);
 
@@ -352,6 +367,10 @@ describe('상품 서비스 유닛 테스트', () => {
       content: '언제 오나요?',
       isSecret: true,
     });
+    expect(mockedNotificationsRepository.create).toHaveBeenCalledWith(
+      'seller-1',
+      '상품 "문의 상품"에 새로운 문의가 등록되었습니다.',
+    );
     expect(toProductInquiryResponseDto).toHaveBeenCalledWith(createdInquiry);
     expect(result).toEqual({ id: 'inq-1', title: '배송 문의' });
   });

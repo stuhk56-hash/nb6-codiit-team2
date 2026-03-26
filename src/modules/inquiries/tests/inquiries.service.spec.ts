@@ -1,5 +1,6 @@
 import { inquiriesRepository } from '../inquiries.repository';
 import { InquiriesService } from '../inquiries.service';
+import { notificationsRepository } from '../../notifications/notifications.repository';
 import {
   toInquiryListResponseDto,
   toInquiryReplyResponseDto,
@@ -34,6 +35,13 @@ jest.mock('../inquiries.repository', () => ({
   },
 }));
 
+jest.mock('../../notifications/notifications.repository', () => ({
+  notificationsRepository: {
+    create: jest.fn(),
+    createMany: jest.fn(),
+  },
+}));
+
 jest.mock('../utils/inquiries.mapper', () => ({
   toInquiryListResponseDto: jest.fn((inquiries: any[], totalCount: number) => ({
     list: inquiries,
@@ -64,6 +72,8 @@ describe('inquiries.service', () => {
   const mockedRepository = inquiriesRepository as jest.Mocked<
     typeof inquiriesRepository
   >;
+  const mockedNotificationsRepository =
+    notificationsRepository as jest.Mocked<typeof notificationsRepository>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -165,12 +175,17 @@ describe('inquiries.service', () => {
   });
 
   test('replyCreate/replyUpdate - 판매자 권한과 상태 변경을 검증한다', async () => {
-    const inquiry = { id: 'inquiry-1' } as any;
+    const inquiry = {
+      id: 'inquiry-1',
+      buyerId: 'buyer-1',
+      product: { name: '문의 상품' },
+    } as any;
     const reply = { id: 'reply-1' } as any;
     mockedRepository.findById.mockResolvedValue(inquiry);
     mockedRepository.createReply.mockResolvedValue(reply);
     mockedRepository.findReplyById.mockResolvedValue(reply);
     mockedRepository.updateReplyById.mockResolvedValue(reply);
+    mockedNotificationsRepository.create.mockResolvedValue({ id: 'n1' } as any);
 
     const created = await service.replyCreate('seller-1', 'inquiry-1', {
       content: '답변',
@@ -183,6 +198,10 @@ describe('inquiries.service', () => {
       'inquiry-1',
       'seller-1',
       '답변',
+    );
+    expect(mockedNotificationsRepository.create).toHaveBeenCalledWith(
+      'buyer-1',
+      '문의하신 상품 "문의 상품"에 답변이 등록되었습니다.',
     );
     expect(toInquiryReplyResponseDto).toHaveBeenCalledWith(reply);
     expect(created).toEqual({ id: 'reply-1' });

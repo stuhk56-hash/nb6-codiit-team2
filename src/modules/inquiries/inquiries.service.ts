@@ -1,4 +1,5 @@
 import type { AuthUser } from '../../types/auth-request.type';
+import { notificationsRepository } from '../notifications/notifications.repository';
 import type { CreateInquiryReplyDto } from './dto/create-inquiry-reply.dto';
 import type { InquiryListResponseDto } from './dto/inquiry-list-response.dto';
 import type { InquiryReplyResponseDto } from './dto/inquiry-reply-response.dto';
@@ -111,6 +112,11 @@ export class InquiriesService {
       inquiryId,
       userId,
       data.content,
+    );
+
+    await notificationsRepository.create(
+      inquiry.buyerId,
+      `문의하신 상품 "${inquiry.product.name}"에 답변이 등록되었습니다.`,
     );
 
     return toInquiryReplyResponseDto(created);
