@@ -46,6 +46,11 @@ export function toStoreResponseDto(store: StoreWithCounts): StoreResponseDto {
     detailAddress: store.detailAddress,
     phoneNumber: store.phoneNumber,
     content: store.content,
+    businessRegistrationNumber: store.businessRegistrationNumber,
+    businessPhoneNumber: store.businessPhoneNumber,
+    mailOrderSalesNumber: store.mailOrderSalesNumber,
+    representativeName: store.representativeName,
+    businessAddress: store.businessAddress,
     image: toRequiredImage(store.imageUrl),
   };
 }
@@ -87,6 +92,11 @@ export function toMyStoreResponseDto(
     detailAddress: store.detailAddress,
     phoneNumber: store.phoneNumber,
     content: store.content,
+    businessRegistrationNumber: store.businessRegistrationNumber,
+    businessPhoneNumber: store.businessPhoneNumber,
+    mailOrderSalesNumber: store.mailOrderSalesNumber,
+    representativeName: store.representativeName,
+    businessAddress: store.businessAddress,
     image: toRequiredImage(store.imageUrl),
     productCount: store._count.products,
     favoriteCount: store._count.favoritedBy,

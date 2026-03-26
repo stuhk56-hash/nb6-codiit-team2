@@ -61,6 +61,22 @@ export class ProductsService {
       name: data.name,
       price: data.price,
       content: data.content,
+      material: data.material,
+      color: data.color,
+      manufacturerName: data.manufacturerName,
+      manufactureCountry: data.manufactureCountry,
+      manufactureDate: data.manufactureDate,
+      caution: data.caution,
+      qualityGuaranteeStandard: data.qualityGuaranteeStandard,
+      asManagerName: data.asManagerName,
+      asPhoneNumber: data.asPhoneNumber,
+      shippingFee: data.shippingFee,
+      extraShippingFee: data.extraShippingFee,
+      shippingCompany: data.shippingCompany,
+      deliveryPeriod: data.deliveryPeriod,
+      returnExchangePolicy: data.returnExchangePolicy,
+      returnShippingFee: data.returnShippingFee,
+      exchangeShippingFee: data.exchangeShippingFee,
       ...(uploadedImage
         ? {
             imageUrl: uploadedImage.url,
@@ -75,6 +91,7 @@ export class ProductsService {
         ? new Date(data.discountEndTime)
         : undefined,
       stocks: data.stocks,
+      sizeSpecs: data.sizeSpecs,
     });
 
     const resolvedProduct = await resolveProductImage(created);
@@ -162,6 +179,22 @@ export class ProductsService {
         name: data.name,
         price: data.price,
         content: data.content,
+        material: data.material,
+        color: data.color,
+        manufacturerName: data.manufacturerName,
+        manufactureCountry: data.manufactureCountry,
+        manufactureDate: data.manufactureDate,
+        caution: data.caution,
+        qualityGuaranteeStandard: data.qualityGuaranteeStandard,
+        asManagerName: data.asManagerName,
+        asPhoneNumber: data.asPhoneNumber,
+        shippingFee: data.shippingFee,
+        extraShippingFee: data.extraShippingFee,
+        shippingCompany: data.shippingCompany,
+        deliveryPeriod: data.deliveryPeriod,
+        returnExchangePolicy: data.returnExchangePolicy,
+        returnShippingFee: data.returnShippingFee,
+        exchangeShippingFee: data.exchangeShippingFee,
         discountRate: data.discountRate,
         discountStartTime:
           data.discountStartTime !== undefined
@@ -176,6 +209,7 @@ export class ProductsService {
               : null
             : undefined,
         stocks: data.stocks,
+        sizeSpecs: data.sizeSpecs,
       }),
     );
 

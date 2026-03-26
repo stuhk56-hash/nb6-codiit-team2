@@ -335,7 +335,7 @@ describe('상품 서비스 유닛 테스트', () => {
       page: 1,
       pageSize: 10,
       sort: 'recent',
-      status: 'PENDING',
+      status: 'WaitingAnswer',
     };
 
     mockedRepository.findById.mockResolvedValue({ id: 'product-1' } as any);
@@ -350,14 +350,17 @@ describe('상품 서비스 유닛 테스트', () => {
     });
 
     const result = await service.getListInquiry('product-1', {
-      status: 'PENDING',
+      status: 'WaitingAnswer',
     });
 
     expect(mockedRepository.findById).toHaveBeenCalledWith('product-1');
     expect(mockedRepository.findProductInquiries).toHaveBeenCalledWith(
       'product-1',
     );
-    expect(filterProductInquiries).toHaveBeenCalledWith(inquiryList, 'PENDING');
+    expect(filterProductInquiries).toHaveBeenCalledWith(
+      inquiryList,
+      'WaitingAnswer',
+    );
     expect(sortProductInquiries).toHaveBeenCalledWith(filteredInquiries, 'recent');
     expect(paginateProductInquiries).toHaveBeenCalledWith(
       filteredInquiries,

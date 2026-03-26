@@ -54,6 +54,40 @@ function ensureValidDiscountPeriod(
   }
 }
 
+function getSizeGuideType(categoryName: string): 'TOP' | 'BOTTOM' | 'NONE' {
+  const category = categoryName.trim().toLowerCase();
+  if (category === 'top' || category === 'outer' || category === 'dress') {
+    return 'TOP';
+  }
+  if (category === 'bottom' || category === 'skirt') {
+    return 'BOTTOM';
+  }
+  return 'NONE';
+}
+
+function validateSizeSpecs(
+  categoryName: string,
+  sizeSpecs: CreateProductDto['sizeSpecs'] | undefined,
+) {
+  const guideType = getSizeGuideType(categoryName);
+  if (guideType === 'NONE') {
+    return;
+  }
+
+  if (!sizeSpecs?.length) {
+    throw new BadRequestError();
+  }
+
+  const labels = new Set<string>();
+  for (const spec of sizeSpecs) {
+    const label = spec.sizeLabel?.trim().toUpperCase();
+    if (!label || labels.has(label)) {
+      throw new BadRequestError();
+    }
+    labels.add(label);
+  }
+}
+
 export function validateCreateProductInput(data: CreateProductDto) {
   if (!data.name || !data.categoryName || !data.stocks.length) {
     throw new BadRequestError();
@@ -68,6 +102,7 @@ export function validateCreateProductInput(data: CreateProductDto) {
     : undefined;
   const end = data.discountEndTime ? new Date(data.discountEndTime) : undefined;
   ensureValidDiscountPeriod(start, end);
+  validateSizeSpecs(data.categoryName, data.sizeSpecs);
 }
 
 export function validateUpdateProductInput(
@@ -96,6 +131,9 @@ export function validateUpdateProductInput(
       : currentProduct.discountEndTime;
 
   ensureValidDiscountPeriod(nextStart, nextEnd);
+
+  const nextCategory = data.categoryName ?? currentProduct.category.name;
+  validateSizeSpecs(nextCategory, data.sizeSpecs);
 }
 
 export function requireProduct(

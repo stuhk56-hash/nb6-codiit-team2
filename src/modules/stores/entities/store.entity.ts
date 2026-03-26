@@ -6,6 +6,11 @@ export type StoreEntity = {
   detailAddress: string;
   phoneNumber: string;
   content: string;
+  businessRegistrationNumber: string | null;
+  businessPhoneNumber: string | null;
+  mailOrderSalesNumber: string | null;
+  representativeName: string | null;
+  businessAddress: string | null;
   imageUrl: string | null;
   imageKey: string | null;
   createdAt: Date;

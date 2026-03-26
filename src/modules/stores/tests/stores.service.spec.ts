@@ -2,6 +2,7 @@ import { s3Service } from '../../s3/s3.service';
 import { storesRepository } from '../stores.repository';
 import { StoresService } from '../stores.service';
 import {
+  ensureStoreBusinessInfoValidity,
   ensureSellerStoreMissing,
   ensureStoreOwner,
   ensureStoreUpdateInput,
@@ -40,6 +41,7 @@ jest.mock('../stores.repository', () => ({
 }));
 
 jest.mock('../utils/stores.service.util', () => ({
+  ensureStoreBusinessInfoValidity: jest.fn(),
   ensureSellerStoreMissing: jest.fn(),
   ensureStoreOwner: jest.fn(),
   ensureStoreUpdateInput: jest.fn(),
@@ -103,6 +105,11 @@ describe('스토어 서비스 유닛 테스트', () => {
     );
 
     expect(ensureSellerStoreMissing).toHaveBeenCalledWith(null);
+    expect(ensureStoreBusinessInfoValidity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: '신규 스토어',
+      }),
+    );
     expect(mockedS3Service.uploadFile).toHaveBeenCalledWith(imageFile);
     expect(mockedStoresRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -130,6 +137,9 @@ describe('스토어 서비스 유닛 테스트', () => {
     );
 
     expect(ensureStoreUpdateInput).toHaveBeenCalledWith({ name: '수정 스토어' }, undefined);
+    expect(ensureStoreBusinessInfoValidity).toHaveBeenCalledWith({
+      name: '수정 스토어',
+    });
     expect(requireStore).toHaveBeenCalledWith(existingStore);
     expect(ensureStoreOwner).toHaveBeenCalledWith('seller-1', { userId: 'seller-1' });
     expect(mockedStoresRepository.update).toHaveBeenCalledWith(

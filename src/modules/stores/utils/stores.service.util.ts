@@ -72,6 +72,67 @@ export function ensureStoreUpdateInput(
   }
 }
 
+function normalizeDigits(value: string) {
+  return value.replace(/\D/g, '');
+}
+
+function isValidBusinessRegistrationNumber(value: string) {
+  const digits = normalizeDigits(value);
+  if (!/^\d{10}$/.test(digits)) {
+    return false;
+  }
+
+  const numbers = digits.split('').map(Number);
+  const weights = [1, 3, 7, 1, 3, 7, 1, 3, 5];
+  const weightedSum = weights.reduce(
+    (sum, weight, index) => sum + numbers[index] * weight,
+    0,
+  );
+  const carry = Math.floor((numbers[8] * 5) / 10);
+  const checksum = (10 - ((weightedSum + carry) % 10)) % 10;
+
+  return checksum === numbers[9];
+}
+
+function isValidBusinessPhoneNumber(value: string) {
+  const digits = normalizeDigits(value);
+  // 지역번호/대표번호/휴대폰 번호를 폭넓게 허용
+  return /^\d{8,11}$/.test(digits);
+}
+
+function isValidMailOrderSalesNumber(value: string) {
+  const normalized = value.trim();
+  // 예: 2024-서울강남-1234, 2025-경기성남-00012
+  return /^\d{4}-[A-Za-z0-9가-힣]+-\d{4,6}$/.test(normalized);
+}
+
+export function ensureStoreBusinessInfoValidity(data: {
+  businessRegistrationNumber?: string;
+  businessPhoneNumber?: string;
+  mailOrderSalesNumber?: string;
+}) {
+  if (
+    data.businessRegistrationNumber !== undefined &&
+    !isValidBusinessRegistrationNumber(data.businessRegistrationNumber)
+  ) {
+    throw new BadRequestError('사업자등록번호 형식이 올바르지 않습니다.');
+  }
+
+  if (
+    data.businessPhoneNumber !== undefined &&
+    !isValidBusinessPhoneNumber(data.businessPhoneNumber)
+  ) {
+    throw new BadRequestError('사업자 연락처 형식이 올바르지 않습니다.');
+  }
+
+  if (
+    data.mailOrderSalesNumber !== undefined &&
+    !isValidMailOrderSalesNumber(data.mailOrderSalesNumber)
+  ) {
+    throw new BadRequestError('통신판매업 신고번호 형식이 올바르지 않습니다.');
+  }
+}
+
 export async function resolveStoreImage<T extends StoreWithCounts>(store: T) {
   store.imageUrl = await resolveS3ImageUrl(
     store.imageUrl,

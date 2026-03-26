@@ -23,6 +23,7 @@ export function setupRoutes(app: Express) {
   app.use('/api/orders', ordersRouter);
   app.use('/api/cart', cartRouter);
   app.use('/api/products', productsRouter);
+  app.use('/api/stores', storesRouter);
   app.use('/api/inquiries', inquiriesRouter);
   app.use('/api/product', productReviewsRouter);
   app.use('/api/review', reviewsRouter);

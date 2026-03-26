@@ -130,6 +130,16 @@ model Store {
   phoneNumber   String
   // 스토어 소개글
   content       String
+  // 사업자등록번호
+  businessRegistrationNumber String?
+  // 사업자 연락처
+  businessPhoneNumber        String?
+  // 통신판매업 신고번호
+  mailOrderSalesNumber       String?
+  // 대표자명
+  representativeName         String?
+  // 사업장 소재지
+  businessAddress            String?
   // 스토어 대표 이미지 URL
   imageUrl      String?
   // 스토어 이미지 저장소 키
@@ -212,6 +222,38 @@ model Product {
   name      String
   // 상세 설명
   content   String?
+  // 제품 소재
+  material  String?
+  // 색상
+  color     String?
+  // 제조자(수입자)
+  manufacturerName String?
+  // 제조국
+  manufactureCountry String?
+  // 제조연월
+  manufactureDate String?
+  // 세탁방법 및 취급 시 주의사항
+  caution String?
+  // 품질보증기준
+  qualityGuaranteeStandard String?
+  // A/S 책임자
+  asManagerName String?
+  // A/S 연락처
+  asPhoneNumber String?
+  // 배송비
+  shippingFee Int?
+  // 도서산간 추가 배송비
+  extraShippingFee Int?
+  // 배송사
+  shippingCompany String?
+  // 평균 배송기간 안내
+  deliveryPeriod String?
+  // 반품/교환/환불 안내
+  returnExchangePolicy String?
+  // 반품 배송비
+  returnShippingFee Int?
+  // 교환 배송비
+  exchangeShippingFee Int?
   // 정가
   price     Int
   // 품절 여부
@@ -236,6 +278,8 @@ model Product {
 
   // 사이즈별 재고 목록
   stocks     ProductStock[]
+  // 카테고리별 사이즈 스펙 표
+  sizeSpecs  ProductSizeSpec[]
   // 상품 문의 목록
   inquiries  Inquiry[]
   // 상품 리뷰 목록
@@ -254,6 +298,35 @@ model Product {
   @@index([storeId])
   // 카테고리별 상품 조회 최적화
   @@index([categoryId])
+}
+
+// 상품 사이즈 스펙(카테고리별로 필요한 컬럼만 사용)
+model ProductSizeSpec {
+  id        String  @id @default(cuid())
+  productId String
+  // 행 라벨(예: S, M, L, XL)
+  sizeLabel String
+  // 표시 순서
+  displayOrder Int @default(0)
+
+  // 공통/상의/하의 컬럼(카테고리에 따라 일부만 사용)
+  totalLengthCm Float?
+  shoulderCm    Float?
+  chestCm       Float?
+  sleeveCm      Float?
+  waistCm       Float?
+  hipCm         Float?
+  thighCm       Float?
+  riseCm        Float?
+  hemCm         Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, sizeLabel])
+  @@index([productId, displayOrder])
 }
 
 // 상품-사이즈별 재고

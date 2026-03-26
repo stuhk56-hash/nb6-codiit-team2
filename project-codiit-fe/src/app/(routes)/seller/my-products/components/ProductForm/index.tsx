@@ -38,6 +38,28 @@ export default function ProductForm({ initialValues, onSubmit }: ProductFormProp
         periodStart: null,
         periodEnd: null,
       },
+      detail: "",
+      noticeInfo: {
+        material: "",
+        color: "",
+        manufacturerName: "",
+        manufactureCountry: "",
+        manufactureDate: "",
+        caution: "",
+        qualityGuaranteeStandard: "",
+        asManagerName: "",
+        asPhoneNumber: "",
+      },
+      tradeInfo: {
+        shippingFee: null,
+        extraShippingFee: null,
+        shippingCompany: "",
+        deliveryPeriod: "",
+        returnExchangePolicy: "",
+        returnShippingFee: null,
+        exchangeShippingFee: null,
+      },
+      sizeSpecs: [],
     },
   });
 

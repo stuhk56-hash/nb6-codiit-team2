@@ -6,6 +6,7 @@ import {
 } from '../../../lib/errors/customErrors';
 import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 import {
+  ensureStoreBusinessInfoValidity,
   ensureSellerStoreMissing,
   ensureStoreOwner,
   ensureStoreUpdateInput,
@@ -59,6 +60,40 @@ describe('스토어 서비스 유틸 유닛 테스트', () => {
 
   test('ensureStoreUpdateInput은 body와 이미지가 모두 없으면 BadRequestError를 던진다', () => {
     expect(() => ensureStoreUpdateInput({})).toThrow(BadRequestError);
+  });
+
+  test('사업자등록번호가 유효하지 않으면 BadRequestError를 던진다', () => {
+    expect(() =>
+      ensureStoreBusinessInfoValidity({
+        businessRegistrationNumber: '111-11-11111',
+      }),
+    ).toThrow(BadRequestError);
+  });
+
+  test('통신판매업 신고번호가 유효하지 않으면 BadRequestError를 던진다', () => {
+    expect(() =>
+      ensureStoreBusinessInfoValidity({
+        mailOrderSalesNumber: '서울강남-1234',
+      }),
+    ).toThrow(BadRequestError);
+  });
+
+  test('사업자 연락처가 유효하지 않으면 BadRequestError를 던진다', () => {
+    expect(() =>
+      ensureStoreBusinessInfoValidity({
+        businessPhoneNumber: 'abc',
+      }),
+    ).toThrow(BadRequestError);
+  });
+
+  test('사업자 정보가 유효하면 예외를 던지지 않는다', () => {
+    expect(() =>
+      ensureStoreBusinessInfoValidity({
+        businessRegistrationNumber: '220-81-62517',
+        businessPhoneNumber: '02-3456-7890',
+        mailOrderSalesNumber: '2024-서울강남-1234',
+      }),
+    ).not.toThrow();
   });
 
   test('resolveStoreImage는 resolveS3ImageUrl 결과로 imageUrl을 갱신한다', async () => {

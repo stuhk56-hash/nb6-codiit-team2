@@ -133,6 +133,41 @@ export default function StoreForm({ mode, onClose, onSubmit, defaultValues, imag
           {errors.phoneNumber && <p className="mt-[1px] text-red-500">{errors.phoneNumber.message}</p>}
 
           <div className="bg-gray04 mt-[1.875rem] mb-[1.875rem] h-px w-full" />
+          <BoxInput
+            label="대표자명"
+            placeholder="대표자명을 입력하세요"
+            {...register("representativeName")}
+          />
+          <div className="mt-5">
+            <BoxInput
+              label="사업자등록번호"
+              placeholder="예: 123-45-67890"
+              {...register("businessRegistrationNumber")}
+            />
+          </div>
+          <div className="mt-5">
+            <BoxInput
+              label="통신판매업 신고번호"
+              placeholder="예: 2026-서울강남-0001"
+              {...register("mailOrderSalesNumber")}
+            />
+          </div>
+          <div className="mt-5">
+            <BoxInput
+              label="사업자 연락처"
+              placeholder="사업자 연락처 입력"
+              {...register("businessPhoneNumber")}
+            />
+          </div>
+          <div className="mt-5">
+            <BoxInput
+              label="사업장 소재지"
+              placeholder="사업장 소재지 입력"
+              {...register("businessAddress")}
+            />
+          </div>
+
+          <div className="bg-gray04 mt-[1.875rem] mb-[1.875rem] h-px w-full" />
           <label className="flex flex-col gap-5 text-xl font-bold">
             스토어 이미지
             <input

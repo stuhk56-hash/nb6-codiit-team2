@@ -6,6 +6,11 @@ export interface Store {
   detailAddress?: string;
   phoneNumber: string;
   content: string;
+  businessRegistrationNumber: string | null;
+  businessPhoneNumber: string | null;
+  mailOrderSalesNumber: string | null;
+  representativeName: string | null;
+  businessAddress: string | null;
   image: string;
   createdAt: string;
   updatedAt: string;

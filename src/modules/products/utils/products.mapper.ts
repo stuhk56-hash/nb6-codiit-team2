@@ -51,6 +51,17 @@ function toRequiredNumber(value: number | null | undefined) {
   return value ?? 0;
 }
 
+function toSizeGuideType(categoryName: string): 'TOP' | 'BOTTOM' | 'NONE' {
+  const upper = categoryName.toUpperCase();
+  if (upper === 'TOP' || upper === 'OUTER' || upper === 'DRESS') {
+    return 'TOP';
+  }
+  if (upper === 'BOTTOM' || upper === 'SKIRT') {
+    return 'BOTTOM';
+  }
+  return 'NONE';
+}
+
 export function toStockDto(product: ProductWithRelations): StockDto[] {
   return product.stocks.map((stock) => ({
     id: stock.id,
@@ -187,6 +198,47 @@ export function toDetailProductResponseDto(
     inquiries: product.inquiries.map((inquiry) =>
       toProductInquiryListItem(inquiry),
     ),
+    sellerInfo: {
+      businessRegistrationNumber: product.store.businessRegistrationNumber,
+      businessPhoneNumber: product.store.businessPhoneNumber,
+      mailOrderSalesNumber: product.store.mailOrderSalesNumber,
+      representativeName: product.store.representativeName,
+      businessAddress: product.store.businessAddress,
+    },
+    noticeInfo: {
+      material: product.material,
+      color: product.color,
+      manufacturerName: product.manufacturerName,
+      manufactureCountry: product.manufactureCountry,
+      manufactureDate: product.manufactureDate,
+      caution: product.caution,
+      qualityGuaranteeStandard: product.qualityGuaranteeStandard,
+      asManagerName: product.asManagerName,
+      asPhoneNumber: product.asPhoneNumber,
+    },
+    tradeInfo: {
+      shippingFee: product.shippingFee,
+      extraShippingFee: product.extraShippingFee,
+      shippingCompany: product.shippingCompany,
+      deliveryPeriod: product.deliveryPeriod,
+      returnExchangePolicy: product.returnExchangePolicy,
+      returnShippingFee: product.returnShippingFee,
+      exchangeShippingFee: product.exchangeShippingFee,
+    },
+    sizeGuideType: toSizeGuideType(product.category.name),
+    sizeSpecs: product.sizeSpecs.map((spec) => ({
+      sizeLabel: spec.sizeLabel,
+      displayOrder: spec.displayOrder,
+      totalLengthCm: spec.totalLengthCm,
+      shoulderCm: spec.shoulderCm,
+      chestCm: spec.chestCm,
+      sleeveCm: spec.sleeveCm,
+      waistCm: spec.waistCm,
+      hipCm: spec.hipCm,
+      thighCm: spec.thighCm,
+      riseCm: spec.riseCm,
+      hemCm: spec.hemCm,
+    })),
     categoryId: product.categoryId,
     category: {
       name: product.category.name,

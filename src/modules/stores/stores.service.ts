@@ -18,6 +18,7 @@ import {
   toStoreResponseDto,
 } from './utils/stores.mapper';
 import {
+  ensureStoreBusinessInfoValidity,
   ensureSellerStoreMissing,
   ensureStoreOwner,
   ensureStoreUpdateInput,
@@ -37,11 +38,17 @@ export class StoresService {
       detailAddress: string;
       phoneNumber: string;
       content: string;
+      businessRegistrationNumber?: string;
+      businessPhoneNumber?: string;
+      mailOrderSalesNumber?: string;
+      representativeName?: string;
+      businessAddress?: string;
     },
     image?: Express.Multer.File,
   ): Promise<StoreResponseDto> {
     const existing = await storesRepository.findBySellerId(sellerId);
     ensureSellerStoreMissing(existing);
+    ensureStoreBusinessInfoValidity(data);
     const uploadedImage = image ? await s3Service.uploadFile(image) : null;
 
     const store = await storesRepository.create({
@@ -68,10 +75,16 @@ export class StoresService {
       detailAddress?: string;
       phoneNumber?: string;
       content?: string;
+      businessRegistrationNumber?: string;
+      businessPhoneNumber?: string;
+      mailOrderSalesNumber?: string;
+      representativeName?: string;
+      businessAddress?: string;
     },
     image?: Express.Multer.File,
   ): Promise<StoreResponseDto> {
     ensureStoreUpdateInput(data, image);
+    ensureStoreBusinessInfoValidity(data);
     const store = requireStore(await storesRepository.findById(storeId));
     ensureStoreOwner(sellerId, { userId: store.sellerId });
     const uploadedImage = image ? await s3Service.uploadFile(image) : null;
