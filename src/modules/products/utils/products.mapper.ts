@@ -89,7 +89,9 @@ export function toProductDto(product: ProductWithRelations): ProductDto {
   };
 }
 
-export function toProductListDto(product: ProductWithRelations): ProductListDto {
+export function toProductListDto(
+  product: ProductWithRelations,
+): ProductListDto {
   return {
     id: product.id,
     storeId: product.storeId,
