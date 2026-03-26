@@ -5,12 +5,6 @@ import { requireBuyer } from '../../lib/request/auth-user';
 
 // 결제 생성 POST /api/payments
 export async function createPayment(req: AuthenticatedRequest, res: Response) {
-  console.log('📍 createPayment 진입');
-  console.log('Body:', req.body);
-  console.log('orderId:', req.body.orderId);
-  console.log('price:', req.body.price);
-  console.log('paymentMethod:', req.body.paymentMethod);
-
   const { orderId, price, paymentMethod, cardNumber, bankName, phoneNumber } =
     req.body;
 

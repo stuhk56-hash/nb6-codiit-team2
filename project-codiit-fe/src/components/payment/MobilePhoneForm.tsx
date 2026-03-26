@@ -4,7 +4,8 @@ import { usePayment } from "@/lib/api/usePayment";
 import { PaymentResponse } from "@/types/payment";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
+// ✅ Controller 추가
 import { z } from "zod";
 import PaymentLoading from "./PaymentLoading";
 
@@ -30,13 +31,14 @@ interface MobilePhoneFormProps {
 
 export default function MobilePhoneForm({ orderId, price, onBack, onSuccess }: MobilePhoneFormProps) {
   const {
-    register,
+    control,
     handleSubmit,
     watch,
     formState: { errors },
   } = useForm<MobilePhoneFormType>({
     resolver: zodResolver(mobilePhoneSchema),
     defaultValues: {
+      phoneNumber: "", // ✅ 기본값 빈 문자열
       carrier: "skt",
     },
   });
@@ -44,7 +46,7 @@ export default function MobilePhoneForm({ orderId, price, onBack, onSuccess }: M
   const paymentMutation = usePayment();
   const [isLoading, setIsLoading] = useState(false);
   const selectedCarrier = watch("carrier");
-  const phoneNumber = watch("phoneNumber");
+  const phoneNumber = watch("phoneNumber"); // ✅ watch로 실시간 감지
 
   const selectedCarrierInfo = CARRIERS.find((c) => c.id === selectedCarrier);
 
@@ -58,7 +60,6 @@ export default function MobilePhoneForm({ orderId, price, onBack, onSuccess }: M
         phoneNumber: data.phoneNumber.replace(/-/g, ""),
       });
 
-      // 3초 지연 후 성공 처리
       setTimeout(() => {
         onSuccess(payment);
       }, 3000);
@@ -68,7 +69,6 @@ export default function MobilePhoneForm({ orderId, price, onBack, onSuccess }: M
     }
   };
 
-  // ✅ 로딩 상태일 때만 로딩 화면 표시
   if (isLoading) {
     return <PaymentLoading />;
   }
@@ -77,14 +77,17 @@ export default function MobilePhoneForm({ orderId, price, onBack, onSuccess }: M
     <form onSubmit={handleSubmit(onSubmit)}>
       <h2 className="mb-8 text-3xl font-bold">휴대폰 결제</h2>
 
-      {/* 휴대폰 미리보기 */}
+      {/* ✅ 휴대폰 미리보기 카드 */}
       <div className={`mb-8 rounded-2xl bg-gradient-to-br ${selectedCarrierInfo?.color} p-8 text-white shadow-2xl`}>
         <div className="mb-12 flex items-center justify-between">
           <div className="text-4xl">{selectedCarrierInfo?.logo}</div>
           <div className="text-2xl font-bold">{selectedCarrierInfo?.name}</div>
         </div>
 
-        <div className="mb-8 text-3xl font-bold tracking-wider">{phoneNumber ? phoneNumber : "010-0000-0000"}</div>
+        {/* ✅ 실시간으로 반영되는 전화번호 */}
+        <div className="mb-8 text-center">
+          <div className="text-4xl font-bold tracking-wider">{phoneNumber || "010-0000-0000"}</div>
+        </div>
 
         <div className="text-sm opacity-75">결제용 휴대폰</div>
       </div>
@@ -98,11 +101,17 @@ export default function MobilePhoneForm({ orderId, price, onBack, onSuccess }: M
               key={carrier.id}
               className="relative cursor-pointer"
             >
-              <input
-                type="radio"
-                {...register("carrier")}
-                value={carrier.id}
-                className="sr-only"
+              <Controller
+                name="carrier"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    type="radio"
+                    {...field}
+                    value={carrier.id}
+                    className="sr-only"
+                  />
+                )}
               />
               <div
                 className={`rounded-lg p-4 text-center transition-all ${
@@ -119,20 +128,28 @@ export default function MobilePhoneForm({ orderId, price, onBack, onSuccess }: M
         </div>
       </div>
 
-      {/* 휴대폰번호 */}
+      {/* ✅ 휴대폰번호 입력 - Controller 사용으로 실시간 동기화 */}
       <div className="mb-8">
         <label className="mb-2 block font-bold">휴대폰번호</label>
-        <input
-          {...register("phoneNumber")}
-          placeholder="010-1234-5678"
-          maxLength={13}
-          className="w-full rounded-lg border-2 border-gray-300 px-4 py-3 font-mono text-lg tracking-wider focus:border-black focus:outline-none"
-          onChange={(e) => {
-            let value = e.target.value.replace(/\D/g, "");
-            if (value.length > 11) value = value.slice(0, 11);
-            const formatted = value.replace(/^(\d{3})(\d{4})(\d{4})$/, "$1-$2-$3");
-            e.target.value = formatted;
-          }}
+        <Controller
+          name="phoneNumber"
+          control={control}
+          render={({ field: { value, onChange } }) => (
+            <input
+              type="text"
+              value={value}
+              placeholder="010-1234-5678"
+              maxLength={13}
+              className="w-full rounded-lg border-2 border-gray-300 px-4 py-3 font-mono text-lg tracking-wider transition-all focus:border-black focus:outline-none"
+              onChange={(e) => {
+                let inputValue = e.target.value.replace(/\D/g, "");
+                if (inputValue.length > 11) inputValue = inputValue.slice(0, 11);
+                const formatted = inputValue.replace(/^(\d{3})(\d{4})(\d{4})$/, "$1-$2-$3");
+                onChange(formatted); // ✅ watch와 동기화
+                e.target.value = formatted;
+              }}
+            />
+          )}
         />
         {errors.phoneNumber && <p className="mt-2 text-sm text-red-500">{errors.phoneNumber.message}</p>}
       </div>

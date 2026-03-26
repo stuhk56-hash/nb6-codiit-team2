@@ -10,19 +10,21 @@ import { PaymentDto } from '../dto/payment.dto';
 import { ShippingDto } from '../dto/shipping.dto';
 
 //order 엔티티를 응답 DTO로 변환
-export function toOrderDto(order: OrderWithRelations): OrderResponseDto {
+export function toOrderDto(order: any): OrderResponseDto {
   return {
     id: order.id,
+    buyerId: order.buyerId,
     buyerName: order.buyerName,
     phoneNumber: order.phoneNumber,
     address: order.address,
     usedPoints: order.usedPoints,
     earnedPoints: order.earnedPoints,
     status: order.status,
-    createdAt: order.createdAt.toISOString(),
-    orderItems: order.items.map(toOrderItemDto),
-    payments: order.payment ? toPaymentDto(order.payment) : null,
-    shipping: order.shipping ? toShippingDto(order.shipping) : null,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+    items: order.items || order.orderItems || [], // ✅ items로 통일
+    payment: order.payment, // ✅ payment (단수)
+    shipping: order.shipping,
   };
 }
 

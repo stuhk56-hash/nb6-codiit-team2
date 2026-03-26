@@ -99,7 +99,7 @@ export async function findPaymentsByStatus(status: string) {
 // 결제 생성
 export async function createPayment(
   orderId: string,
-  price: number,
+  price: number, // ✅ 이 값이 이미 포인트 차감된 금액이어야 함
   paymentMethod: PaymentMethod,
   cardNumber?: string,
   bankName?: string,
@@ -126,7 +126,6 @@ export async function createPayment(
     throw new Error('이미 결제된 주문입니다');
   }
 
-  // ✅ 무조건 성공 (내용 잘 넣으면 성공)
   const transactionId = generateTransactionId();
 
   let payment;
@@ -136,6 +135,7 @@ export async function createPayment(
     payment = await prisma.payment.update({
       where: { orderId },
       data: {
+        price: price, // ✅ 포인트 차감된 가격
         paymentMethod,
         cardNumber:
           paymentMethod === PaymentMethod.CREDIT_CARD
@@ -145,7 +145,7 @@ export async function createPayment(
           paymentMethod === PaymentMethod.BANK_TRANSFER ? bankName : null,
         phoneNumber:
           paymentMethod === PaymentMethod.MOBILE_PHONE ? phoneNumber : null,
-        status: PaymentStatus.CompletedPayment, // ✅ 항상 성공
+        status: PaymentStatus.CompletedPayment,
         transactionId: transactionId,
       },
       select: paymentSelect,
@@ -154,7 +154,7 @@ export async function createPayment(
     payment = await prisma.payment.create({
       data: {
         orderId,
-        price,
+        price: price, // ✅ 포인트 차감된 가격
         paymentMethod,
         cardNumber:
           paymentMethod === PaymentMethod.CREDIT_CARD
@@ -164,7 +164,7 @@ export async function createPayment(
           paymentMethod === PaymentMethod.BANK_TRANSFER ? bankName : null,
         phoneNumber:
           paymentMethod === PaymentMethod.MOBILE_PHONE ? phoneNumber : null,
-        status: PaymentStatus.CompletedPayment, // ✅ 항상 성공
+        status: PaymentStatus.CompletedPayment,
         transactionId: transactionId,
       },
       select: paymentSelect,

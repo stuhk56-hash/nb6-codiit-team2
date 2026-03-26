@@ -3,10 +3,8 @@
 import Stars from "@/app/(routes)/products/[productId]/components/Stars";
 import Modal from "@/components/Modal";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
-import { ReviewCreateForm, reviewCreateSchemas } from "@/lib/schemas/reviewCreate.schemas";
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { OrderItem } from "@/types/order";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useEffect } from "react";
@@ -15,106 +13,88 @@ import Button from "../button/Button";
 import Divder from "../divider/Divder";
 import TextArea from "../input/TextArea";
 
-interface ReviewWriteModalProps {
-  open: boolean;
-  onClose: () => void;
-  purchase: OrderItem | null;
-  onSubmit?: () => void;
+interface Review {
+  id: string;
+  rating: number;
+  content: string;
+  createdAt: string;
 }
 
-export default function ReviewWriteModal({ open, onClose, purchase, onSubmit }: ReviewWriteModalProps) {
+interface ReviewEditModalProps {
+  open: boolean;
+  onClose: () => void;
+  purchase: OrderItem;
+  review: Review;
+  onComplete: () => void;
+}
+
+export default function ReviewEditModal({ open, onClose, purchase, review, onComplete }: ReviewEditModalProps) {
   const axiosInstance = getAxiosInstance();
-  const queryClient = useQueryClient();
-  const toaster = useToaster(); // ✅ 추가
+  const queryClient = useQueryClient(); // ✅ 추가
+  const toaster = useToaster();
   const {
     control,
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<ReviewCreateForm>({
-    resolver: zodResolver(reviewCreateSchemas),
-    defaultValues: { rating: 0, content: "" },
+  } = useForm({
+    defaultValues: { rating: review.rating, content: review.content },
   });
 
   useEffect(() => {
-    if (open) reset({ rating: 0, content: "" });
-  }, [open, reset]);
+    if (open) {
+      reset({ rating: review.rating, content: review.content });
+    }
+  }, [open, review, reset]);
 
-  const createReviewMutation = useMutation({
-    mutationFn: async (data: ReviewCreateForm) => {
-      if (!purchase) {
-        throw new Error("구매 정보가 없습니다.");
-      }
+  const updateReviewMutation = useMutation({
+    mutationFn: async (data: { rating: number; content: string }) => {
+      console.log("📝 리뷰 수정 요청", data);
 
-      const productId = purchase.productId;
-
-      if (!productId) {
-        throw new Error("상품 ID가 없습니다.");
-      }
-
-      const requestBody = {
+      const response = await axiosInstance.patch(`/review/${review.id}`, {
         rating: parseInt(String(data.rating), 10),
         content: String(data.content).trim(),
-        orderItemId: String(purchase.id).trim(),
-      };
+      });
 
-      console.log("📝 리뷰 작성 요청 시작");
-      console.log("🔍 requestBody 전체:", JSON.stringify(requestBody, null, 2));
-
-      try {
-        const response = await axiosInstance.post(`/product/${productId}/reviews`, requestBody);
-
-        console.log("✅ 리뷰 작성 성공:", response.data);
-        return response.data;
-      } catch (error: any) {
-        console.error("❌ 리뷰 작성 실패");
-        console.error("📌 Status:", error.response?.status);
-        console.error("📌 Error Response:", JSON.stringify(error.response?.data, null, 2));
-        throw error;
-      }
+      console.log("✅ 리뷰 수정 API 성공:", response.data);
+      return response.data;
     },
-    onSuccess: (data) => {
-      console.log("✅ 리뷰 작성 완료");
-      toaster("info", "리뷰가 작성되었습니다.");
+    onSuccess: () => {
+      console.log("✅ 리뷰 수정 완료");
+      toaster("info", "리뷰가 수정되었습니다.");
 
       // ✅ 1. 즉시 폼 초기화
       reset({ rating: 0, content: "" });
 
       // ✅ 2. 캐시 무효화
       console.log("🗑️ 캐시 무효화 시작");
-      queryClient.invalidateQueries({ queryKey: ["mypage-orders"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["mypage-orders"] });
 
-      // ✅ 3. 캐시 새로고침 (약간의 딜레이 후)
+      // ✅ 3. 캐시 새로고침
       setTimeout(() => {
         console.log("🔄 캐시 새로고침 시작");
-        queryClient.refetchQueries({ queryKey: ["mypage-orders"] });
         queryClient.refetchQueries({ queryKey: ["orders"] });
+        queryClient.refetchQueries({ queryKey: ["mypage-orders"] });
       }, 300);
 
       // ✅ 4. 모달 닫기 (마지막에!)
       setTimeout(() => {
-        if (onSubmit) {
-          console.log("📞 onSubmit 콜백 실행");
-          onSubmit();
-        }
         onClose();
+        onComplete();
       }, 100);
     },
     onError: (error: any) => {
-      console.error("❌ 리뷰 작성 최종 실패:", error.message);
-      toaster("warn", error.response?.data?.message || "리뷰 작성 중 오류가 발생했습니다.");
+      console.error("❌ 리뷰 수정 실패:", error);
+      toaster("warn", error.response?.data?.message || "리뷰 수정 중 오류가 발생했습니다.");
     },
   });
 
-  const handleReviewSubmit = (data: ReviewCreateForm) => {
-    console.log("🎯 리뷰 제출 시작");
-    createReviewMutation.mutate(data);
+  const handleReviewSubmit = (data: { rating: number; content: string }) => {
+    updateReviewMutation.mutate(data);
   };
 
-  if (!purchase) {
-    return null;
-  }
+  if (!purchase) return null;
 
   const imageUrl = purchase.product?.image || purchase.productImageUrl || "/images/Mask-group.svg";
 
@@ -141,7 +121,7 @@ export default function ReviewWriteModal({ open, onClose, purchase, onSubmit }: 
             height={24}
           />
         </button>
-        <div className="text-black01 mb-5 text-[1.75rem] font-extrabold">리뷰 쓰기</div>
+        <div className="text-black01 mb-5 text-[1.75rem] font-extrabold">리뷰 수정</div>
         <Divder className="mb-10" />
         <div className="mb-10 flex flex-col gap-6">
           <div className="flex gap-2.5">
@@ -163,7 +143,7 @@ export default function ReviewWriteModal({ open, onClose, purchase, onSubmit }: 
                 </div>
               </div>
               <div className="text-black01 text-lg/5 font-normal">
-                사이즈 : {(purchase.size as any)?.size?.ko || "사이즈 정보 없음"} {/* ✅ 수정 */}
+                사이즈 : {(purchase.size as any)?.size?.ko || "사이즈 정보 없음"}
               </div>
               <div className="flex items-center gap-[0.625rem]">
                 <span className="text-lg/5 font-extrabold">
@@ -185,7 +165,7 @@ export default function ReviewWriteModal({ open, onClose, purchase, onSubmit }: 
                     rating={value}
                     onChange={onChange}
                   />
-                  {errors.rating && <span className="text-red01 text-sm">{errors.rating.message}</span>}
+                  {errors.rating && <span className="text-red01 text-sm">평점을 선택해주세요.</span>}
                 </div>
               )}
             />
@@ -199,7 +179,6 @@ export default function ReviewWriteModal({ open, onClose, purchase, onSubmit }: 
                     label="어떤 점이 좋았나요?"
                     placeholder="최소 10자 이상 입력"
                   />
-                  {errors.content && <span className="text-red01 text-sm">{errors.content.message}</span>}
                 </div>
               )}
             />
@@ -207,12 +186,12 @@ export default function ReviewWriteModal({ open, onClose, purchase, onSubmit }: 
         </div>
         <Button
           type="submit"
-          label={createReviewMutation.isPending ? "등록 중..." : "리뷰 등록"} // ✅ 로딩 상태 표시
+          label={updateReviewMutation.isPending ? "수정 중..." : "리뷰 수정"}
           size="large"
           variant="primary"
           color="black"
           className="h-15 w-full"
-          disabled={createReviewMutation.isPending}
+          disabled={updateReviewMutation.isPending}
         />
       </form>
     </Modal>

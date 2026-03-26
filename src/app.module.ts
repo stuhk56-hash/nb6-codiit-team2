@@ -15,6 +15,7 @@ import {
 } from './modules/reviews/reviews.module';
 import { paymentsRouter } from './modules/payments/payment.module';
 import { shippingRouter } from './modules/shipping/shipping.module';
+import { storesRouter } from './modules/stores/stores.module';
 
 export function setupRoutes(app: Express) {
   app.use('/api/auth', authRouter);
@@ -31,4 +32,5 @@ export function setupRoutes(app: Express) {
   app.use('/api/s3', s3Router);
   app.use('/api/payments', paymentsRouter);
   app.use('/api/shipping', shippingRouter);
+  app.use('/api/stores', storesRouter);
 }

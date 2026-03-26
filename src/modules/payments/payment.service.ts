@@ -15,11 +15,6 @@ export async function createPayment(
   bankName?: string,
   phoneNumber?: string,
 ): Promise<PaymentResponseDto> {
-  console.log('🔍 Service createPayment 진입');
-  console.log('orderId:', orderId, 'type:', typeof orderId);
-  console.log('price:', price, 'type:', typeof price);
-  console.log('paymentMethod:', paymentMethod, 'type:', typeof paymentMethod);
-
   if (!orderId || !price || !paymentMethod) {
     console.log('❌ 필수 정보 누락');
     throw new BadRequestError('필수 결제 정보가 누락되었습니다');

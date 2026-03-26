@@ -23,18 +23,20 @@ export default function MyPage() {
     queryFn: async ({ pageParam = 1 }) => {
       const { data } = await axiosInstance.get<OrdersResponse>("/orders", {
         params: {
-          status: OrderStatus.CompletedPayment,
-          limit: 3,
+          status: "CompletedPayment",
+          limit: 10, // ✅ 더 많이 가져오기
           page: pageParam,
         },
       });
 
-      console.log("API Response:", data);
+      // ✅ Canceled 주문 제외 필터링
+      const orders: Order[] = data.data.filter((order) => order.status !== OrderStatus.Canceled);
 
-      // Order 배열 그대로 반환
-      const orders: Order[] = data.data;
+      // ✅ 모든 주문의 items를 하나의 배열로 합치기 (옛날 버전처럼)
+      const items = orders.flatMap((order) => order.items ?? order.orderItems ?? []);
 
       return {
+        items,
         orders,
         nextPage: pageParam < data.meta.totalPages ? pageParam + 1 : undefined,
         totalPages: data.meta.totalPages,
@@ -49,8 +51,9 @@ export default function MyPage() {
     fetchNextPage,
   });
 
+  const allItems = data?.pages.flatMap((page) => page.items) ?? [];
   const allOrders = data?.pages.flatMap((page) => page.orders) ?? [];
-  const displayedOrders = showAllOrders ? allOrders : allOrders.slice(0, 3);
+  const displayedItems = showAllOrders ? allItems : allItems.slice(0, 3); // ✅ 아이템 3개씩 표시
 
   const handleShowMore = () => {
     setShowAllOrders(true);
@@ -74,7 +77,7 @@ export default function MyPage() {
             <div className="w-full">
               <div className="flex justify-between py-[0.5625rem]">
                 <span className="text-black01 text-lg/5 font-extrabold">최근 주문</span>
-                {!showAllOrders && allOrders.length > 3 && (
+                {!showAllOrders && allItems.length > 3 && (
                   <button
                     onClick={handleShowMore}
                     className="text-black01 cursor-pointer text-base/4.5 font-normal hover:underline"
@@ -85,11 +88,15 @@ export default function MyPage() {
               </div>
               {isLoading ? (
                 <div className="flex justify-center py-8">로딩 중...</div>
-              ) : displayedOrders.length === 0 ? (
+              ) : displayedItems.length === 0 ? (
                 <div className="flex justify-center py-8 text-gray-500">주문 내역이 없습니다.</div>
               ) : (
                 <div className={`${showAllOrders ? "h-[600px] overflow-y-auto px-5" : ""}`}>
-                  <MypageItemCard orders={displayedOrders} />
+                  <MypageItemCard
+                    purchases={displayedItems}
+                    orders={allOrders}
+                    key={`${displayedItems.map((item) => item.id).join("-")}`}
+                  />
                   {showAllOrders && hasNextPage && (
                     <div
                       ref={setTarget}

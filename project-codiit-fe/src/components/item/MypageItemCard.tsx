@@ -1,26 +1,60 @@
 "use client";
 
-import { Order, OrderStatus, ShippingStatus } from "@/types/order";
+import { Order, OrderItem, ShippingStatus } from "@/types/order";
+import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Button from "../button/Button";
 import ShippingModal from "../order/ShippingModal";
+import ReviewViewModal from "./ReviewViewModal";
+import ReviewWriteModal from "./ReviewWriteModal";
 
 interface MypageItemCardProps {
-  orders: Order[];
+  purchases: OrderItem[];
+  orders?: Order[];
 }
 
-export default function MypageItemCard({ orders }: MypageItemCardProps) {
+export default function MypageItemCard({ purchases, orders = [] }: MypageItemCardProps) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const [reviewViewTarget, setReviewViewTarget] = useState<OrderItem | null>(null);
+  const [reviewWriteTarget, setReviewWriteTarget] = useState<OrderItem | null>(null);
   const [showShippingModal, setShowShippingModal] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
+
+  const handleCloseView = () => setReviewViewTarget(null);
+  const handleCloseWrite = () => setReviewWriteTarget(null);
+
+  const handleReviewSubmit = () => {
+    handleCloseWrite();
+  };
 
   const handleShippingClick = (orderId: string) => {
     setSelectedOrderId(orderId);
     setShowShippingModal(true);
   };
 
-  const handleCloseModal = () => {
+  const handleCloseShippingModal = () => {
     setShowShippingModal(false);
     setSelectedOrderId("");
+    queryClient.invalidateQueries({ queryKey: ["mypage-orders"] });
+  };
+
+  // ✅ 리뷰 수정 완료 콜백 함수 추가
+  const handleReviewEditComplete = async () => {
+    console.log("📝 리뷰 수정 완료 - 전체 리페치 시작");
+
+    // 1. 모달 닫기
+    setReviewViewTarget(null);
+
+    // 2. 캐시 무효화
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    queryClient.invalidateQueries({ queryKey: ["mypage-orders"] });
+
+    // 3. 새 데이터 불러오기
+    await queryClient.refetchQueries({ queryKey: ["mypage-orders"] });
   };
 
   const getShippingStatusLabel = (status?: ShippingStatus) => {
@@ -36,140 +70,171 @@ export default function MypageItemCard({ orders }: MypageItemCardProps) {
     }
   };
 
-  const getOrderStatusLabel = (status: OrderStatus) => {
-    switch (status) {
-      case OrderStatus.CompletedPayment:
-        return "배송 준비중";
-      case OrderStatus.WaitingPayment:
-        return "결제 대기";
-      case OrderStatus.Canceled:
-        return "취소됨";
-      default:
-        return "주문 대기";
-    }
+  const getRelatedOrder = (itemId: string): Order | undefined => {
+    return orders.find((order) => (order.items ?? order.orderItems ?? []).some((oi) => oi.id === itemId));
   };
 
-  // items 또는 orderItems 호환성 처리
-  const getOrderItems = (order: Order) => {
-    return order.items ?? order.orderItems ?? [];
+  // ✅ 리뷰 여부 판단 (product.reviews 배열의 길이로 판단)
+  const hasReview = (item: OrderItem): boolean => {
+    // product.reviews가 아니라, orderItem 자체의 리뷰 여부를 확인
+    return !!(item.reviews && item.reviews.length > 0);
+  };
+
+  // ✅ 리뷰 쓰기 클릭 시 권한 체크
+  const handleReviewWriteClick = (item: OrderItem) => {
+    const relatedOrder = getRelatedOrder(item.id);
+
+    if (relatedOrder?.shipping?.status !== ShippingStatus.Delivered) {
+      alert("배송이 완료되어야 리뷰를 쓸 수 있습니다.");
+      return;
+    }
+
+    setReviewWriteTarget(item);
   };
 
   return (
-    <div className="space-y-8">
-      {orders && orders.length > 0 ? (
-        orders.map((order) => {
-          const orderItems = getOrderItems(order);
+    <div className="flex w-full flex-col gap-5">
+      {purchases.map((item) => {
+        const imageUrl = item.product?.image || item.productImageUrl || "/images/Mask-group.svg";
+        const relatedOrder = getRelatedOrder(item.id);
+        const isDelivered = relatedOrder?.shipping?.status === ShippingStatus.Delivered;
+        const itemHasReview = hasReview(item);
 
-          if (!orderItems || orderItems.length === 0) {
-            return (
-              <div
-                key={order.id}
-                className="border-b pb-8"
-              >
-                <p className="text-gray-500">주문 상품이 없습니다.</p>
+        console.log("🛍️ MypageItemCard rendering item:", {
+          productName: item.productName,
+          hasReview: itemHasReview,
+          reviewsCount: item.reviews?.length,
+        });
+
+        return (
+          <div
+            key={item.id}
+            className="border-gray03 flex items-center justify-between gap-6 rounded-xl border bg-white p-6"
+          >
+            {/* ✅ 왼쪽: 상품 정보 섹션 */}
+            <div className="flex flex-1 items-center gap-6">
+              {/* 사진 - 크기 키움 */}
+              <div className="relative h-32 w-32 flex-shrink-0">
+                <Image
+                  src={imageUrl}
+                  alt={item.product?.name || item.productName || "상품"}
+                  fill
+                  className="rounded-lg object-cover"
+                />
               </div>
-            );
-          }
 
-          return (
-            <div key={order.id}>
-              {orderItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="border-b pb-8"
-                >
-                  {/* 주문 정보 헤더 */}
-                  <div className="mb-6">
-                    <p className="text-sm text-gray-500">
-                      주문일: {order.createdAt ? new Date(order.createdAt).toLocaleDateString("ko-KR") : "정보 없음"}
-                    </p>
-                    <p className="mt-2 text-sm font-bold">
-                      {order.shipping
-                        ? getShippingStatusLabel(order.shipping.status as ShippingStatus)
-                        : getOrderStatusLabel(order.status)}
-                    </p>
+              {/* 텍스트 정보 */}
+              <div className="flex flex-1 flex-col gap-3">
+                <div className="flex flex-col gap-2">
+                  <div className="text-black01 text-base font-extrabold">
+                    {relatedOrder?.shipping
+                      ? getShippingStatusLabel(relatedOrder.shipping.status as ShippingStatus)
+                      : "배송 정보 없음"}
                   </div>
-
-                  {/* 상품 정보 + 가격/버튼 (가로 레이아웃) */}
-                  <div className="mb-4 flex gap-6">
-                    {/* 왼쪽: 상품 정보 */}
-                    <div className="flex flex-1 gap-4">
-                      <div className="relative h-24 w-24 flex-shrink-0">
-                        {item.product?.image ? (
-                          <Image
-                            src={item.product.image}
-                            alt={item.product.name || "상품"}
-                            fill
-                            className="rounded object-cover"
-                          />
-                        ) : item.productImageUrl ? (
-                          <Image
-                            src={item.productImageUrl}
-                            alt={item.productName || "상품"}
-                            fill
-                            className="rounded object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center rounded bg-gray-200 text-xs text-gray-500">
-                            이미지 없음
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="mb-2 text-base font-bold">
-                          {item.product?.name || item.productName || "상품명 없음"}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {(item.price ?? item.unitPrice ?? 0).toLocaleString()}원 × {item.quantity}개
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* 오른쪽: 가격 + 버튼들 */}
-                    <div className="flex min-w-[140px] flex-col items-end gap-3">
-                      {/* 가격 */}
-                      <p className="text-lg font-bold">
-                        {((item.price ?? item.unitPrice ?? 0) * item.quantity).toLocaleString()}원
-                      </p>
-
-                      {/* 버튼들 (세로) */}
-                      <div className="w-full space-y-2">
-                        {/* ✅ 배송 정보 있으면 배송 조회 버튼 */}
-                        {order.shipping && (
-                          <button
-                            onClick={() => handleShippingClick(order.id)}
-                            className="w-full rounded border-2 border-black px-3 py-2 text-sm font-bold transition-all hover:bg-black hover:text-white"
-                          >
-                            🚚 배송 조회
-                          </button>
-                        )}
-
-                        {/* ✅ 항상 리뷰 쓰기 버튼 표시 */}
-                        <button className="w-full rounded bg-black px-3 py-2 text-sm font-bold text-white transition-all hover:bg-gray-800">
-                          리뷰 쓰기
-                        </button>
-                      </div>
-                    </div>
+                  <div className="text-gray01 text-sm font-normal">
+                    구매일 : {new Date().toLocaleDateString("ko-KR")}
+                  </div>
+                  <div className="text-black01 text-lg font-bold">
+                    {item.product?.name || item.productName || "상품명 없음"}
                   </div>
                 </div>
-              ))}
-            </div>
-          );
-        })
-      ) : (
-        <div className="py-8 text-center text-gray-500">주문 내역이 없습니다.</div>
-      )}
 
-      {/* ✅ 배송 조회 모달 - 받는사람, 주소 추가 */}
+                {/* 사이즈, 가격, 수량 */}
+                <div className="flex items-center gap-4">
+                  <div className="text-black01 text-base font-normal">
+                    사이즈:{" "}
+                    <span className="font-bold">
+                      {(item.size as any)?.size?.ko ||
+                        (item.size as any)?.nameKo ||
+                        (item.size as any)?.name ||
+                        "정보 없음"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-extrabold">
+                      {(item.price ?? item.unitPrice ?? 0).toLocaleString()}원
+                    </span>
+                    <span className="text-gray01 text-base font-normal">| {item.quantity}개</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ✅ 오른쪽: 버튼 섹션 (배송조회/주문상세/리뷰) */}
+            <div className="flex flex-col gap-2">
+              {/* 배송 조회 버튼 */}
+              {relatedOrder?.shipping && (
+                <Button
+                  label="🚚 배송조회"
+                  size="medium"
+                  variant="secondary"
+                  color="black"
+                  className="h-10 w-28 px-3 py-2 text-sm font-bold whitespace-nowrap"
+                  onClick={() => relatedOrder.id && handleShippingClick(relatedOrder.id)}
+                />
+              )}
+
+              {/* 주문상세 버튼 */}
+              {relatedOrder && (
+                <Button
+                  label="📋 주문상세"
+                  size="medium"
+                  variant="secondary"
+                  color="black"
+                  className="h-10 w-28 px-3 py-2 text-sm font-bold whitespace-nowrap"
+                  onClick={() => router.push(`/buyer/order-detail/${relatedOrder.id}`)}
+                />
+              )}
+
+              {/* ✅ 리뷰 보기/쓰기 버튼 - product.reviews 배열로 판단 */}
+              <Button
+                label={itemHasReview ? "⭐ 리뷰보기" : "📝 리뷰쓰기"}
+                size="medium"
+                variant="secondary"
+                color={itemHasReview ? "white" : "black"}
+                className={`h-10 w-28 px-3 py-2 text-sm font-bold whitespace-nowrap ${
+                  !itemHasReview && !isDelivered ? "cursor-not-allowed opacity-50" : ""
+                }`}
+                disabled={!itemHasReview && !isDelivered}
+                onClick={() => {
+                  if (itemHasReview) {
+                    setReviewViewTarget(item);
+                  } else {
+                    handleReviewWriteClick(item);
+                  }
+                }}
+              />
+            </div>
+          </div>
+        );
+      })}
+
+      {/* 배송 조회 모달 */}
       {showShippingModal && (
         <ShippingModal
           isOpen={showShippingModal}
           orderId={selectedOrderId}
           buyerName={orders.find((o) => o.id === selectedOrderId)?.buyerName || "받는사람"}
           address={orders.find((o) => o.id === selectedOrderId)?.address || "주소 정보 없음"}
-          onClose={handleCloseModal}
+          onClose={handleCloseShippingModal}
         />
       )}
+
+      {/* 리뷰 보기 모달 */}
+      <ReviewViewModal
+        open={!!reviewViewTarget}
+        onClose={handleCloseView}
+        purchase={reviewViewTarget}
+        onEditComplete={handleReviewEditComplete}
+      />
+
+      {/* 리뷰 작성 모달 */}
+      <ReviewWriteModal
+        open={!!reviewWriteTarget}
+        onClose={handleCloseWrite}
+        purchase={reviewWriteTarget}
+        onSubmit={handleReviewSubmit}
+      />
     </div>
   );
 }

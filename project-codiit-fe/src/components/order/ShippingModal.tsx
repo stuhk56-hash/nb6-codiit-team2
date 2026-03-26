@@ -56,7 +56,7 @@ export default function ShippingModal({
           } else if (err.response?.status === 404) {
             setError("배송 정보를 찾을 수 없습니다");
           } else if (err.response?.status === 500) {
-            setError("서버 오류가 발생했습니다");
+            setError("서버 오류가 ���생했습니다");
           } else {
             setError(err.message || "배송 정보를 조회할 수 없습니다");
           }
@@ -67,7 +67,7 @@ export default function ShippingModal({
     };
 
     fetchShipping();
-  }, [isOpen, orderId]);
+  }, [isOpen, orderId, retryCount]); // ✅ retryCount 의존성 추가
 
   const handleRetry = () => {
     setRetryCount((prev) => prev + 1);
@@ -93,9 +93,19 @@ export default function ShippingModal({
 
   if (!isOpen) return null;
 
-  const getStatusInfo = (status: string) => {
+  const getStatusInfo = (status?: string) => {
     const today = new Date();
     const dateStr = `${today.getMonth() + 1}/${today.getDate()}(일)`;
+
+    if (!status) {
+      return {
+        title: "배송 정보",
+        subtitle: "배송 상태를 확인하세요.",
+        icon: "📋",
+        bgColor: "bg-gray-50",
+        borderColor: "border-gray-200",
+      };
+    }
 
     switch (status) {
       case "ReadyToShip":
@@ -125,7 +135,7 @@ export default function ShippingModal({
       default:
         return {
           title: "배송 정보",
-          subtitle: "배송 상태를 확인하세요.",
+          subtitle: "배송 상태를 ���인하세요.",
           icon: "📋",
           bgColor: "bg-gray-50",
           borderColor: "border-gray-200",
@@ -133,7 +143,8 @@ export default function ShippingModal({
     }
   };
 
-  const getCarrierIcon = (carrier: string) => {
+  const getCarrierIcon = (carrier?: string) => {
+    if (!carrier) return "🚚";
     if (carrier.includes("로켓")) return "🚀";
     if (carrier.includes("CJ")) return "📦";
     if (carrier.includes("우체국")) return "📮";
@@ -214,16 +225,19 @@ export default function ShippingModal({
                   {/* 배송사 정보 */}
                   <div className="flex-1">
                     <div className="mb-4 flex items-center gap-2">
+                      {/* ✅ carrier 타입 체크 추가 */}
                       <span className="text-3xl">{getCarrierIcon(shipping.carrier)}</span>
                       <div>
                         <p className="text-sm text-gray-500">배송업체</p>
-                        <p className="text-black01 font-bold">{shipping.carrier}</p>
+                        <p className="text-black01 font-bold">{shipping.carrier || "정보 없음"}</p>
                       </div>
                     </div>
 
                     <div className="mb-4">
                       <p className="mb-1 text-sm text-gray-500">송장번호</p>
-                      <p className="text-black01 font-mono text-lg font-bold">{shipping.trackingNumber}</p>
+                      <p className="text-black01 font-mono text-lg font-bold">
+                        {shipping.trackingNumber || "정보 없음"}
+                      </p>
                       <p className="mt-1 text-xs text-gray-400">🔗 배송업체 웹사이트에서 확인할 수 있습니다.</p>
                     </div>
                   </div>

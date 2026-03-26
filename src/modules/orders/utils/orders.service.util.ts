@@ -84,9 +84,23 @@ export function validateOrderOwnership(
 }
 
 //주문 취소 가능 여부 검증
-export function validateOrderCancellation(paymentStatus: string): void {
-  if (paymentStatus !== 'WaitingPayment') {
-    throw new BadRequestError('이미 결제된 주문은 취소할 수 없습니다.');
+export function validateOrderCancellation(
+  paymentStatus: string,
+  shippingStatus?: string, // ✅ 배송 상태 추가
+): void {
+  // ✅ 배송 준비중일 때만 취소 가능
+  if (shippingStatus && shippingStatus !== 'ReadyToShip') {
+    throw new BadRequestError(
+      `${shippingStatus === 'InShipping' ? '배송 중' : '배송 완료'}인 주문은 취소할 수 없습니다.`,
+    );
+  }
+
+  // ✅ 결제 대기 상태가 아니면 취소 불가
+  if (
+    paymentStatus !== 'WaitingPayment' &&
+    paymentStatus !== 'CompletedPayment'
+  ) {
+    throw new BadRequestError('이미 처리된 주문은 취소할 수 없습니다.');
   }
 }
 

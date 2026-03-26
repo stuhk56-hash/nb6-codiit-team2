@@ -13,7 +13,9 @@ import type {
 } from '../types/reviews.type';
 import { DEFAULT_REVIEWS_LIMIT, DEFAULT_REVIEWS_PAGE } from './reviews.util';
 
-export function normalizeReviewsQuery(query: ReviewsQuery): NormalizedReviewsQuery {
+export function normalizeReviewsQuery(
+  query: ReviewsQuery,
+): NormalizedReviewsQuery {
   return {
     page: query.page && query.page > 0 ? query.page : DEFAULT_REVIEWS_PAGE,
     limit: query.limit && query.limit > 0 ? query.limit : DEFAULT_REVIEWS_LIMIT,
@@ -69,16 +71,23 @@ export function ensureOrderItemPurchasableByBuyer(
 
 export function ensurePaidOrderItem(orderItem: OrderItemForReview) {
   if (orderItem.order.status !== 'CompletedPayment') {
-    throw new BadRequestError('결제가 완료된 주문만 리뷰를 작성할 수 있습니다.');
+    throw new BadRequestError(
+      '결제가 완료된 주문만 리뷰를 작성할 수 있습니다.',
+    );
   }
 
   const paymentStatus = orderItem.order.payment?.status;
-  if (paymentStatus !== 'Paid') {
-    throw new BadRequestError('결제가 완료된 주문만 리뷰를 작성할 수 있습니다.');
+  if (paymentStatus !== 'CompletedPayment') {
+    throw new BadRequestError(
+      '결제가 완료된 주문만 리뷰를 작성할 수 있습니다.',
+    );
   }
 }
 
-export function ensureReviewOwner(review: ReviewWithRelations, buyerId: string) {
+export function ensureReviewOwner(
+  review: ReviewWithRelations,
+  buyerId: string,
+) {
   if (review.buyerId !== buyerId) {
     throw new ForbiddenError('접근 권한이 없습니다.');
   }

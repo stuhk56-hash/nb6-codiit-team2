@@ -15,10 +15,16 @@ export enum PaymentStatus {
   CanceledPayment = "CanceledPayment",
 }
 
+export enum PaymentMethod {
+  BankTransfer = "BANK_TRANSFER",
+  CreditCard = "CREDIT_CARD",
+  MobilePhone = "MOBILE_PHONE",
+}
+
 export enum ShippingStatus {
-  ReadyToShip = "ReadyToShip", // 배송준비
-  InShipping = "InShipping", // 배송중
-  Delivered = "Delivered", // 배송완료
+  ReadyToShip = "ReadyToShip",
+  InShipping = "InShipping",
+  Delivered = "Delivered",
 }
 
 // ============================================
@@ -33,20 +39,31 @@ export interface OrderItem {
   unitPrice: number;
   productName: string;
   productImageUrl?: string;
-  price: number;
+  price?: number;
   isReviewed?: boolean;
-  product: {
-    name: string;
-    image: string;
-    reviews: Array<{
+  reviews?: Array<{
+    // ✅ 추가
+    id: string;
+    rating: number;
+    content: string;
+    createdAt: string;
+    updatedAt: string;
+    buyerId: string;
+    productId: string;
+    orderItemId: string | null;
+  }>;
+  product?: {
+    name?: string;
+    image?: string;
+    reviews?: Array<{
       id: string;
       rating: number;
       content: string;
       createdAt: string;
     }>;
   };
-  size: {
-    size: {
+  size?: {
+    size?: {
       en: string;
       ko: string;
     };
@@ -56,7 +73,8 @@ export interface OrderItem {
 export interface Payment {
   id: string;
   price: number;
-  status: PaymentStatus;
+  status: PaymentStatus | string;
+  paymentMethod?: PaymentMethod | string;
   createdAt: string;
   updatedAt: string;
   orderId: string;
@@ -65,14 +83,22 @@ export interface Payment {
 export interface Shipping {
   id: string;
   orderId: string;
-  status: ShippingStatus;
-  trackingNumber: string;
-  carrier: string;
+  status: ShippingStatus | string;
+  trackingNumber?: string;
+  carrier?: string;
   readyToShipAt?: string;
   inShippingAt?: string;
   deliveredAt?: string;
   createdAt: string;
   updatedAt: string;
+  shippingHistories?: Array<{
+    id: string;
+    shippingId: string;
+    status: string;
+    description: string;
+    location?: string;
+    createdAt: string;
+  }>;
 }
 
 export interface Order {
@@ -81,15 +107,14 @@ export interface Order {
   buyerName: string;
   phoneNumber: string;
   address: string;
-  usedPoints: number;
-  earnedPoints: number;
-  status: OrderStatus;
+  usedPoints?: number;
+  earnedPoints?: number;
+  status: OrderStatus | string;
   createdAt: string;
   updatedAt: string;
-  items: OrderItem[];
-  orderItems?: OrderItem[]; // 하위 호환성
+  items?: OrderItem[];
+  orderItems?: OrderItem[];
   payment?: Payment;
-  payments?: Payment; // 하위 호환성
   shipping?: Shipping;
 }
 
@@ -126,16 +151,19 @@ export interface ShippingHistory {
   createdAt: string;
 }
 
-export interface Shipping {
+// ✅ 응답 타입 추가
+export interface OrderResponseDto {
   id: string;
-  orderId: string;
-  status: ShippingStatus;
-  trackingNumber: string;
-  carrier: string;
-  readyToShipAt?: string;
-  inShippingAt?: string;
-  deliveredAt?: string;
+  buyerId: string;
+  buyerName: string;
+  phoneNumber: string;
+  address: string;
+  usedPoints: number;
+  earnedPoints: number;
+  status: string;
   createdAt: string;
   updatedAt: string;
-  shippingHistories?: ShippingHistory[]; // ✅ 추가
+  items: OrderItem[];
+  payment: Payment;
+  shipping: Shipping;
 }

@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
 export default function OrderPage() {
   const axiosInstance = getAxiosInstance();
   const router = useRouter();
-  const { selectedItems, getOrderRequest, reset } = useOrderStore();
+  const { selectedItems, getOrderRequest, reset } = useOrderStore(); // ✅ usePoint 제거
   const isOrderCompleted = useRef(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentResponse | null>(null);
@@ -45,14 +45,13 @@ export default function OrderPage() {
       console.log("📥 response:", response);
       console.log("📥 response.data:", response.data);
 
-      // ✅ response.data가 바로 orderData!
-      // (response.data.data가 아님)
       const orderData = response.data;
 
       console.log("✅ 최종 orderData:", orderData);
       console.log("✅ orderData.id:", orderData?.id);
+      console.log("✅ orderData.usedPoints:", orderData?.usedPoints);
 
-      return orderData; // ✅ 반드시 return!
+      return orderData;
     },
     onSuccess: (orderData) => {
       try {
@@ -60,6 +59,7 @@ export default function OrderPage() {
         console.log("📦 전달받은 orderData:", orderData);
 
         const orderId = orderData?.id;
+        const usedPoints = orderData?.usedPoints ?? 0; // ✅ 백엔드에서 받은 사용 포인트
 
         if (!orderId) {
           console.error("❌ orderId가 없습니다:", orderData);
@@ -69,14 +69,23 @@ export default function OrderPage() {
 
         setCurrentOrderId(orderId);
 
-        const totalPrice = selectedItems.reduce((sum, item) => {
+        // ✅ 상품 총액 계산 (할인 적용)
+        const productTotal = selectedItems.reduce((sum, item) => {
           const price = item.product.price;
           const discountRate = item.product.discountRate;
           const discountedPrice = Math.floor(price * (1 - discountRate / 100));
           return sum + discountedPrice * item.quantity;
         }, 0);
 
-        setOrderPrice(totalPrice);
+        // ✅ 최종결제금액 = 상품총액 - 사용포인트
+        const finalPaymentPrice = productTotal - usedPoints;
+
+        console.log("💰 결제 정보:");
+        console.log("  상품총액:", productTotal);
+        console.log("  사용포인트:", usedPoints);
+        console.log("  최종결제금액:", finalPaymentPrice);
+
+        setOrderPrice(finalPaymentPrice); // ✅ 포인트 차감된 금액 저장
         setIsPaymentModalOpen(true);
         setIsLoading(false);
       } catch (error) {
@@ -95,22 +104,18 @@ export default function OrderPage() {
 
   const handlePaymentSuccess = async (payment: PaymentResponse) => {
     try {
-      // 결제 성공 후 장바구니 아이템 삭제
       await deleteCartItemsMutation.mutateAsync();
       isOrderCompleted.current = true;
       reset();
       setIsPaymentModalOpen(false);
 
-      // 결제 완료 화면 표시
       setPaymentData(payment);
     } catch (error) {
       console.error("장바구니 삭제 중 오류:", error);
-      // 장바구니 삭제 실패해도 결제는 완료되었으므로 완료 화면 표시
       setPaymentData(payment);
     }
   };
 
-  // ✅ 결제 완료 후 최종 화면
   if (paymentData) {
     return <PaymentComplete payment={paymentData} />;
   }
@@ -138,7 +143,6 @@ export default function OrderPage() {
         </div>
       </div>
 
-      {/* ✅ 결제 모달 */}
       {isPaymentModalOpen && (
         <PaymentModal
           orderId={currentOrderId}

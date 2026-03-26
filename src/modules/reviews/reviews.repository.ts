@@ -28,6 +28,14 @@ export class ReviewsRepository {
     });
   }
 
+  // ✅ orderItemId로 리뷰 조회 (유니크)
+  findByOrderItemId(orderItemId: string) {
+    return prisma.review.findUnique({
+      where: { orderItemId },
+      include: reviewInclude,
+    });
+  }
+
   create(data: CreateReviewRecordInput) {
     return prisma.review.create({
       data,
@@ -81,6 +89,25 @@ export class ReviewsRepository {
       reviews,
       totalCount,
     };
+  }
+
+  // ✅ 사용자가 특정 OrderItem에 대해 리뷰를 작성했는지 확인
+  async hasReviewForOrderItem(orderItemId: string): Promise<boolean> {
+    const review = await prisma.review.findUnique({
+      where: { orderItemId },
+      select: { id: true },
+    });
+
+    return !!review;
+  }
+
+  // ✅ 사용자의 특정 상품에 대한 모든 리뷰 조회
+  async findAllByBuyerAndProduct(buyerId: string, productId: string) {
+    return prisma.review.findMany({
+      where: { buyerId, productId },
+      include: reviewInclude,
+      orderBy: { createdAt: 'desc' },
+    });
   }
 }
 

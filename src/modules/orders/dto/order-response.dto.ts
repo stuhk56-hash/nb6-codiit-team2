@@ -9,9 +9,11 @@ export interface OrderResponseDto {
   address: string;
   usedPoints: number;
   earnedPoints: number;
-  status: string; // ✅ status 추가
+  status: string;
   createdAt: string;
-  orderItems: OrderItemDto[];
-  payments: PaymentDto | null; // ✅ null 가능
-  shipping: ShippingDto | null; // ✅ shipping 추가
+  updatedAt: string;
+  buyerId: string;
+  items?: OrderItemDto[];
+  payment?: PaymentDto | null;
+  shipping?: ShippingDto | null;
 }
