@@ -3,6 +3,7 @@ import { CreateOrderDto } from '../dto/create-order.dto';
 import {
   OrderWithRelations,
   OrderItemWithRelations,
+  OrderSelectResult, // ✅ 추가
 } from '../types/orders.type';
 import {
   ConflictError,
@@ -12,7 +13,6 @@ import {
 import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 
 //주문 아이템 검증 및 가격 계산
-
 export async function validateAndCalculateOrderItems(
   orderItems: CreateOrderDto['orderItems'],
 ) {
@@ -52,7 +52,6 @@ export async function validateAndCalculateOrderItems(
 }
 
 //포인트 사용 검증
-
 export function validatePointUsage(usePoint: number, totalPrice: number): void {
   if (usePoint < 0) {
     throw new BadRequestError('포인트는 0 이상이어야 합니다.');
@@ -64,7 +63,6 @@ export function validatePointUsage(usePoint: number, totalPrice: number): void {
 }
 
 //배송 정보 검증
-
 export function validateShippingInfo(
   name: string,
   phone: string,
@@ -76,7 +74,6 @@ export function validateShippingInfo(
 }
 
 //주문 접근 권한 검증
-
 export function validateOrderOwnership(
   orderBuyerId: string,
   requestBuyerId: string,
@@ -87,29 +84,37 @@ export function validateOrderOwnership(
 }
 
 //주문 취소 가능 여부 검증
-
 export function validateOrderCancellation(paymentStatus: string): void {
-  if (paymentStatus !== 'Pending') {
-    throw new BadRequestError('취소할 수 없는 주문입니다.');
+  if (paymentStatus !== 'WaitingPayment') {
+    throw new BadRequestError('이미 결제된 주문은 취소할 수 없습니다.');
   }
 }
 
-export async function resolveOrderItemImages(order: OrderWithRelations) {
-  await Promise.all(
-    order.items.map(async function (item: OrderItemWithRelations) {
-      if (!item.productImageUrl) {
-        item.productImageUrl = await resolveS3ImageUrl(
-          item.product.imageUrl,
-          null,
-          '/images/Mask-group.svg',
-        );
-      }
-    }),
-  );
+// ✅ OrderSelectResult를 OrderWithRelations로 변환
+export async function resolveOrderItemImages(
+  order: OrderSelectResult | OrderWithRelations,
+): Promise<OrderWithRelations> {
+  // items 배열이 있으면 처리
+  if (order.items && Array.isArray(order.items)) {
+    await Promise.all(
+      order.items.map(async (item: any) => {
+        if (!item.productImageUrl && item.product?.imageUrl) {
+          item.productImageUrl = await resolveS3ImageUrl(
+            item.product.imageUrl,
+            null,
+            '/images/Mask-group.svg',
+          );
+        }
+      }),
+    );
+  }
 
-  return order;
+  return order as OrderWithRelations;
 }
 
-export async function resolveOrdersItemImages(orders: OrderWithRelations[]) {
+// ✅ 여러 주문의 이미지 해석
+export async function resolveOrdersItemImages(
+  orders: OrderSelectResult[] | OrderWithRelations[],
+): Promise<OrderWithRelations[]> {
   return Promise.all(orders.map(resolveOrderItemImages));
 }

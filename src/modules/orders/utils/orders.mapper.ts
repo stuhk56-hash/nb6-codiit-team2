@@ -2,10 +2,12 @@ import {
   OrderWithRelations,
   OrderItemWithRelations,
   PaymentWithRelations,
+  ShippingWithRelations,
 } from '../types/orders.type';
 import { OrderResponseDto } from '../dto/order-response.dto';
 import { OrderItemDto } from '../dto/order-item.dto';
 import { PaymentDto } from '../dto/payment.dto';
+import { ShippingDto } from '../dto/shipping.dto';
 
 //order 엔티티를 응답 DTO로 변환
 export function toOrderDto(order: OrderWithRelations): OrderResponseDto {
@@ -16,13 +18,17 @@ export function toOrderDto(order: OrderWithRelations): OrderResponseDto {
     address: order.address,
     usedPoints: order.usedPoints,
     earnedPoints: order.earnedPoints,
+    status: order.status,
     createdAt: order.createdAt.toISOString(),
     orderItems: order.items.map(toOrderItemDto),
-    payments: toPaymentDto(order.payment),
+    payments: order.payment ? toPaymentDto(order.payment) : null,
+    shipping: order.shipping ? toShippingDto(order.shipping) : null,
   };
 }
 
-export function toOrderItemDto(orderItem: OrderItemWithRelations): OrderItemDto {
+export function toOrderItemDto(
+  orderItem: OrderItemWithRelations,
+): OrderItemDto {
   return {
     id: orderItem.id,
     price: orderItem.unitPrice,
@@ -50,7 +56,13 @@ export function toOrderItemDto(orderItem: OrderItemWithRelations): OrderItemDto 
 }
 
 //Payment 엔티티를 DTO로 변환
-export function toPaymentDto(payment: PaymentWithRelations): PaymentDto {
+export function toPaymentDto(
+  payment: PaymentWithRelations | null,
+): PaymentDto | null {
+  if (!payment) {
+    return null;
+  }
+
   return {
     id: payment.id,
     price: payment.price,
@@ -58,5 +70,26 @@ export function toPaymentDto(payment: PaymentWithRelations): PaymentDto {
     createdAt: payment.createdAt.toISOString(),
     updatedAt: payment.updatedAt.toISOString(),
     orderId: payment.orderId,
+  };
+}
+
+// Shipping 엔티티를 DTO로 변환
+export function toShippingDto(
+  shipping: ShippingWithRelations | null,
+): ShippingDto | null {
+  if (!shipping) {
+    return null;
+  }
+
+  return {
+    id: shipping.id,
+    status: shipping.status,
+    trackingNumber: shipping.trackingNumber,
+    carrier: shipping.carrier,
+    readyToShipAt: shipping.readyToShipAt?.toISOString() || null,
+    inShippingAt: shipping.inShippingAt?.toISOString() || null,
+    deliveredAt: shipping.deliveredAt?.toISOString() || null,
+    createdAt: shipping.createdAt.toISOString(),
+    updatedAt: shipping.updatedAt.toISOString(),
   };
 }

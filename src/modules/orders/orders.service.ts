@@ -164,7 +164,10 @@ export async function cancelOrder(
   }
 
   orderServiceUtil.validateOrderOwnership(order.buyerId, buyerId);
-  orderServiceUtil.validateOrderCancellation(order.payment.status);
+
+  if (order.payment) {
+    orderServiceUtil.validateOrderCancellation(order.payment.status);
+  }
 
   //트랜잭션
   await orderRepository.cancelOrderWithTransaction(

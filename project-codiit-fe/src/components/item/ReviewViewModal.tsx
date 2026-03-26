@@ -2,7 +2,7 @@ import Stars from "@/app/(routes)/products/[productId]/components/Stars";
 import Modal from "@/components/Modal";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
 import { useToaster } from "@/proviers/toaster/toaster.hook";
-import { OrderItemResponse } from "@/types/order";
+import { OrderItem } from "@/types/order";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Button from "../button/Button";
@@ -11,7 +11,7 @@ import Divder from "../divider/Divder";
 interface ReviewViewModalProps {
   open: boolean;
   onClose: () => void;
-  purchase: OrderItemResponse | null;
+  purchase: OrderItem | null;
 }
 
 export default function ReviewViewModal({ open, onClose, purchase }: ReviewViewModalProps) {

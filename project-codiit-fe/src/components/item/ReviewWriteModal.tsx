@@ -2,7 +2,7 @@ import Stars from "@/app/(routes)/products/[productId]/components/Stars";
 import Modal from "@/components/Modal";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
 import { ReviewCreateForm, reviewCreateSchemas } from "@/lib/schemas/reviewCreate.schemas";
-import { OrderItemResponse } from "@/types/order";
+import { OrderItem } from "@/types/order";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
@@ -15,7 +15,7 @@ import TextArea from "../input/TextArea";
 interface ReviewWriteModalProps {
   open: boolean;
   onClose: () => void;
-  purchase: OrderItemResponse | null;
+  purchase: OrderItem | null;
   onSubmit: () => void;
 }
 

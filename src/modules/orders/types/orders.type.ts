@@ -1,3 +1,32 @@
+import {
+  Order,
+  OrderItem,
+  Payment,
+  Shipping,
+  Product,
+  Size,
+  Review,
+} from '@prisma/client';
+
+export interface ShippingWithRelations extends Shipping {}
+
+export interface PaymentWithRelations extends Payment {}
+
+export interface OrderItemWithRelations extends OrderItem {
+  product: Product & {
+    reviews: Review[];
+  };
+  size: Size;
+  reviews: Review[];
+}
+
+export interface OrderWithRelations extends Order {
+  items: OrderItemWithRelations[];
+  payment: PaymentWithRelations | null;
+  shipping: ShippingWithRelations | null;
+}
+
+// ✅ 실제 DB 반환 타입 (Prisma select 결과)
 export type OrderItemSelectResult = {
   id: string;
   unitPrice: number;
@@ -70,6 +99,19 @@ export type PaymentSelectResult = {
   orderId: string;
 };
 
+export type ShippingSelectResult = {
+  id: string;
+  status: string;
+  trackingNumber: string;
+  carrier: string;
+  readyToShipAt: Date | null;
+  inShippingAt: Date | null;
+  deliveredAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+// ✅ Prisma select 결과 타입 (payment & shipping 추가)
 export type OrderSelectResult = {
   id: string;
   buyerId: string;
@@ -78,14 +120,10 @@ export type OrderSelectResult = {
   address: string;
   usedPoints: number;
   earnedPoints: number;
+  status: string; // ✅ status 추가
   createdAt: Date;
+  updatedAt: Date; // ✅ updatedAt 추가
   items: OrderItemSelectResult[];
-  payment: PaymentSelectResult;
+  payment: PaymentSelectResult | null; // ✅ null 가능
+  shipping: ShippingSelectResult | null; // ✅ shipping 추가
 };
-
-//Mapper에서 사용할 타입들
-export type OrderWithRelations = OrderSelectResult;
-
-export type OrderItemWithRelations = OrderItemSelectResult;
-
-export type PaymentWithRelations = PaymentSelectResult;

@@ -1,4 +1,4 @@
-import { OrderItemResponse } from "@/types/order";
+import { OrderItem } from "@/types/order";
 import Image from "next/image";
 import { useState } from "react";
 import Button from "../button/Button";
@@ -6,12 +6,12 @@ import ReviewViewModal from "./ReviewViewModal";
 import ReviewWriteModal from "./ReviewWriteModal";
 
 interface ItemCardProps {
-  purchases: OrderItemResponse[];
+  purchases: OrderItem[];
 }
 
 export default function ItemCard({ purchases }: ItemCardProps) {
-  const [reviewViewTarget, setReviewViewTarget] = useState<OrderItemResponse | null>(null);
-  const [reviewWriteTarget, setReviewWriteTarget] = useState<OrderItemResponse | null>(null);
+  const [reviewViewTarget, setReviewViewTarget] = useState<OrderItem | null>(null);
+  const [reviewWriteTarget, setReviewWriteTarget] = useState<OrderItem | null>(null);
 
   const handleCloseView = () => setReviewViewTarget(null);
   const handleCloseWrite = () => setReviewWriteTarget(null);
