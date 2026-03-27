@@ -1,6 +1,8 @@
 import { requireBuyer, requireSeller } from '../../lib/request/auth-user';
 import { AuthUser } from '../../types/auth-request.type';
 import { s3Service } from '../s3/s3.service';
+import { notificationsRepository } from '../notifications/notifications.repository';
+import { notificationsService } from '../notifications/notifications.service';
 import { DetailProductResponseDto } from './dto/detail-product-response.dto';
 import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 import { ProductInquiryListResponseDto } from './dto/product-inquiry-list-response.dto';
@@ -35,6 +37,10 @@ import {
   validateCreateProductInput,
   validateUpdateProductInput,
 } from './utils/products.service.util';
+import {
+  toCreateProductPayload,
+  toUpdateProductPayload,
+} from './utils/products.payload.util';
 
 export class ProductsService {
   async create(
@@ -55,27 +61,14 @@ export class ProductsService {
 
     const uploadedImage = image ? await s3Service.uploadFile(image) : null;
 
-    const created = await productsRepository.create({
-      storeId: store!.id,
-      categoryId: category!.id,
-      name: data.name,
-      price: data.price,
-      content: data.content,
-      ...(uploadedImage
-        ? {
-            imageUrl: uploadedImage.url,
-            imageKey: uploadedImage.key,
-          }
-        : {}),
-      discountRate: data.discountRate,
-      discountStartTime: data.discountStartTime
-        ? new Date(data.discountStartTime)
-        : undefined,
-      discountEndTime: data.discountEndTime
-        ? new Date(data.discountEndTime)
-        : undefined,
-      stocks: data.stocks,
-    });
+    const created = await productsRepository.create(
+      toCreateProductPayload({
+        storeId: store!.id,
+        categoryId: category!.id,
+        data,
+        uploadedImage,
+      }),
+    );
 
     const resolvedProduct = await resolveProductImage(created);
     return toDetailProductResponseDto(resolvedProduct);
@@ -151,32 +144,14 @@ export class ProductsService {
     const uploadedImage = image ? await s3Service.uploadFile(image) : null;
 
     const updated = requireProduct(
-      await productsRepository.update(productId, {
-        ...(uploadedImage
-          ? {
-              imageUrl: uploadedImage.url,
-              imageKey: uploadedImage.key,
-            }
-          : {}),
-        categoryId: category?.id,
-        name: data.name,
-        price: data.price,
-        content: data.content,
-        discountRate: data.discountRate,
-        discountStartTime:
-          data.discountStartTime !== undefined
-            ? data.discountStartTime
-              ? new Date(data.discountStartTime)
-              : null
-            : undefined,
-        discountEndTime:
-          data.discountEndTime !== undefined
-            ? data.discountEndTime
-              ? new Date(data.discountEndTime)
-              : null
-            : undefined,
-        stocks: data.stocks,
-      }),
+      await productsRepository.update(
+        productId,
+        toUpdateProductPayload({
+          categoryId: category?.id,
+          data,
+          uploadedImage,
+        }),
+      ),
     );
 
     const resolvedProduct = await resolveProductImage(updated);
@@ -199,7 +174,7 @@ export class ProductsService {
     data: { title: string; content: string; isSecret?: boolean },
   ): Promise<ProductInquiryResponseDto> {
     requireBuyer(user);
-    requireProduct(await productsRepository.findById(productId));
+    const product = requireProduct(await productsRepository.findById(productId));
 
     const inquiry = await productsRepository.createInquiry({
       productId,
@@ -208,6 +183,12 @@ export class ProductsService {
       content: data.content,
       isSecret: data.isSecret,
     });
+
+    const notification = await notificationsRepository.create(
+      product.store.sellerId,
+      `상품 "${product.name}"에 새로운 문의가 등록되었습니다.`,
+    );
+    notificationsService.emitCreatedNotification(notification);
 
     return toProductInquiryResponseDto(inquiry);
   }

@@ -10,6 +10,11 @@ export const CreateStoreBodyStruct = s.type({
   detailAddress: nonEmptyString,
   phoneNumber: nonEmptyString,
   content: nonEmptyString,
+  businessRegistrationNumber: s.optional(nonEmptyString),
+  businessPhoneNumber: s.optional(nonEmptyString),
+  mailOrderSalesNumber: s.optional(nonEmptyString),
+  representativeName: s.optional(nonEmptyString),
+  businessAddress: s.optional(nonEmptyString),
 });
 
 export const UpdateStoreBodyStruct = s.partial(
@@ -19,6 +24,11 @@ export const UpdateStoreBodyStruct = s.partial(
     detailAddress: nonEmptyString,
     phoneNumber: nonEmptyString,
     content: nonEmptyString,
+    businessRegistrationNumber: nonEmptyString,
+    businessPhoneNumber: nonEmptyString,
+    mailOrderSalesNumber: nonEmptyString,
+    representativeName: nonEmptyString,
+    businessAddress: nonEmptyString,
   }),
 );
 

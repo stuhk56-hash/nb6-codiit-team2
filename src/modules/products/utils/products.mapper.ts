@@ -13,6 +13,7 @@ import {
   calculateAverageRating,
   calculateDiscountPrice,
 } from './products.util';
+import { decryptStorePiiNullable } from '../../../lib/security/store-pii-crypto';
 
 function toRequiredImage(value: string | null | undefined) {
   if (typeof value !== 'string') {
@@ -49,6 +50,51 @@ function toRequiredIsoString(value: Date | null | undefined, fallback: Date) {
 
 function toRequiredNumber(value: number | null | undefined) {
   return value ?? 0;
+}
+
+function toSellerInfo(product: ProductWithRelations) {
+  return {
+    businessRegistrationNumber: decryptStorePiiNullable(
+      product.store.businessRegistrationNumber,
+    ),
+    businessPhoneNumber: decryptStorePiiNullable(
+      product.store.businessPhoneNumber,
+    ),
+    mailOrderSalesNumber: decryptStorePiiNullable(
+      product.store.mailOrderSalesNumber,
+    ),
+    representativeName: decryptStorePiiNullable(
+      product.store.representativeName,
+    ),
+    businessAddress: decryptStorePiiNullable(product.store.businessAddress),
+  };
+}
+
+function toSizeSpecs(product: ProductWithRelations) {
+  return product.sizeSpecs.map((spec) => ({
+    sizeLabel: spec.sizeLabel,
+    displayOrder: spec.displayOrder,
+    totalLengthCm: spec.totalLengthCm,
+    shoulderCm: spec.shoulderCm,
+    chestCm: spec.chestCm,
+    sleeveCm: spec.sleeveCm,
+    waistCm: spec.waistCm,
+    hipCm: spec.hipCm,
+    thighCm: spec.thighCm,
+    riseCm: spec.riseCm,
+    hemCm: spec.hemCm,
+  }));
+}
+
+function toSizeGuideType(categoryName: string): 'TOP' | 'BOTTOM' | 'NONE' {
+  const upper = categoryName.toUpperCase();
+  if (upper === 'TOP' || upper === 'OUTER' || upper === 'DRESS') {
+    return 'TOP';
+  }
+  if (upper === 'BOTTOM' || upper === 'SKIRT') {
+    return 'BOTTOM';
+  }
+  return 'NONE';
 }
 
 export function toStockDto(product: ProductWithRelations): StockDto[] {
@@ -187,6 +233,29 @@ export function toDetailProductResponseDto(
     inquiries: product.inquiries.map((inquiry) =>
       toProductInquiryListItem(inquiry),
     ),
+    sellerInfo: toSellerInfo(product),
+    noticeInfo: {
+      material: product.material,
+      color: product.color,
+      manufacturerName: product.manufacturerName,
+      manufactureCountry: product.manufactureCountry,
+      manufactureDate: product.manufactureDate,
+      caution: product.caution,
+      qualityGuaranteeStandard: product.qualityGuaranteeStandard,
+      asManagerName: product.asManagerName,
+      asPhoneNumber: product.asPhoneNumber,
+    },
+    tradeInfo: {
+      shippingFee: product.shippingFee,
+      extraShippingFee: product.extraShippingFee,
+      shippingCompany: product.shippingCompany,
+      deliveryPeriod: product.deliveryPeriod,
+      returnExchangePolicy: product.returnExchangePolicy,
+      returnShippingFee: product.returnShippingFee,
+      exchangeShippingFee: product.exchangeShippingFee,
+    },
+    sizeGuideType: toSizeGuideType(product.category.name),
+    sizeSpecs: toSizeSpecs(product),
     categoryId: product.categoryId,
     category: {
       name: product.category.name,

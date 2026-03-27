@@ -28,7 +28,7 @@ export class DashboardRepository {
           status: 'CompletedPayment',
           payment: {
             is: {
-              status: PaymentStatus.Paid,
+              status: PaymentStatus.CompletedPayment,
             },
           },
         },

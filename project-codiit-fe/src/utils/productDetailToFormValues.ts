@@ -28,5 +28,26 @@ export function transformToFormValues(data: ProductInfoData): ProductFormValues 
       periodEnd: formatDateTimeLocal(data.discountEndTime),
     },
     detail: data.content,
+    noticeInfo: {
+      material: data.noticeInfo.material ?? "",
+      color: data.noticeInfo.color ?? "",
+      manufacturerName: data.noticeInfo.manufacturerName ?? "",
+      manufactureCountry: data.noticeInfo.manufactureCountry ?? "",
+      manufactureDate: data.noticeInfo.manufactureDate ?? "",
+      caution: data.noticeInfo.caution ?? "",
+      qualityGuaranteeStandard: data.noticeInfo.qualityGuaranteeStandard ?? "",
+      asManagerName: data.noticeInfo.asManagerName ?? "",
+      asPhoneNumber: data.noticeInfo.asPhoneNumber ?? "",
+    },
+    tradeInfo: {
+      shippingFee: data.tradeInfo.shippingFee ?? null,
+      extraShippingFee: data.tradeInfo.extraShippingFee ?? null,
+      shippingCompany: data.tradeInfo.shippingCompany ?? "",
+      deliveryPeriod: data.tradeInfo.deliveryPeriod ?? "",
+      returnExchangePolicy: data.tradeInfo.returnExchangePolicy ?? "",
+      returnShippingFee: data.tradeInfo.returnShippingFee ?? null,
+      exchangeShippingFee: data.tradeInfo.exchangeShippingFee ?? null,
+    },
+    sizeSpecs: data.sizeSpecs ?? [],
   };
 }

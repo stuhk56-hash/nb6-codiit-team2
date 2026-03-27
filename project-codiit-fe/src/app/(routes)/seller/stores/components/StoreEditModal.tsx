@@ -13,6 +13,11 @@ interface StoreEditModalProps {
     detailAddress?: string;
     phone: string;
     content: string;
+    businessRegistrationNumber?: string | null;
+    businessPhoneNumber?: string | null;
+    mailOrderSalesNumber?: string | null;
+    representativeName?: string | null;
+    businessAddress?: string | null;
     imageUrl?: string;
   };
 }
@@ -47,6 +52,11 @@ export default function StoreEditModal({ onClose, store }: StoreEditModalProps) 
         },
         phoneNumber: store.phone,
         description: store.content,
+        businessRegistrationNumber: store.businessRegistrationNumber ?? "",
+        businessPhoneNumber: store.businessPhoneNumber ?? "",
+        mailOrderSalesNumber: store.mailOrderSalesNumber ?? "",
+        representativeName: store.representativeName ?? "",
+        businessAddress: store.businessAddress ?? "",
       }}
       imagePreviewUrl={store.imageUrl}
     />

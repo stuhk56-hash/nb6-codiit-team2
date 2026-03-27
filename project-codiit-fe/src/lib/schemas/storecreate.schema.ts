@@ -17,6 +17,14 @@ export const storeCreateSchema = z.object({
     })
     .optional(),
   description: z.string().min(10, "스토어 설명은 최소 10자 이상입니다"),
+  businessRegistrationNumber: z.string().optional(),
+  businessPhoneNumber: z.string().optional(),
+  mailOrderSalesNumber: z.string().optional(),
+  representativeName: z.string().optional(),
+  businessAddress: z.string().optional(),
+  disclosureAgreement: z.boolean().refine((value) => value, {
+    message: "공개 항목 및 약관 안내에 동의해야 저장할 수 있습니다",
+  }),
 });
 
 export type StoreCreateForm = z.infer<typeof storeCreateSchema>;

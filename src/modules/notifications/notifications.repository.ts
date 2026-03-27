@@ -3,6 +3,15 @@ import type { NotificationsPageResult } from './types/notifications.type';
 import type { NormalizedNotificationsQuery } from './types/notifications.type';
 
 export class NotificationsRepository {
+  create(userId: string, content: string) {
+    return prisma.notification.create({
+      data: {
+        userId,
+        content,
+      },
+    });
+  }
+
   async findPageByUserId(
     userId: string,
     query: NormalizedNotificationsQuery,
@@ -48,20 +57,6 @@ export class NotificationsRepository {
       },
       data: {
         isChecked: true,
-      },
-    });
-  }
-
-  findCreatedAfter(userId: string, createdAt: Date) {
-    return prisma.notification.findMany({
-      where: {
-        userId,
-        createdAt: {
-          gt: createdAt,
-        },
-      },
-      orderBy: {
-        createdAt: 'asc',
       },
     });
   }

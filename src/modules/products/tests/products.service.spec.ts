@@ -1,4 +1,6 @@
 import { requireBuyer, requireSeller } from '../../../lib/request/auth-user';
+import { notificationsRepository } from '../../notifications/notifications.repository';
+import { notificationsService } from '../../notifications/notifications.service';
 import { s3Service } from '../../s3/s3.service';
 import { productsRepository } from '../products.repository';
 import { ProductsService } from '../products.service';
@@ -21,6 +23,10 @@ import {
   filterProductInquiries,
 } from '../utils/products.service.util';
 import {
+  toCreateProductPayload,
+  toUpdateProductPayload,
+} from '../utils/products.payload.util';
+import {
   toDetailProductResponseDto,
   toProductInquiryListResponseDto,
   toProductInquiryResponseDto,
@@ -35,6 +41,19 @@ jest.mock('../../../lib/request/auth-user', () => ({
 jest.mock('../../s3/s3.service', () => ({
   s3Service: {
     uploadFile: jest.fn(),
+  },
+}));
+
+jest.mock('../../notifications/notifications.repository', () => ({
+  notificationsRepository: {
+    create: jest.fn(),
+    createMany: jest.fn(),
+  },
+}));
+
+jest.mock('../../notifications/notifications.service', () => ({
+  notificationsService: {
+    emitCreatedNotification: jest.fn(),
   },
 }));
 
@@ -72,6 +91,48 @@ jest.mock('../utils/products.service.util', () => ({
   validateUpdateProductInput: jest.fn(),
 }));
 
+jest.mock('../utils/products.payload.util', () => ({
+  toCreateProductPayload: jest.fn((params: any) => ({
+    storeId: params.storeId,
+    categoryId: params.categoryId,
+    ...params.data,
+    ...(params.uploadedImage
+      ? {
+          imageUrl: params.uploadedImage.url,
+          imageKey: params.uploadedImage.key,
+        }
+      : {}),
+    discountStartTime: params.data.discountStartTime
+      ? new Date(params.data.discountStartTime)
+      : undefined,
+    discountEndTime: params.data.discountEndTime
+      ? new Date(params.data.discountEndTime)
+      : undefined,
+  })),
+  toUpdateProductPayload: jest.fn((params: any) => ({
+    categoryId: params.categoryId,
+    ...params.data,
+    ...(params.uploadedImage
+      ? {
+          imageUrl: params.uploadedImage.url,
+          imageKey: params.uploadedImage.key,
+        }
+      : {}),
+    discountStartTime:
+      params.data.discountStartTime !== undefined
+        ? params.data.discountStartTime
+          ? new Date(params.data.discountStartTime)
+          : null
+        : undefined,
+    discountEndTime:
+      params.data.discountEndTime !== undefined
+        ? params.data.discountEndTime
+          ? new Date(params.data.discountEndTime)
+          : null
+        : undefined,
+  })),
+}));
+
 jest.mock('../utils/products.mapper', () => ({
   toDetailProductResponseDto: jest.fn((product: any) => ({
     id: product.id,
@@ -97,6 +158,10 @@ describe('상품 서비스 유닛 테스트', () => {
     typeof productsRepository
   >;
   const mockedS3Service = s3Service as jest.Mocked<typeof s3Service>;
+  const mockedNotificationsRepository =
+    notificationsRepository as jest.Mocked<typeof notificationsRepository>;
+  const mockedNotificationsService =
+    notificationsService as jest.Mocked<typeof notificationsService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -132,6 +197,13 @@ describe('상품 서비스 유닛 테스트', () => {
     expect(ensureSellerStore).toHaveBeenCalledWith('store-1');
     expect(ensureCategory).toHaveBeenCalledWith('cat-1');
     expect(mockedS3Service.uploadFile).toHaveBeenCalledWith(imageFile);
+    expect(toCreateProductPayload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storeId: 'store-1',
+        categoryId: 'cat-1',
+        data: createInput,
+      }),
+    );
     expect(mockedRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         storeId: 'store-1',
@@ -256,6 +328,12 @@ describe('상품 서비스 유닛 테스트', () => {
     expect(ensureProductOwner).toHaveBeenCalledWith('seller-1', existingProduct);
     expect(validateUpdateProductInput).toHaveBeenCalledWith(updateInput, existingProduct);
     expect(ensureCategory).toHaveBeenCalledWith('cat-2');
+    expect(toUpdateProductPayload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        categoryId: 'cat-2',
+        data: updateInput,
+      }),
+    );
     expect(mockedRepository.update).toHaveBeenCalledWith(
       'product-1',
       expect.objectContaining({
@@ -279,8 +357,13 @@ describe('상품 서비스 유닛 테스트', () => {
       title: '배송 문의',
     } as any;
 
-    mockedRepository.findById.mockResolvedValue({ id: 'product-1' } as any);
+    mockedRepository.findById.mockResolvedValue({
+      id: 'product-1',
+      name: '문의 상품',
+      store: { sellerId: 'seller-1' },
+    } as any);
     mockedRepository.createInquiry.mockResolvedValue(createdInquiry);
+    mockedNotificationsRepository.create.mockResolvedValue({ id: 'n1' } as any);
 
     const result = await service.createInquiry(buyerUser, 'product-1', inquiryInput);
 
@@ -293,6 +376,13 @@ describe('상품 서비스 유닛 테스트', () => {
       content: '언제 오나요?',
       isSecret: true,
     });
+    expect(mockedNotificationsRepository.create).toHaveBeenCalledWith(
+      'seller-1',
+      '상품 "문의 상품"에 새로운 문의가 등록되었습니다.',
+    );
+    expect(mockedNotificationsService.emitCreatedNotification).toHaveBeenCalledWith(
+      { id: 'n1' },
+    );
     expect(toProductInquiryResponseDto).toHaveBeenCalledWith(createdInquiry);
     expect(result).toEqual({ id: 'inq-1', title: '배송 문의' });
   });
@@ -335,7 +425,7 @@ describe('상품 서비스 유닛 테스트', () => {
       page: 1,
       pageSize: 10,
       sort: 'recent',
-      status: 'PENDING',
+      status: 'WaitingAnswer',
     };
 
     mockedRepository.findById.mockResolvedValue({ id: 'product-1' } as any);
@@ -350,14 +440,17 @@ describe('상품 서비스 유닛 테스트', () => {
     });
 
     const result = await service.getListInquiry('product-1', {
-      status: 'PENDING',
+      status: 'WaitingAnswer',
     });
 
     expect(mockedRepository.findById).toHaveBeenCalledWith('product-1');
     expect(mockedRepository.findProductInquiries).toHaveBeenCalledWith(
       'product-1',
     );
-    expect(filterProductInquiries).toHaveBeenCalledWith(inquiryList, 'PENDING');
+    expect(filterProductInquiries).toHaveBeenCalledWith(
+      inquiryList,
+      'WaitingAnswer',
+    );
     expect(sortProductInquiries).toHaveBeenCalledWith(filteredInquiries, 'recent');
     expect(paginateProductInquiries).toHaveBeenCalledWith(
       filteredInquiries,

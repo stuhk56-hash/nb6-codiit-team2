@@ -1,5 +1,7 @@
 import { prisma } from '../../lib/constants/prismaClient';
-import { PaymentStatus, OrderStatus } from '@prisma/client';
+import { PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
+import { notificationHub } from '../notifications/notification-hub';
+import { toAlarmDto } from '../notifications/utils/notifications.mapper';
 
 const orderSelect = {
   id: true,
@@ -142,7 +144,24 @@ export async function createOrderWithTransaction(
   totalPrice: number,
   usePoint: number,
 ) {
+  const emittedNotifications: Array<{
+    id: string;
+    userId: string;
+    content: string;
+    isChecked: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = [];
+
   const orderId = await prisma.$transaction(async (tx) => {
+    const pendingNotifications = new Map<string, { userId: string; content: string }>();
+    const soldOutNotifiedProducts = new Set<string>();
+
+    const queueNotification = (userId: string, content: string) => {
+      const key = `${userId}:${content}`;
+      pendingNotifications.set(key, { userId, content });
+    };
+
     // 1. 주문 생성
     const createdOrder = await tx.order.create({
       data: {
@@ -158,7 +177,7 @@ export async function createOrderWithTransaction(
 
     // 2. 재고 재검증 및 감소
     for (const item of processedItems) {
-      await tx.productStock.update({
+      const updatedStock = await tx.productStock.update({
         where: {
           productId_sizeId: {
             productId: item.productId,
@@ -170,7 +189,75 @@ export async function createOrderWithTransaction(
             decrement: item.quantity,
           },
         },
+        select: {
+          quantity: true,
+          product: {
+            select: {
+              name: true,
+              store: {
+                select: {
+                  sellerId: true,
+                },
+              },
+            },
+          },
+          size: {
+            select: {
+              name: true,
+            },
+          },
+        },
       });
+
+      if (updatedStock.quantity <= 0) {
+        queueNotification(
+          updatedStock.product.store.sellerId,
+          `판매중인 상품 "${updatedStock.product.name}" (${updatedStock.size.name}) 사이즈가 품절되었습니다.`,
+        );
+
+        const cartOwners = await tx.cartItem.findMany({
+          where: {
+            productId: item.productId,
+            sizeId: item.sizeId,
+          },
+          select: {
+            cart: {
+              select: {
+                buyerId: true,
+              },
+            },
+          },
+        });
+
+        for (const owner of cartOwners) {
+          queueNotification(
+            owner.cart.buyerId,
+            `장바구니/주문 상품 "${updatedStock.product.name}" (${updatedStock.size.name})이(가) 품절되었습니다.`,
+          );
+        }
+
+        if (!soldOutNotifiedProducts.has(item.productId)) {
+          const hasRemainingStock = await tx.productStock.findFirst({
+            where: {
+              productId: item.productId,
+              quantity: {
+                gt: 0,
+              },
+            },
+            select: {
+              id: true,
+            },
+          });
+
+          if (!hasRemainingStock) {
+            queueNotification(
+              updatedStock.product.store.sellerId,
+              `판매중인 상품 "${updatedStock.product.name}"의 모든 사이즈가 품절되었습니다.`,
+            );
+            soldOutNotifiedProducts.add(item.productId);
+          }
+        }
+      }
     }
 
     // 3. 주문 아이템 생성
@@ -265,10 +352,23 @@ export async function createOrderWithTransaction(
       });
     }
 
-    // ❌ 결제 생성 제거! (결제는 별도로 진행)
+    if (pendingNotifications.size > 0) {
+      const createdNotifications = await Promise.all(
+        Array.from(pendingNotifications.values()).map((notification) =>
+          tx.notification.create({
+            data: notification,
+          }),
+        ),
+      );
+      emittedNotifications.push(...createdNotifications);
+    }
 
     return createdOrder.id;
   });
+
+  for (const notification of emittedNotifications) {
+    notificationHub.emit(notification.userId, toAlarmDto(notification));
+  }
 
   return findOrderById(orderId);
 }

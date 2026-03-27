@@ -2,6 +2,7 @@ import { s3Service } from '../../s3/s3.service';
 import { storesRepository } from '../stores.repository';
 import { StoresService } from '../stores.service';
 import {
+  ensureStoreBusinessInfoValidity,
   ensureSellerStoreMissing,
   ensureStoreOwner,
   ensureStoreUpdateInput,
@@ -11,6 +12,12 @@ import {
   requireMyStore,
   requireStore,
 } from '../utils/stores.service.util';
+import { toStoreAuditSnapshot } from '../utils/stores.audit.util';
+import { encryptStoreBusinessInfoInput } from '../utils/stores.crypto.util';
+import {
+  toCreateStoreRecordInput,
+  toUpdateStoreRecordInput,
+} from '../utils/stores.payload.util';
 import {
   toFavoriteStoreDeleteResponseDto,
   toFavoriteStoreRegisterResponseDto,
@@ -33,6 +40,7 @@ jest.mock('../stores.repository', () => ({
     findById: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    createAuditLog: jest.fn(),
     findMyProductsBySellerId: jest.fn(),
     registerFavorite: jest.fn(),
     deleteFavorite: jest.fn(),
@@ -40,6 +48,7 @@ jest.mock('../stores.repository', () => ({
 }));
 
 jest.mock('../utils/stores.service.util', () => ({
+  ensureStoreBusinessInfoValidity: jest.fn(),
   ensureSellerStoreMissing: jest.fn(),
   ensureStoreOwner: jest.fn(),
   ensureStoreUpdateInput: jest.fn(),
@@ -48,6 +57,36 @@ jest.mock('../utils/stores.service.util', () => ({
   resolveStoreImage: jest.fn(async (store: unknown) => store),
   requireMyStore: jest.fn((store: unknown) => store),
   requireStore: jest.fn((store: unknown) => store),
+}));
+
+jest.mock('../utils/stores.audit.util', () => ({
+  toStoreAuditSnapshot: jest.fn((store: unknown) => store),
+}));
+
+jest.mock('../utils/stores.crypto.util', () => ({
+  encryptStoreBusinessInfoInput: jest.fn((data: unknown) => data),
+}));
+
+jest.mock('../utils/stores.payload.util', () => ({
+  toCreateStoreRecordInput: jest.fn((params: any) => ({
+    sellerId: params.sellerId,
+    ...params.data,
+    ...(params.uploadedImage
+      ? {
+          imageUrl: params.uploadedImage.url,
+          imageKey: params.uploadedImage.key,
+        }
+      : {}),
+  })),
+  toUpdateStoreRecordInput: jest.fn((params: any) => ({
+    ...params.data,
+    ...(params.uploadedImage
+      ? {
+          imageUrl: params.uploadedImage.url,
+          imageKey: params.uploadedImage.key,
+        }
+      : {}),
+  })),
 }));
 
 jest.mock('../utils/stores.mapper', () => ({
@@ -103,12 +142,35 @@ describe('스토어 서비스 유닛 테스트', () => {
     );
 
     expect(ensureSellerStoreMissing).toHaveBeenCalledWith(null);
+    expect(ensureStoreBusinessInfoValidity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: '신규 스토어',
+      }),
+    );
     expect(mockedS3Service.uploadFile).toHaveBeenCalledWith(imageFile);
+    expect(encryptStoreBusinessInfoInput).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: '신규 스토어',
+      }),
+    );
+    expect(toCreateStoreRecordInput).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sellerId: 'seller-1',
+      }),
+    );
     expect(mockedStoresRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         sellerId: 'seller-1',
         imageUrl: 'https://cdn.example.com/store.png',
         imageKey: 'store.png',
+      }),
+    );
+    expect(toStoreAuditSnapshot).toHaveBeenCalledWith(createdStore);
+    expect(mockedStoresRepository.createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storeId: 'store-1',
+        sellerId: 'seller-1',
+        action: 'CREATED',
       }),
     );
     expect(resolveStoreImage).toHaveBeenCalledWith(createdStore);
@@ -130,11 +192,31 @@ describe('스토어 서비스 유닛 테스트', () => {
     );
 
     expect(ensureStoreUpdateInput).toHaveBeenCalledWith({ name: '수정 스토어' }, undefined);
+    expect(ensureStoreBusinessInfoValidity).toHaveBeenCalledWith({
+      name: '수정 스토어',
+    });
     expect(requireStore).toHaveBeenCalledWith(existingStore);
     expect(ensureStoreOwner).toHaveBeenCalledWith('seller-1', { userId: 'seller-1' });
+    expect(encryptStoreBusinessInfoInput).toHaveBeenCalledWith({
+      name: '수정 스토어',
+    });
+    expect(toUpdateStoreRecordInput).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { name: '수정 스토어' },
+      }),
+    );
     expect(mockedStoresRepository.update).toHaveBeenCalledWith(
       'store-1',
       expect.objectContaining({ name: '수정 스토어' }),
+    );
+    expect(toStoreAuditSnapshot).toHaveBeenCalledWith(existingStore);
+    expect(toStoreAuditSnapshot).toHaveBeenCalledWith(updatedStore);
+    expect(mockedStoresRepository.createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storeId: 'store-1',
+        sellerId: 'seller-1',
+        action: 'UPDATED',
+      }),
     );
     expect(resolveStoreImage).toHaveBeenCalledWith(updatedStore);
     expect(toStoreResponseDto).toHaveBeenCalledWith(updatedStore);

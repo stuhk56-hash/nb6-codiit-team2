@@ -39,6 +39,43 @@ export const productFormSchema = z
 
     // 상품 상세정보
     detail: z.string().min(1, "상품 상세정보를 입력해 주세요"),
+    noticeInfo: z.object({
+      material: z.string().optional(),
+      color: z.string().optional(),
+      manufacturerName: z.string().optional(),
+      manufactureCountry: z.string().optional(),
+      manufactureDate: z.string().optional(),
+      caution: z.string().optional(),
+      qualityGuaranteeStandard: z.string().optional(),
+      asManagerName: z.string().optional(),
+      asPhoneNumber: z.string().optional(),
+    }),
+    tradeInfo: z.object({
+      shippingFee: z.number().min(0).nullable().optional(),
+      extraShippingFee: z.number().min(0).nullable().optional(),
+      shippingCompany: z.string().optional(),
+      deliveryPeriod: z.string().optional(),
+      returnExchangePolicy: z.string().optional(),
+      returnShippingFee: z.number().min(0).nullable().optional(),
+      exchangeShippingFee: z.number().min(0).nullable().optional(),
+    }),
+    sizeSpecs: z
+      .array(
+        z.object({
+          sizeLabel: z.string(),
+          displayOrder: z.number().optional(),
+          totalLengthCm: z.number().nullable().optional(),
+          shoulderCm: z.number().nullable().optional(),
+          chestCm: z.number().nullable().optional(),
+          sleeveCm: z.number().nullable().optional(),
+          waistCm: z.number().nullable().optional(),
+          hipCm: z.number().nullable().optional(),
+          thighCm: z.number().nullable().optional(),
+          riseCm: z.number().nullable().optional(),
+          hemCm: z.number().nullable().optional(),
+        })
+      )
+      .optional(),
   })
   .superRefine((data, ctx) => {
     const { sizes, stocks = {}, discount } = data;

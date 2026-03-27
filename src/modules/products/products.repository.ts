@@ -1,9 +1,17 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/constants/prismaClient';
 import { productInclude } from './queries/products.query';
-import { NormalizedProductListQuery } from './types/products.type';
+import type {
+  CreateProductInquiryInput,
+  CreateProductRecordInput,
+  NormalizedProductListQuery,
+  UpdateProductRecordInput,
+} from './types/products.type';
 import {
   buildProductListOrderBy,
   buildProductListWhere,
+  toCreateProductData,
+  toUpdateProductData,
 } from './utils/products.repository.util';
 import { isSoldOutByStocks } from './utils/products.util';
 
@@ -69,90 +77,38 @@ export class ProductsRepository {
     });
   }
 
-  create(data: {
-    storeId: string;
-    categoryId: string;
-    name: string;
-    price: number;
-    content?: string;
-    imageUrl?: string;
-    imageKey?: string;
-    discountRate?: number;
-    discountStartTime?: Date;
-    discountEndTime?: Date;
-    stocks: Array<{ sizeId: number; quantity: number }>;
-  }) {
+  create(data: CreateProductRecordInput) {
     const isSoldOut = isSoldOutByStocks(data.stocks);
 
     return prisma.product.create({
-      data: {
-        storeId: data.storeId,
-        categoryId: data.categoryId,
-        name: data.name,
-        price: data.price,
-        content: data.content,
-        imageUrl: data.imageUrl,
-        imageKey: data.imageKey,
-        discountRate: data.discountRate,
-        discountStartTime: data.discountStartTime,
-        discountEndTime: data.discountEndTime,
-        isSoldOut,
-        stocks: {
-          create: data.stocks,
-        },
-      },
+      data: toCreateProductData(data, isSoldOut),
       include: productInclude,
     });
   }
 
-  async update(
-    productId: string,
-    data: {
-      categoryId?: string;
-      name?: string;
-      price?: number;
-      content?: string;
-      imageUrl?: string;
-      imageKey?: string;
-      discountRate?: number;
-      discountStartTime?: Date | null;
-      discountEndTime?: Date | null;
-      stocks: Array<{ sizeId: number; quantity: number }>;
-    },
-  ) {
+  async update(productId: string, data: UpdateProductRecordInput) {
     const isSoldOut = isSoldOutByStocks(data.stocks);
 
-    await prisma.$transaction([
+    const operations: Prisma.PrismaPromise<unknown>[] = [
       prisma.productStock.deleteMany({
         where: { productId },
       }),
+    ];
+    if (data.sizeSpecs !== undefined) {
+      operations.push(
+        prisma.productSizeSpec.deleteMany({
+          where: { productId },
+        }),
+      );
+    }
+    operations.push(
       prisma.product.update({
         where: { id: productId },
-        data: {
-          ...(data.categoryId !== undefined
-            ? { categoryId: data.categoryId }
-            : {}),
-          ...(data.name !== undefined ? { name: data.name } : {}),
-          ...(data.price !== undefined ? { price: data.price } : {}),
-          ...(data.content !== undefined ? { content: data.content } : {}),
-          ...(data.imageUrl !== undefined ? { imageUrl: data.imageUrl } : {}),
-          ...(data.imageKey !== undefined ? { imageKey: data.imageKey } : {}),
-          ...(data.discountRate !== undefined
-            ? { discountRate: data.discountRate }
-            : {}),
-          ...(data.discountStartTime !== undefined
-            ? { discountStartTime: data.discountStartTime }
-            : {}),
-          ...(data.discountEndTime !== undefined
-            ? { discountEndTime: data.discountEndTime }
-            : {}),
-          isSoldOut,
-          stocks: {
-            create: data.stocks,
-          },
-        },
+        data: toUpdateProductData(data, isSoldOut),
       }),
-    ]);
+    );
+
+    await prisma.$transaction(operations);
 
     return prisma.product.findUnique({
       where: { id: productId },
@@ -166,13 +122,7 @@ export class ProductsRepository {
     });
   }
 
-  createInquiry(data: {
-    productId: string;
-    buyerId: string;
-    title: string;
-    content: string;
-    isSecret?: boolean;
-  }) {
+  createInquiry(data: CreateProductInquiryInput) {
     return prisma.inquiry.create({
       data: {
         productId: data.productId,

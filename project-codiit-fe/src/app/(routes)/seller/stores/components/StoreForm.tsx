@@ -5,6 +5,7 @@ import TextArea from "@/components/input/TextArea";
 import { StoreCreateForm, storeCreateSchema } from "@/lib/schemas/storecreate.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useController, useForm } from "react-hook-form";
 
@@ -30,7 +31,10 @@ export default function StoreForm({ mode, onClose, onSubmit, defaultValues, imag
 
   // defaultValues 변경 시 폼 리셋
   useEffect(() => {
-    reset(defaultValues);
+    reset({
+      disclosureAgreement: false,
+      ...defaultValues,
+    });
   }, [defaultValues, reset]);
 
   const {
@@ -88,6 +92,39 @@ export default function StoreForm({ mode, onClose, onSubmit, defaultValues, imag
         <div className="relative w-[599px] text-left">
           <p className="text-[28px] font-extrabold">{mode === "create" ? "스토어 등록" : "스토어 수정"}</p>
           <div className="bg-gray04 mt-5 mb-10 h-px w-full" />
+          <div className="mb-8 rounded-md border border-gray-200 bg-gray-50 p-4">
+            <p className="text-base font-bold text-gray-900">구매자 노출 안내</p>
+            <p className="mt-1 text-sm text-gray-600">
+              아래 정보는 구매자에게 공개됩니다. (상품 상세 &gt; 판매자정보/배송·교환·반품 안내)
+            </p>
+            <p className="mt-2 text-xs text-gray-500">
+              판매자 이용약관 및 개인정보 수집·이용 안내에 따라 공개 항목이 처리됩니다.
+            </p>
+            <div className="mt-3 space-y-2 text-sm text-gray-700">
+              <div>스토어명, 주소, 전화번호, 스토어 설명</div>
+              <div>대표자명, 사업자등록번호, 통신판매업 신고번호, 사업자 연락처, 사업장 소재지</div>
+            </div>
+            <div className="mt-3 text-xs text-gray-500">
+              <span className="font-semibold">관련 문서:</span>{" "}
+              <Link
+                href="/seller/terms"
+                className="underline underline-offset-2"
+                target="_blank"
+                rel="noreferrer"
+              >
+                판매자 이용약관
+              </Link>{" "}
+              /{" "}
+              <Link
+                href="/seller/privacy"
+                className="underline underline-offset-2"
+                target="_blank"
+                rel="noreferrer"
+              >
+                개인정보 수집·이용 안내
+              </Link>
+            </div>
+          </div>
           <button
             className="absolute top-0 right-0"
             onClick={onClose}
@@ -133,6 +170,41 @@ export default function StoreForm({ mode, onClose, onSubmit, defaultValues, imag
           {errors.phoneNumber && <p className="mt-[1px] text-red-500">{errors.phoneNumber.message}</p>}
 
           <div className="bg-gray04 mt-[1.875rem] mb-[1.875rem] h-px w-full" />
+          <BoxInput
+            label="대표자명"
+            placeholder="대표자명을 입력하세요"
+            {...register("representativeName")}
+          />
+          <div className="mt-5">
+            <BoxInput
+              label="사업자등록번호"
+              placeholder="예: 123-45-67890"
+              {...register("businessRegistrationNumber")}
+            />
+          </div>
+          <div className="mt-5">
+            <BoxInput
+              label="통신판매업 신고번호"
+              placeholder="예: 2026-서울강남-0001"
+              {...register("mailOrderSalesNumber")}
+            />
+          </div>
+          <div className="mt-5">
+            <BoxInput
+              label="사업자 연락처"
+              placeholder="사업자 연락처 입력"
+              {...register("businessPhoneNumber")}
+            />
+          </div>
+          <div className="mt-5">
+            <BoxInput
+              label="사업장 소재지"
+              placeholder="사업장 소재지 입력"
+              {...register("businessAddress")}
+            />
+          </div>
+
+          <div className="bg-gray04 mt-[1.875rem] mb-[1.875rem] h-px w-full" />
           <label className="flex flex-col gap-5 text-xl font-bold">
             스토어 이미지
             <input
@@ -176,6 +248,37 @@ export default function StoreForm({ mode, onClose, onSubmit, defaultValues, imag
           />
           {errors.description && <p className="mt-[1px] text-red-500">{errors.description.message}</p>}
         </div>
+
+        <label className="mt-8 flex items-start gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            className="mt-1"
+            {...register("disclosureAgreement")}
+          />
+          <span>
+            <Link
+              href="/seller/terms"
+              className="underline underline-offset-2"
+              target="_blank"
+              rel="noreferrer"
+            >
+              판매자 이용약관
+            </Link>
+            {" / "}
+            <Link
+              href="/seller/privacy"
+              className="underline underline-offset-2"
+              target="_blank"
+              rel="noreferrer"
+            >
+              개인정보 수집·이용 안내
+            </Link>
+            {" 및 공개 항목(노출 위치 포함)을 확인했으며, 저장 시 구매자에게 공개됨에 동의합니다."}
+          </span>
+        </label>
+        {errors.disclosureAgreement && (
+          <p className="mt-1 text-sm text-red-500">{errors.disclosureAgreement.message}</p>
+        )}
 
         <div className="mt-10 flex gap-5">
           <Button

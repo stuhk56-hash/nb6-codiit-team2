@@ -8,6 +8,11 @@ export const productInclude = Prisma.validator<Prisma.ProductInclude>()({
       size: true,
     },
   },
+  sizeSpecs: {
+    orderBy: {
+      displayOrder: 'asc',
+    },
+  },
   reviews: true,
   inquiries: {
     include: {

@@ -1,29 +1,39 @@
 import type { Response } from 'express';
 
-export class NotificationHub {
-  private readonly clients = new Map<string, Set<Response>>();
+function createNotificationHub() {
+  const clients = new Map<string, Set<Response>>();
 
-  add(userId: string, res: Response) {
-    const clients = this.clients.get(userId) ?? new Set<Response>();
-    clients.add(res);
-    this.clients.set(userId, clients);
-  }
+  const add = (userId: string, res: Response) => {
+    const targetClients = clients.get(userId) ?? new Set<Response>();
+    targetClients.add(res);
+    clients.set(userId, targetClients);
+  };
 
-  remove(userId: string, res: Response) {
-    const clients = this.clients.get(userId);
-    if (!clients) {
+  const remove = (userId: string, res: Response) => {
+    const targetClients = clients.get(userId);
+    if (!targetClients) {
       return;
     }
 
-    clients.delete(res);
-    if (clients.size === 0) {
-      this.clients.delete(userId);
+    targetClients.delete(res);
+    if (targetClients.size === 0) {
+      clients.delete(userId);
     }
-  }
+  };
 
-  has(userId: string) {
-    return this.clients.has(userId);
-  }
+  const emit = (userId: string, data: unknown) => {
+    const targetClients = clients.get(userId);
+    if (!targetClients || targetClients.size === 0) {
+      return;
+    }
+
+    const payload = `data: ${JSON.stringify(data)}\n\n`;
+    for (const res of targetClients) {
+      res.write(payload);
+    }
+  };
+
+  return { add, remove, emit };
 }
 
-export const notificationHub = new NotificationHub();
+export const notificationHub = createNotificationHub();
