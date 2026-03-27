@@ -20,6 +20,7 @@ jest.mock('../notification-hub', () => ({
   notificationHub: {
     add: jest.fn(),
     remove: jest.fn(),
+    emit: jest.fn(),
   },
 }));
 
@@ -28,7 +29,6 @@ jest.mock('../notifications.repository', () => ({
     findPageByUserId: jest.fn(),
     findById: jest.fn(),
     updateCheckedById: jest.fn(),
-    findCreatedAfter: jest.fn(),
   },
 }));
 
@@ -143,19 +143,9 @@ describe('notifications.service', () => {
   test('SSE 전송 대상 생성 로직을 테스트한다', async () => {
     const res = {
       on: jest.fn(),
+      write: jest.fn(),
       end: jest.fn(),
     } as unknown as Response;
-    const createdAt = new Date('2026-03-23T00:00:00.000Z');
-    mockedRepository.findCreatedAfter.mockResolvedValue([
-      {
-        id: 'alarm-1',
-        userId: 'user-1',
-        content: '새 알림',
-        isChecked: false,
-        createdAt,
-        updatedAt: createdAt,
-      },
-    ] as any);
 
     service.connectSse({ id: 'user-1', type: 'BUYER' } as any, res);
 
@@ -164,16 +154,7 @@ describe('notifications.service', () => {
     expect(writeNotificationSseData).toHaveBeenCalledWith(res, {});
 
     jest.advanceTimersByTime(30000);
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(mockedRepository.findCreatedAfter).toHaveBeenCalledWith(
-      'user-1',
-      expect.any(Date),
-    );
-    expect(writeNotificationSseData).toHaveBeenCalledWith(res, {
-      id: 'alarm-1',
-    });
+    expect(writeNotificationSseData).toHaveBeenCalledWith(res, {});
 
     const closeHandler = (res.on as jest.Mock).mock.calls.find(
       ([event]) => event === 'close',
@@ -183,5 +164,24 @@ describe('notifications.service', () => {
 
     expect(mockedHub.remove).toHaveBeenCalledWith('user-1', res);
     expect(res.end).toHaveBeenCalled();
+  });
+
+  test('emitCreatedNotification - 허브에 즉시 emit 한다', () => {
+    const createdAt = new Date('2026-03-23T00:00:00.000Z');
+    service.emitCreatedNotification({
+      id: 'alarm-1',
+      userId: 'user-1',
+      content: '새 알림',
+      isChecked: false,
+      createdAt,
+      updatedAt: createdAt,
+    } as any);
+
+    expect(toAlarmDto).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'alarm-1',
+      }),
+    );
+    expect(mockedHub.emit).toHaveBeenCalledWith('user-1', { id: 'alarm-1' });
   });
 });

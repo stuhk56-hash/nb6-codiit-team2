@@ -12,16 +12,6 @@ export class NotificationsRepository {
     });
   }
 
-  createMany(data: Array<{ userId: string; content: string }>) {
-    if (data.length === 0) {
-      return Promise.resolve({ count: 0 });
-    }
-
-    return prisma.notification.createMany({
-      data,
-    });
-  }
-
   async findPageByUserId(
     userId: string,
     query: NormalizedNotificationsQuery,
@@ -67,20 +57,6 @@ export class NotificationsRepository {
       },
       data: {
         isChecked: true,
-      },
-    });
-  }
-
-  findCreatedAfter(userId: string, createdAt: Date) {
-    return prisma.notification.findMany({
-      where: {
-        userId,
-        createdAt: {
-          gt: createdAt,
-        },
-      },
-      orderBy: {
-        createdAt: 'asc',
       },
     });
   }

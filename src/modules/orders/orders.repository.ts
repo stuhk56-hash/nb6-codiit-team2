@@ -1,5 +1,7 @@
 import { prisma } from '../../lib/constants/prismaClient';
 import { PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
+import { notificationHub } from '../notifications/notification-hub';
+import { toAlarmDto } from '../notifications/utils/notifications.mapper';
 
 const orderSelect = {
   id: true,
@@ -142,6 +144,15 @@ export async function createOrderWithTransaction(
   totalPrice: number,
   usePoint: number,
 ) {
+  const emittedNotifications: Array<{
+    id: string;
+    userId: string;
+    content: string;
+    isChecked: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = [];
+
   const orderId = await prisma.$transaction(async (tx) => {
     const pendingNotifications = new Map<string, { userId: string; content: string }>();
     const soldOutNotifiedProducts = new Set<string>();
@@ -199,6 +210,11 @@ export async function createOrderWithTransaction(
       });
 
       if (updatedStock.quantity <= 0) {
+        queueNotification(
+          updatedStock.product.store.sellerId,
+          `판매중인 상품 "${updatedStock.product.name}" (${updatedStock.size.name}) 사이즈가 품절되었습니다.`,
+        );
+
         const cartOwners = await tx.cartItem.findMany({
           where: {
             productId: item.productId,
@@ -236,7 +252,7 @@ export async function createOrderWithTransaction(
           if (!hasRemainingStock) {
             queueNotification(
               updatedStock.product.store.sellerId,
-              `판매중인 상품 "${updatedStock.product.name}"이(가) 품절되었습니다.`,
+              `판매중인 상품 "${updatedStock.product.name}"의 모든 사이즈가 품절되었습니다.`,
             );
             soldOutNotifiedProducts.add(item.productId);
           }
@@ -337,13 +353,22 @@ export async function createOrderWithTransaction(
     }
 
     if (pendingNotifications.size > 0) {
-      await tx.notification.createMany({
-        data: Array.from(pendingNotifications.values()),
-      });
+      const createdNotifications = await Promise.all(
+        Array.from(pendingNotifications.values()).map((notification) =>
+          tx.notification.create({
+            data: notification,
+          }),
+        ),
+      );
+      emittedNotifications.push(...createdNotifications);
     }
 
     return createdOrder.id;
   });
+
+  for (const notification of emittedNotifications) {
+    notificationHub.emit(notification.userId, toAlarmDto(notification));
+  }
 
   return findOrderById(orderId);
 }

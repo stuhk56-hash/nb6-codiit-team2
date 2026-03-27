@@ -1,5 +1,6 @@
 import { requireBuyer, requireSeller } from '../../../lib/request/auth-user';
 import { notificationsRepository } from '../../notifications/notifications.repository';
+import { notificationsService } from '../../notifications/notifications.service';
 import { s3Service } from '../../s3/s3.service';
 import { productsRepository } from '../products.repository';
 import { ProductsService } from '../products.service';
@@ -47,6 +48,12 @@ jest.mock('../../notifications/notifications.repository', () => ({
   notificationsRepository: {
     create: jest.fn(),
     createMany: jest.fn(),
+  },
+}));
+
+jest.mock('../../notifications/notifications.service', () => ({
+  notificationsService: {
+    emitCreatedNotification: jest.fn(),
   },
 }));
 
@@ -153,6 +160,8 @@ describe('상품 서비스 유닛 테스트', () => {
   const mockedS3Service = s3Service as jest.Mocked<typeof s3Service>;
   const mockedNotificationsRepository =
     notificationsRepository as jest.Mocked<typeof notificationsRepository>;
+  const mockedNotificationsService =
+    notificationsService as jest.Mocked<typeof notificationsService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -370,6 +379,9 @@ describe('상품 서비스 유닛 테스트', () => {
     expect(mockedNotificationsRepository.create).toHaveBeenCalledWith(
       'seller-1',
       '상품 "문의 상품"에 새로운 문의가 등록되었습니다.',
+    );
+    expect(mockedNotificationsService.emitCreatedNotification).toHaveBeenCalledWith(
+      { id: 'n1' },
     );
     expect(toProductInquiryResponseDto).toHaveBeenCalledWith(createdInquiry);
     expect(result).toEqual({ id: 'inq-1', title: '배송 문의' });

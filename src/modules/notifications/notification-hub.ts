@@ -21,8 +21,16 @@ export class NotificationHub {
     }
   }
 
-  has(userId: string) {
-    return this.clients.has(userId);
+  emit(userId: string, data: unknown) {
+    const clients = this.clients.get(userId);
+    if (!clients || clients.size === 0) {
+      return;
+    }
+
+    const payload = `data: ${JSON.stringify(data)}\n\n`;
+    for (const res of clients) {
+      res.write(payload);
+    }
   }
 }
 

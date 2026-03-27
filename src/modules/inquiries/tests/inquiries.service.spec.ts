@@ -1,6 +1,7 @@
 import { inquiriesRepository } from '../inquiries.repository';
 import { InquiriesService } from '../inquiries.service';
 import { notificationsRepository } from '../../notifications/notifications.repository';
+import { notificationsService } from '../../notifications/notifications.service';
 import {
   toInquiryListResponseDto,
   toInquiryReplyResponseDto,
@@ -42,6 +43,12 @@ jest.mock('../../notifications/notifications.repository', () => ({
   },
 }));
 
+jest.mock('../../notifications/notifications.service', () => ({
+  notificationsService: {
+    emitCreatedNotification: jest.fn(),
+  },
+}));
+
 jest.mock('../utils/inquiries.mapper', () => ({
   toInquiryListResponseDto: jest.fn((inquiries: any[], totalCount: number) => ({
     list: inquiries,
@@ -74,6 +81,8 @@ describe('inquiries.service', () => {
   >;
   const mockedNotificationsRepository =
     notificationsRepository as jest.Mocked<typeof notificationsRepository>;
+  const mockedNotificationsService =
+    notificationsService as jest.Mocked<typeof notificationsService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -202,6 +211,9 @@ describe('inquiries.service', () => {
     expect(mockedNotificationsRepository.create).toHaveBeenCalledWith(
       'buyer-1',
       '문의하신 상품 "문의 상품"에 답변이 등록되었습니다.',
+    );
+    expect(mockedNotificationsService.emitCreatedNotification).toHaveBeenCalledWith(
+      { id: 'n1' },
     );
     expect(toInquiryReplyResponseDto).toHaveBeenCalledWith(reply);
     expect(created).toEqual({ id: 'reply-1' });

@@ -2,6 +2,7 @@ import { requireBuyer, requireSeller } from '../../lib/request/auth-user';
 import { AuthUser } from '../../types/auth-request.type';
 import { s3Service } from '../s3/s3.service';
 import { notificationsRepository } from '../notifications/notifications.repository';
+import { notificationsService } from '../notifications/notifications.service';
 import { DetailProductResponseDto } from './dto/detail-product-response.dto';
 import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 import { ProductInquiryListResponseDto } from './dto/product-inquiry-list-response.dto';
@@ -183,10 +184,11 @@ export class ProductsService {
       isSecret: data.isSecret,
     });
 
-    await notificationsRepository.create(
+    const notification = await notificationsRepository.create(
       product.store.sellerId,
       `상품 "${product.name}"에 새로운 문의가 등록되었습니다.`,
     );
+    notificationsService.emitCreatedNotification(notification);
 
     return toProductInquiryResponseDto(inquiry);
   }

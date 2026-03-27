@@ -1,5 +1,6 @@
 import type { Response } from 'express';
 import type { AuthUser } from '../../types/auth-request.type';
+import type { Notification } from '@prisma/client';
 import type { AlarmDto } from './dto/alarm.dto';
 import type { AlarmsResponseDto } from './dto/alarms-response.dto';
 import { notificationHub } from './notification-hub';
@@ -20,6 +21,10 @@ import {
 } from './utils/notifications.sse.util';
 
 export class NotificationsService {
+  emitCreatedNotification(notification: Notification) {
+    notificationHub.emit(notification.userId, toAlarmDto(notification));
+  }
+
   async findMyNotifications(
     user: AuthUser,
     query: NotificationsQuery,
@@ -48,29 +53,10 @@ export class NotificationsService {
   connectSse(user: AuthUser, res: Response) {
     initializeNotificationSse(res);
     notificationHub.add(user.id, res);
-
-    let lastCheckedAt = new Date();
     writeNotificationSseData(res, {});
 
-    const publishNotifications = async () => {
-      const notifications = await notificationsRepository.findCreatedAfter(
-        user.id,
-        lastCheckedAt,
-      );
-      lastCheckedAt = new Date();
-
-      if (notifications.length === 0) {
-        writeNotificationSseData(res, {});
-        return;
-      }
-
-      for (const notification of notifications) {
-        writeNotificationSseData(res, toAlarmDto(notification));
-      }
-    };
-
     const interval = setInterval(() => {
-      void publishNotifications();
+      writeNotificationSseData(res, {});
     }, 30000);
 
     res.on('close', () => {
