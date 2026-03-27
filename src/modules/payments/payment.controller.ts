@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import * as paymentsService from './payment.service';
+import { paymentService } from './payment.service';
 import { AuthenticatedRequest } from '../../types/auth-request.type';
 import { requireBuyer } from '../../lib/request/auth-user';
 
@@ -8,7 +8,7 @@ export async function createPayment(req: AuthenticatedRequest, res: Response) {
   const { orderId, price, paymentMethod, cardNumber, bankName, phoneNumber } =
     req.body;
 
-  const result = await paymentsService.createPayment(
+  const result = await paymentService.createPayment(
     orderId,
     price,
     paymentMethod,
@@ -31,7 +31,7 @@ export async function getPaymentByOrderId(
   const buyerId = requireBuyer(req.user).id;
   const { orderId } = req.params;
 
-  const result = await paymentsService.getPaymentByOrderId(buyerId, orderId);
+  const result = await paymentService.getPaymentByOrderId(buyerId, orderId);
 
   return res.status(200).send({
     success: true,
@@ -49,7 +49,7 @@ export async function getPaymentsByUserId(
   const page = Number(req.query.page) || 1;
   const status = req.query.status as string | undefined;
 
-  const result = await paymentsService.getPaymentsByUserId(
+  const result = await paymentService.getPaymentsByUserId(
     buyerId,
     limit,
     page,
@@ -67,7 +67,7 @@ export async function getPaymentById(req: AuthenticatedRequest, res: Response) {
   const buyerId = requireBuyer(req.user).id;
   const { paymentId } = req.params;
 
-  const result = await paymentsService.getPaymentById(buyerId, paymentId);
+  const result = await paymentService.getPaymentById(buyerId, paymentId);
 
   return res.status(200).send({
     success: true,
@@ -82,7 +82,7 @@ export async function getPaymentsByStatus(
 ) {
   const { status } = req.query;
 
-  const result = await paymentsService.getPaymentsByStatus(status as string);
+  const result = await paymentService.getPaymentsByStatus(status as string);
 
   return res.status(200).send({
     success: true,
@@ -95,7 +95,7 @@ export async function cancelPayment(req: AuthenticatedRequest, res: Response) {
   const buyerId = requireBuyer(req.user).id;
   const { orderId } = req.params;
 
-  const result = await paymentsService.cancelPayment(buyerId, orderId);
+  const result = await paymentService.cancelPayment(buyerId, orderId);
 
   return res.status(200).send({
     success: true,

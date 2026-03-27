@@ -32,6 +32,7 @@
     "test:coverage": "dotenv -e .env.test -- npm run prisma:migrate:deploy && dotenv -e .env.test -- jest --runInBand --coverage",
     "test:cart": "dotenv -e .env.test -- npm run prisma:migrate:deploy && dotenv -e .env.test -- jest src/modules/cart/tests --runInBand",
     "test:orders": "dotenv -e .env.test -- npm run prisma:migrate:deploy && dotenv -e .env.test -- jest src/modules/orders/tests --runInBand",
+    "test:payment": "dotenv -e .env.test -- npm run prisma:migrate:deploy && dotenv -e .env.test -- jest src/modules/payments/tests --runInBand",
     "coverage:open": "open coverage/lcov-report/index.html",
     "prisma": "prisma"
   },
