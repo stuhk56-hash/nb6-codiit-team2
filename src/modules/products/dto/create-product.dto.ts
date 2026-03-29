@@ -1,41 +1,50 @@
-import { Type } from 'class-transformer';
-import {
-  IsArray,
-  IsNumber,
-  IsOptional,
-  IsString,
-  ValidateNested,
-} from 'class-validator';
-import { StockDto } from './stock.dto';
+export type CreateProductStockDto = {
+  sizeId: number;
+  quantity: number;
+};
 
-export class CreateProductDto {
-  @IsString()
+export type CreateProductSizeSpecDto = {
+  sizeLabel: string;
+  displayOrder?: number;
+  totalLengthCm?: number | null;
+  shoulderCm?: number | null;
+  chestCm?: number | null;
+  sleeveCm?: number | null;
+  waistCm?: number | null;
+  hipCm?: number | null;
+  thighCm?: number | null;
+  riseCm?: number | null;
+  hemCm?: number | null;
+};
+
+export type CreateProductDto = {
   name: string;
-
-  @IsNumber()
   price: number;
-
-  @IsString()
-  @IsOptional()
   content?: string;
-
-  @IsString()
   categoryName: string;
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => StockDto)
-  stocks: StockDto[];
-
-  @IsNumber()
-  @IsOptional()
+  stocks: CreateProductStockDto[];
+  sizeSpecs?: CreateProductSizeSpecDto[];
+  material?: string;
+  color?: string;
+  manufacturerName?: string;
+  manufactureCountry?: string;
+  manufactureDate?: string;
+  caution?: string;
+  qualityGuaranteeStandard?: string;
+  asManagerName?: string;
+  asPhoneNumber?: string;
+  shippingFee?: number;
+  extraShippingFee?: number;
+  shippingCompany?: string;
+  deliveryPeriod?: string;
+  returnExchangePolicy?: string;
+  returnShippingFee?: number;
+  exchangeShippingFee?: number;
   discountRate?: number;
-
-  @IsString()
-  @IsOptional()
   discountStartTime?: string;
-
-  @IsString()
-  @IsOptional()
   discountEndTime?: string;
-}
+};
+
+export type UpdateProductDto = Partial<CreateProductDto> & {
+  isSoldOut?: boolean;
+};

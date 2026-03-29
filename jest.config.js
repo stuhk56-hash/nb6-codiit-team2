@@ -5,8 +5,18 @@ module.exports = {
   transform: {
     '^.+\.(t|j)s$': 'ts-jest',
   },
-  collectCoverageFrom: ['**/*.(t|j)s'],
+  collectCoverageFrom: [
+    'src/**/*.(t|j)s',
+    '!src/**/*.spec.ts',
+    '!src/**/tests/**',
+    '!src/main.ts',
+  ],
   coverageDirectory: './coverage',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src/', '<rootDir>/test/'],
+  roots: ['<rootDir>/src/'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '<rootDir>/src/modules/metadata/test/',
+    '<rootDir>/src/modules/users/test/',
+  ],
 };

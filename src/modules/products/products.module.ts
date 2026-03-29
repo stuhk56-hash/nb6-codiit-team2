@@ -1,13 +1,32 @@
-import { Module } from '@nestjs/common';
-import { ProductsController } from './products.controller';
-import { ProductsService } from './products.service';
-import { PrismaModule } from 'src/prisma/prisma.module';
-import { ProductsRepository } from './products.repository';
-import { S3Module } from '../s3/s3.module';
+import { Router } from 'express';
+import { withAsync } from '../../lib/withAsync';
+import { authenticate } from '../../middlewares/authenticate';
+import {
+  create,
+  createInquiry,
+  findList,
+  findProduct,
+  getListInquiry,
+  remove,
+  update,
+} from './products.controller';
+import { productsUpload } from './products.upload';
 
-@Module({
-  imports: [PrismaModule, S3Module],
-  controllers: [ProductsController],
-  providers: [ProductsService, ProductsRepository],
-})
-export class ProductsModule {}
+export const productsRouter = Router();
+
+productsRouter.post('/', authenticate(), productsUpload, withAsync(create));
+productsRouter.get('/', withAsync(findList));
+productsRouter.patch(
+  '/:productId',
+  authenticate(),
+  productsUpload,
+  withAsync(update),
+);
+productsRouter.get('/:productId', withAsync(findProduct));
+productsRouter.delete('/:productId', authenticate(), withAsync(remove));
+productsRouter.post(
+  '/:productId/inquiries',
+  authenticate(),
+  withAsync(createInquiry),
+);
+productsRouter.get('/:productId/inquiries', withAsync(getListInquiry));

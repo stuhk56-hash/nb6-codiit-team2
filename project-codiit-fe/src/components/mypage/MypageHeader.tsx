@@ -24,11 +24,12 @@ export default function MypageHeader() {
   };
 
   if (!user) return null;
+  const profileImageSrc = user.image && user.image.trim() !== "" ? user.image : "/images/profile-buyer.png";
 
   return (
     <div className="border-black01 flex w-full flex-col items-center justify-center gap-7.5 border-b px-[1.875rem] pt-[1.875rem] pb-10">
       <Image
-        src={user.image}
+        src={profileImageSrc}
         alt={user.name}
         width={100}
         height={100}

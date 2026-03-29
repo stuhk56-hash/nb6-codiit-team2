@@ -7,7 +7,7 @@ import { menuItems } from "@/data/buyerMenuItems";
 import { tabList } from "@/data/reviewTabList";
 import useIntersectionObserver from "@/hooks/useIntersection";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
-import { OrderItemResponse, OrdersResponse } from "@/types/order";
+import type { Order, OrderItem, OrdersResponse } from "@/types/order";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -29,10 +29,11 @@ export default function ReviewPage() {
         },
       });
 
-      // 모든 주문의 orderItems를 하나의 배열로 합치기
-      const items: OrderItemResponse[] = data.data.flatMap((order) => order.orderItems);
+      // ✅ Canceled 주문 제외 필터링 (Enum 사용)
+      const orders: Order[] = data.data.filter((order) => order.status !== "Canceled");
+      const items: OrderItem[] = orders.flatMap((order) => order.items ?? order.orderItems ?? []);
 
-      // 탭에 따라 아이템 필터링
+      // ✅ 탭에 따라 필터링
       const filteredItems = items.filter((item) => {
         switch (selectedTab) {
           case "writable":
@@ -46,6 +47,7 @@ export default function ReviewPage() {
 
       return {
         items: filteredItems,
+        orders,
         nextPage: pageParam < data.meta.totalPages ? pageParam + 1 : undefined,
         totalPages: data.meta.totalPages,
       };
@@ -60,6 +62,7 @@ export default function ReviewPage() {
   });
 
   const allItems = data?.pages.flatMap((page) => page.items) ?? [];
+  const allOrders = data?.pages.flatMap((page) => page.orders) ?? [];
 
   return (
     <div className="mb-20 min-h-screen bg-white">
@@ -95,7 +98,10 @@ export default function ReviewPage() {
               </div>
             ) : (
               <>
-                <ItemCard purchases={allItems} />
+                <ItemCard
+                  purchases={allItems}
+                  orders={allOrders}
+                />
                 {hasNextPage && (
                   <div
                     ref={setTarget}

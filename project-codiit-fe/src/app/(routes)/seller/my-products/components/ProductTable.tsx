@@ -44,7 +44,7 @@ export default function ProductTable() {
               price: product.price,
               stock: product.stock,
               isDiscounted: product.isDiscount,
-              isSoldout: product.stock === 0,
+              isSoldout: product.isSoldOut,
               createdAt: product.createdAt,
             }}
           />

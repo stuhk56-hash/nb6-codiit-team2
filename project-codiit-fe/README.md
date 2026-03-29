@@ -22,8 +22,11 @@ npm run dev
 `.env.example` 파일을 참고해서 `.env` 파일을 만들고 `NEXT_PUBLIC_API_BASE_URL`을 설정합니다.
 
 ```
-NEXT_PUBLIC_API_BASE_URL=https://nb-project-codiit-be.vercel.app/api
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/api
 ```
+
+환경변수를 만들지 않아도 프론트엔드는 기본적으로 `http://localhost:3001/api`를 사용합니다.
+다른 주소를 쓰려면 `.env` 또는 `http://localhost:3000/setting`에서 변경하면 됩니다.
 
 
 ## 프로덕션 실행

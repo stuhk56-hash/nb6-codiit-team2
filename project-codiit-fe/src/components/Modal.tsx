@@ -1,53 +1,42 @@
-"use client";
-
-import styles from "@/styles/scrollbar.module.css";
-import { useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
+import React, { ReactNode } from "react";
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
+  closeOnBackdropClick?: boolean;
+  isDimmed?: boolean;
 }
 
-export default function Modal({ isOpen, onClose, children }: ModalProps) {
-  const modalRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // ESC close
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-
-    // 외부 스크롤 잠금
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [isOpen, onClose]);
-
+export default function Modal({
+  isOpen,
+  onClose,
+  children,
+  closeOnBackdropClick = false,
+  isDimmed = true,
+}: ModalProps) {
   if (!isOpen) return null;
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-70 flex items-center justify-center bg-black/50"
-      // 모달 외부 클릭 시 닫힘
-      onClick={onClose}
-    >
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (closeOnBackdropClick && e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  return (
+    <>
+      {/* 배경 */}
       <div
-        ref={modalRef}
-        className={`max-h-[90vh] overflow-y-auto rounded-[12px] bg-white p-10 ${styles["scrollbar-hidden"]}`}
-        // 내부 클릭 시 닫힘 방지
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
+        className={`fixed inset-0 z-[70] ${isDimmed ? "bg-black/50" : "bg-black/10"}`}
+        onClick={handleBackdropClick}
+      ></div>
+
+      {/* 모달 */}
+      <div className="fixed inset-0 z-[71] flex items-start justify-center overflow-y-auto p-4 pt-6">
+        <div className="relative w-full max-w-[600px] rounded-2xl bg-white shadow-xl">
+          <div className="max-h-[calc(100vh-3rem)] overflow-y-auto overflow-x-hidden p-6">{children}</div>
+        </div>
       </div>
-    </div>,
-    document.body
+    </>
   );
 }

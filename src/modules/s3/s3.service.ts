@@ -1,30 +1,35 @@
-import { Injectable } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { v4 as uuidv4 } from 'uuid';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import type { S3UploadResult } from './types/s3.type';
+import {
+  createS3Client,
+  createS3ObjectKey,
+  createS3ObjectUrl,
+  requireS3Bucket,
+  requireS3Region,
+  requireUploadFile,
+} from './utils/s3.service.util';
+import { toS3UploadResult } from './utils/s3.mapper';
 
-@Injectable()
 export class S3Service {
-  private readonly s3Client = new S3Client({
-    region: process.env.AWS_REGION,
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    },
-  });
+  async uploadFile(file?: Express.Multer.File): Promise<S3UploadResult> {
+    const uploadedFile = requireUploadFile(file);
+    const bucket = requireS3Bucket();
+    const region = requireS3Region();
+    const key = createS3ObjectKey(uploadedFile.originalname);
 
-  async uploadFile(file: Express.Multer.File): Promise<string> {
-    const key = `${uuidv4()}-${file.originalname}`;
-    const bucket = process.env.AWS_S3_BUCKET_NAME;
+    const client = createS3Client();
 
-    const command = new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    });
+    await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: uploadedFile.buffer,
+        ContentType: uploadedFile.mimetype,
+      }),
+    );
 
-    await this.s3Client.send(command);
-
-    return `https://s3.${process.env.AWS_REGION}.amazonaws.com/${bucket}/${key}`;
+    return toS3UploadResult(createS3ObjectUrl(bucket, region, key), key);
   }
 }
+
+export const s3Service = new S3Service();

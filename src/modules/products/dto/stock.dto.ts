@@ -1,9 +1,9 @@
-import { IsNumber, IsString } from 'class-validator';
+import type { SizeDto } from './size.dto';
 
-export class StockDto {
-  @IsString()
-  size: string;
-
-  @IsNumber()
+export type StockDto = {
+  id: string;
+  productId: string;
+  sizeId: number;
   quantity: number;
-}
+  size: SizeDto;
+};

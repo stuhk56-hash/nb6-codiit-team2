@@ -1,6 +1,17 @@
 node_modules
 dist
 .env
+.env.test
 coverage/
+_http/
 
 /generated/prisma
+
+.DS_Store
+.vscode/
+
+project-codiit-fe/.next
+project-codiit-fe/node_modules
+project-codiit-fe/.env
+project-codiit-fe/.env.*
+!project-codiit-fe/.env.example

@@ -7,7 +7,7 @@ import MypageHeader from "@/components/mypage/MypageHeader";
 import { menuItems } from "@/data/buyerMenuItems";
 import useIntersectionObserver from "@/hooks/useIntersection";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
-import { OrderItemResponse, OrdersResponse } from "@/types/order";
+import { Order, OrderStatus, OrdersResponse } from "@/types/order";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -24,16 +24,20 @@ export default function MyPage() {
       const { data } = await axiosInstance.get<OrdersResponse>("/orders", {
         params: {
           status: "CompletedPayment",
-          limit: 3,
+          limit: 10, // ✅ 더 많이 가져오기
           page: pageParam,
         },
       });
 
-      // 모든 주문의 orderItems를 하나의 배열로 합치기
-      const items: OrderItemResponse[] = data.data.flatMap((order) => order.orderItems);
+      // ✅ Canceled 주문 제외 필터링
+      const orders: Order[] = data.data.filter((order) => order.status !== OrderStatus.Canceled);
+
+      // ✅ 모든 주문의 items를 하나의 배열로 합치기 (옛날 버전처럼)
+      const items = orders.flatMap((order) => order.items ?? order.orderItems ?? []);
 
       return {
         items,
+        orders,
         nextPage: pageParam < data.meta.totalPages ? pageParam + 1 : undefined,
         totalPages: data.meta.totalPages,
       };
@@ -48,7 +52,8 @@ export default function MyPage() {
   });
 
   const allItems = data?.pages.flatMap((page) => page.items) ?? [];
-  const displayedItems = showAllOrders ? allItems : allItems.slice(0, 3);
+  const allOrders = data?.pages.flatMap((page) => page.orders) ?? [];
+  const displayedItems = showAllOrders ? allItems : allItems.slice(0, 3); // ✅ 아이템 3개씩 표시
 
   const handleShowMore = () => {
     setShowAllOrders(true);
@@ -87,7 +92,11 @@ export default function MyPage() {
                 <div className="flex justify-center py-8 text-gray-500">주문 내역이 없습니다.</div>
               ) : (
                 <div className={`${showAllOrders ? "h-[600px] overflow-y-auto px-5" : ""}`}>
-                  <MypageItemCard purchases={displayedItems} />
+                  <MypageItemCard
+                    purchases={displayedItems}
+                    orders={allOrders}
+                    key={`${displayedItems.map((item) => item.id).join("-")}`}
+                  />
                   {showAllOrders && hasNextPage && (
                     <div
                       ref={setTarget}

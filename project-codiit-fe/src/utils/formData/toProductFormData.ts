@@ -2,6 +2,17 @@ import { ProductFormValues } from "@/lib/schemas/productForm.schema";
 
 export function toProductFormData(data: ProductFormValues): FormData {
   const formData = new FormData();
+  const appendIfNotEmpty = (key: string, value?: string | null) => {
+    if (typeof value !== "string") return;
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    formData.append(key, trimmed);
+  };
+  const appendIfNumber = (key: string, value?: number | null) => {
+    if (typeof value !== "number" || Number.isNaN(value)) return;
+    formData.append(key, String(value));
+  };
+
   formData.append("name", data.name);
   formData.append("price", String(data.price));
   formData.append("categoryName", data.category.toLowerCase());
@@ -46,6 +57,28 @@ export function toProductFormData(data: ProductFormValues): FormData {
 
   // 상세 설명
   formData.append("content", data.detail);
+  appendIfNotEmpty("material", data.noticeInfo.material);
+  appendIfNotEmpty("color", data.noticeInfo.color);
+  appendIfNotEmpty("manufacturerName", data.noticeInfo.manufacturerName);
+  appendIfNotEmpty("manufactureCountry", data.noticeInfo.manufactureCountry);
+  appendIfNotEmpty("manufactureDate", data.noticeInfo.manufactureDate);
+  appendIfNotEmpty("caution", data.noticeInfo.caution);
+  appendIfNotEmpty(
+    "qualityGuaranteeStandard",
+    data.noticeInfo.qualityGuaranteeStandard
+  );
+  appendIfNotEmpty("asManagerName", data.noticeInfo.asManagerName);
+  appendIfNotEmpty("asPhoneNumber", data.noticeInfo.asPhoneNumber);
+  appendIfNumber("shippingFee", data.tradeInfo.shippingFee);
+  appendIfNumber("extraShippingFee", data.tradeInfo.extraShippingFee);
+  appendIfNotEmpty("shippingCompany", data.tradeInfo.shippingCompany);
+  appendIfNotEmpty("deliveryPeriod", data.tradeInfo.deliveryPeriod);
+  appendIfNotEmpty("returnExchangePolicy", data.tradeInfo.returnExchangePolicy);
+  appendIfNumber("returnShippingFee", data.tradeInfo.returnShippingFee);
+  appendIfNumber("exchangeShippingFee", data.tradeInfo.exchangeShippingFee);
+  if (Array.isArray(data.sizeSpecs)) {
+    formData.append("sizeSpecs", JSON.stringify(data.sizeSpecs));
+  }
 
   return formData;
 }

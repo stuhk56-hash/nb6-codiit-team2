@@ -1,32 +1,73 @@
+import type { Request, Response } from 'express';
+import { create as structCreate } from 'superstruct';
+import { requireAuthUser } from '../../lib/request/auth-user';
+import type { AuthenticatedRequest } from '../../middlewares/authenticate';
+import { productsService } from './products.service';
 import {
-  Controller,
-  Post,
-  Body,
-  UseInterceptors,
-  UploadedFile,
-  Get,
-} from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { ProductsService } from './products.service';
-import { CreateProductDto } from './dto/create-product.dto';
+  CreateProductBodyStruct,
+  CreateProductInquiryBodyStruct,
+  ProductInquiryListQueryStruct,
+  ProductListQueryStruct,
+  ProductParamsStruct,
+  UpdateProductBodyStruct,
+} from './structs/products.struct';
+import type { ProductsMulterRequest } from './types/products.type';
 
-@Controller('products')
-export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+export async function create(req: ProductsMulterRequest, res: Response) {
+  const authUser = requireAuthUser(req);
+  const body = structCreate(req.body, CreateProductBodyStruct);
+  const product = await productsService.create(authUser, body, req.file);
+  res.status(201).send(product);
+}
 
-  @Get()
-  findAll() {
-    return this.productsService.findAll();
-  }
+export async function findList(req: Request, res: Response) {
+  const query = structCreate(req.query, ProductListQueryStruct);
+  const products = await productsService.findList(query);
 
-  @Post()
-  @UseInterceptors(FileInterceptor('image'))
-  create(
-    @Body() createProductDto: CreateProductDto,
-    @UploadedFile() image: Express.Multer.File,
-  ) {
-    // TODO: Connect to S3 service to upload image
-    console.log(image);
-    return this.productsService.create(createProductDto, image);
-  }
+  res.send(products);
+}
+
+export async function findProduct(req: Request, res: Response) {
+  const params = structCreate(req.params, ProductParamsStruct);
+  const product = await productsService.findProduct(params.productId);
+  res.send(product);
+}
+
+export async function update(req: ProductsMulterRequest, res: Response) {
+  const authUser = requireAuthUser(req);
+  const params = structCreate(req.params, ProductParamsStruct);
+  const body = structCreate(req.body, UpdateProductBodyStruct);
+  const product = await productsService.update(
+    authUser,
+    params.productId,
+    body,
+    req.file,
+  );
+  res.send(product);
+}
+
+export async function remove(req: AuthenticatedRequest, res: Response) {
+  const authUser = requireAuthUser(req);
+  const params = structCreate(req.params, ProductParamsStruct);
+  await productsService.remove(authUser, params.productId);
+  res.status(204).end();
+}
+
+export async function createInquiry(req: AuthenticatedRequest, res: Response) {
+  const authUser = requireAuthUser(req);
+  const params = structCreate(req.params, ProductParamsStruct);
+  const body = structCreate(req.body, CreateProductInquiryBodyStruct);
+  const inquiry = await productsService.createInquiry(
+    authUser,
+    params.productId,
+    body,
+  );
+  res.status(201).send(inquiry);
+}
+
+export async function getListInquiry(req: Request, res: Response) {
+  const params = structCreate(req.params, ProductParamsStruct);
+  const query = structCreate(req.query, ProductInquiryListQueryStruct);
+  const result = await productsService.getListInquiry(params.productId, query);
+  res.send(result);
 }
