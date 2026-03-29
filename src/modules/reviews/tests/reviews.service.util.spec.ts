@@ -23,7 +23,7 @@ function createOrderItem(partial: Partial<any> = {}) {
       buyerId: 'buyer-1',
       status: 'CompletedPayment',
       payment: {
-        status: 'Paid',
+        status: 'CompletedPayment',
       },
     },
     ...partial,
