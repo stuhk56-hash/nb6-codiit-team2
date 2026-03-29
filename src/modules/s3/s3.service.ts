@@ -8,13 +8,14 @@ import {
   requireS3Region,
   requireUploadFile,
 } from './utils/s3.service.util';
+import { toS3UploadResult } from './utils/s3.mapper';
 
 export class S3Service {
   async uploadFile(file?: Express.Multer.File): Promise<S3UploadResult> {
-    const uploadFile = requireUploadFile(file);
+    const uploadedFile = requireUploadFile(file);
     const bucket = requireS3Bucket();
     const region = requireS3Region();
-    const key = createS3ObjectKey(uploadFile.originalname);
+    const key = createS3ObjectKey(uploadedFile.originalname);
 
     const client = createS3Client();
 
@@ -22,16 +23,12 @@ export class S3Service {
       new PutObjectCommand({
         Bucket: bucket,
         Key: key,
-        Body: uploadFile.buffer,
-        ContentType: uploadFile.mimetype,
+        Body: uploadedFile.buffer,
+        ContentType: uploadedFile.mimetype,
       }),
     );
 
-    return {
-      message: '업로드 성공',
-      url: createS3ObjectUrl(bucket, region, key),
-      key,
-    };
+    return toS3UploadResult(createS3ObjectUrl(bucket, region, key), key);
   }
 }
 

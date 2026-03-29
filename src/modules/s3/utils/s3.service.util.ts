@@ -60,7 +60,7 @@ function isRootPath(value: string) {
   return value.startsWith('/');
 }
 
-export async function resolveS3ImageUrl(
+export function resolveS3ImageUrl(
   imageUrl: string | null | undefined,
   imageKey: string | null | undefined,
   fallbackUrl: string,

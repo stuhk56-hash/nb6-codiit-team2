@@ -6,6 +6,7 @@ import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
+  UploadTooLargeError,
   UnauthorizedError,
 } from '../lib/errors/customErrors';
 import { makeErrorResponse } from '../lib/errors/error-response';
@@ -44,6 +45,10 @@ export function globalErrorHandler(
 
   if (err instanceof UnauthorizedError) {
     return res.status(401).send(makeErrorResponse(401, err.message));
+  }
+
+  if (err instanceof UploadTooLargeError) {
+    return res.status(413).send(makeErrorResponse(413, err.message));
   }
 
   if (err instanceof ForbiddenError) {

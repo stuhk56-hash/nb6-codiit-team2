@@ -8,9 +8,11 @@ import {
 } from './middlewares/errorHandler';
 import { corsMiddleware } from './middlewares/cors';
 import { startStoreBusinessInfoPurgeScheduler } from './modules/stores/jobs/store-business-info-purge.job';
+import { helmetMiddleware } from './middlewares/security';
 
 const app = express();
 
+app.use(helmetMiddleware);
 app.use(express.json());
 app.use(
   express.urlencoded({
