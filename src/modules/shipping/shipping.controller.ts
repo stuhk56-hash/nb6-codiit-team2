@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import * as shippingService from './shipping.service';
+import { shippingService } from './shipping.service';
 import { AuthenticatedRequest } from '../../types/auth-request.type';
 
 // 배송 정보 조회 GET /api/shipping/:orderId

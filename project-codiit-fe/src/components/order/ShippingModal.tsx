@@ -56,7 +56,7 @@ export default function ShippingModal({
           } else if (err.response?.status === 404) {
             setError("배송 정보를 찾을 수 없습니다");
           } else if (err.response?.status === 500) {
-            setError("서버 오류가 ���생했습니다");
+            setError("서버 오류가 발생했습니다");
           } else {
             setError(err.message || "배송 정보를 조회할 수 없습니다");
           }
@@ -135,7 +135,7 @@ export default function ShippingModal({
       default:
         return {
           title: "배송 정보",
-          subtitle: "배송 상태를 ���인하세요.",
+          subtitle: "배송 상태를 확인하세요.",
           icon: "📋",
           bgColor: "bg-gray-50",
           borderColor: "border-gray-200",

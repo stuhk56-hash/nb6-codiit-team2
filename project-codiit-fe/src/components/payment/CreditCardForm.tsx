@@ -66,7 +66,7 @@ export default function CreditCardForm({ orderId, price, onBack, onSuccess }: Cr
         cardNumber: data.cardNumber.replace(/-/g, ""),
       });
 
-      // 3��� 지연 후 성공 처리
+      // 3초 지연 후 성공 처리
       setTimeout(() => {
         onSuccess(payment);
       }, 3000);

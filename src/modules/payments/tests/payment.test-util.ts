@@ -1,7 +1,12 @@
 import { prisma } from '../../../lib/constants/prismaClient';
-import { UserType } from '@prisma/client';
+import {
+  UserType,
+  PaymentMethod,
+  PaymentStatus,
+  OrderStatus,
+} from '@prisma/client';
 import express from 'express';
-import { cartRouter } from '../cart.module';
+import { paymentsRouter } from '../payment.module';
 import {
   defaultNotFoundHandler,
   globalErrorHandler,
@@ -12,7 +17,7 @@ import { makeAccessToken } from '../../../lib/constants/token';
 export function createTestApp() {
   const app = express();
   app.use(express.json());
-  app.use('/api/cart', cartRouter);
+  app.use('/api/payments', paymentsRouter);
   app.use(defaultNotFoundHandler);
   app.use(globalErrorHandler);
   return app;
@@ -96,39 +101,22 @@ export async function seedCategory() {
 }
 
 // ─── 사이즈 시드 ───
-export async function seedSize(
-  overrides: Partial<{
-    id: number;
-    name: string;
-    nameEn: string;
-    nameKo: string;
-  }> = {},
-) {
-  const id = overrides.id ?? 1;
-  await prisma.size.deleteMany({ where: { id } });
+export async function seedSize() {
+  await prisma.size.deleteMany({ where: { id: 1 } });
   return prisma.size.create({
-    data: {
-      id,
-      name: overrides.name ?? 'M',
-      nameEn: overrides.nameEn ?? 'Medium',
-      nameKo: overrides.nameKo ?? '중간',
-    },
+    data: { id: 1, name: 'M', nameEn: 'Medium', nameKo: '중간' },
   });
 }
 
 // ─── 상품 시드 ───
-export async function seedProduct(
-  storeId: string,
-  categoryId: string,
-  overrides: Partial<{ id: string; name: string; price: number }> = {},
-) {
+export async function seedProduct(storeId: string, categoryId: string) {
   return prisma.product.create({
     data: {
-      id: overrides.id ?? 'test-product-id',
+      id: 'test-product-id',
       storeId,
       categoryId,
-      name: overrides.name ?? '테스트상품',
-      price: overrides.price ?? 10000,
+      name: '테스트상품',
+      price: 10000,
     },
   });
 }
@@ -144,27 +132,73 @@ export async function seedProductStock(
   });
 }
 
-// ─── 장바구니 시드 ───
-export async function seedCart(buyerId: string) {
-  return prisma.cart.create({
-    data: { buyerId },
+// ─── 주문 시드 (결제 없이) ───
+export async function seedOrderWithoutPayment(
+  buyerId: string,
+  overrides: Partial<{ id: string; status: OrderStatus }> = {},
+) {
+  const orderId = overrides.id ?? `order-${Date.now()}-${Math.random()}`;
+  return prisma.order.create({
+    data: {
+      id: orderId,
+      buyerId,
+      buyerName: '테스트바이어',
+      phoneNumber: '010-1111-2222',
+      address: '서울시 강남구 테스트동',
+      status: overrides.status ?? 'WaitingPayment',
+      items: {
+        create: {
+          productId: 'test-product-id',
+          sizeId: 1,
+          quantity: 2,
+          unitPrice: 10000,
+          productName: '테스트상품',
+        },
+      },
+    },
+    include: { items: true },
   });
 }
 
-// ─── 장바구니 아이템 시드 ───
-export async function seedCartItem(
-  cartId: string,
-  productId: string,
-  sizeId: number,
-  quantity: number = 2,
+// ─── 주문 + 결제 시드 ───
+export async function seedOrderWithPayment(
+  buyerId: string,
+  overrides: Partial<{
+    orderId: string;
+    paymentStatus: PaymentStatus;
+    paymentMethod: PaymentMethod;
+    orderStatus: OrderStatus;
+  }> = {},
 ) {
-  return prisma.cartItem.create({
+  const orderId = overrides.orderId ?? `order-${Date.now()}-${Math.random()}`;
+  return prisma.order.create({
     data: {
-      cartId,
-      productId,
-      sizeId,
-      quantity,
+      id: orderId,
+      buyerId,
+      buyerName: '테스트바이어',
+      phoneNumber: '010-1111-2222',
+      address: '서울시 강남구 테스트동',
+      status: overrides.orderStatus ?? 'WaitingPayment',
+      items: {
+        create: {
+          productId: 'test-product-id',
+          sizeId: 1,
+          quantity: 2,
+          unitPrice: 10000,
+          productName: '테스트상품',
+        },
+      },
+      payment: {
+        create: {
+          price: 20000,
+          status: overrides.paymentStatus ?? 'WaitingPayment',
+          paymentMethod: overrides.paymentMethod ?? 'CREDIT_CARD',
+          transactionId:
+            `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`.toUpperCase(),
+        },
+      },
     },
+    include: { items: true, payment: true },
   });
 }
 

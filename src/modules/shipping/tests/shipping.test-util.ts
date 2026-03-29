@@ -1,7 +1,7 @@
 import { prisma } from '../../../lib/constants/prismaClient';
-import { UserType } from '@prisma/client';
+import { UserType, ShippingStatus, OrderStatus } from '@prisma/client';
 import express from 'express';
-import { cartRouter } from '../cart.module';
+import { shippingRouter } from '../shipping.module';
 import {
   defaultNotFoundHandler,
   globalErrorHandler,
@@ -12,7 +12,7 @@ import { makeAccessToken } from '../../../lib/constants/token';
 export function createTestApp() {
   const app = express();
   app.use(express.json());
-  app.use('/api/cart', cartRouter);
+  app.use('/api/shipping', shippingRouter);
   app.use(defaultNotFoundHandler);
   app.use(globalErrorHandler);
   return app;
@@ -36,23 +36,6 @@ export async function seedBuyer(
       name: overrides.name ?? '테스트바이어',
       passwordHash: 'hashed-password',
       points: 10000,
-      lifetimeSpend: 0,
-    },
-  });
-}
-
-// ─── 다른 바이어 시드 ───
-export async function seedOtherBuyer(
-  overrides: Partial<{ id: string; email: string; name: string }> = {},
-) {
-  return prisma.user.create({
-    data: {
-      id: overrides.id ?? 'other-buyer-id',
-      type: UserType.BUYER,
-      email: overrides.email ?? 'other-buyer@test.com',
-      name: overrides.name ?? '다른바이어',
-      passwordHash: 'hashed-password',
-      points: 5000,
       lifetimeSpend: 0,
     },
   });
@@ -96,39 +79,22 @@ export async function seedCategory() {
 }
 
 // ─── 사이즈 시드 ───
-export async function seedSize(
-  overrides: Partial<{
-    id: number;
-    name: string;
-    nameEn: string;
-    nameKo: string;
-  }> = {},
-) {
-  const id = overrides.id ?? 1;
-  await prisma.size.deleteMany({ where: { id } });
+export async function seedSize() {
+  await prisma.size.deleteMany({ where: { id: 1 } });
   return prisma.size.create({
-    data: {
-      id,
-      name: overrides.name ?? 'M',
-      nameEn: overrides.nameEn ?? 'Medium',
-      nameKo: overrides.nameKo ?? '중간',
-    },
+    data: { id: 1, name: 'M', nameEn: 'Medium', nameKo: '중간' },
   });
 }
 
 // ─── 상품 시드 ───
-export async function seedProduct(
-  storeId: string,
-  categoryId: string,
-  overrides: Partial<{ id: string; name: string; price: number }> = {},
-) {
+export async function seedProduct(storeId: string, categoryId: string) {
   return prisma.product.create({
     data: {
-      id: overrides.id ?? 'test-product-id',
+      id: 'test-product-id',
       storeId,
       categoryId,
-      name: overrides.name ?? '테스트상품',
-      price: overrides.price ?? 10000,
+      name: '테스트상품',
+      price: 10000,
     },
   });
 }
@@ -144,26 +110,53 @@ export async function seedProductStock(
   });
 }
 
-// ─── 장바구니 시드 ───
-export async function seedCart(buyerId: string) {
-  return prisma.cart.create({
-    data: { buyerId },
-  });
-}
-
-// ─── 장바구니 아이템 시드 ───
-export async function seedCartItem(
-  cartId: string,
-  productId: string,
-  sizeId: number,
-  quantity: number = 2,
+// ─── 주문 + 배송 시드 ───
+export async function seedOrderWithShipping(
+  buyerId: string,
+  overrides: Partial<{
+    orderId: string;
+    orderStatus: OrderStatus;
+    shippingStatus: ShippingStatus;
+  }> = {},
 ) {
-  return prisma.cartItem.create({
+  const orderId = overrides.orderId ?? `order-${Date.now()}-${Math.random()}`;
+
+  return prisma.order.create({
     data: {
-      cartId,
-      productId,
-      sizeId,
-      quantity,
+      id: orderId,
+      buyerId,
+      buyerName: '테스트바이어',
+      phoneNumber: '010-1111-2222',
+      address: '서울시 강남구 테스트동',
+      status: overrides.orderStatus ?? 'CompletedPayment',
+      items: {
+        create: {
+          productId: 'test-product-id',
+          sizeId: 1,
+          quantity: 2,
+          unitPrice: 10000,
+          productName: '테스트상품',
+        },
+      },
+      payment: {
+        create: {
+          price: 20000,
+          status: 'CompletedPayment',
+          paymentMethod: 'CREDIT_CARD',
+        },
+      },
+      shipping: {
+        create: {
+          status: overrides.shippingStatus ?? 'ReadyToShip',
+          trackingNumber: String(Math.floor(Math.random() * 10000000000000)),
+          carrier: '로켓배송',
+        },
+      },
+    },
+    include: {
+      items: true,
+      payment: true,
+      shipping: true,
     },
   });
 }

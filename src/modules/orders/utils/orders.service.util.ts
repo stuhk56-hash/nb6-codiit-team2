@@ -1,4 +1,4 @@
-import * as ordersRepository from '../orders.repository';
+import { orderRepository } from '../orders.repository';
 import { CreateOrderDto } from '../dto/create-order.dto';
 import {
   OrderWithRelations,
@@ -20,7 +20,7 @@ export async function validateAndCalculateOrderItems(
   const processedItems = [];
 
   for (const item of orderItems) {
-    const stock = await ordersRepository.checkProductStock(
+    const stock = await orderRepository.checkProductStock(
       item.productId,
       item.sizeId,
     );

@@ -1,508 +1,328 @@
-import { prisma } from '../../../lib/constants/prismaClient';
-import * as cartService from '../cart.service';
-import * as cartRepository from '../cart.repository';
+import { CartService } from '../cart.service';
+import { cartRepository } from '../cart.repository';
+import * as cartMapper from '../utils/cart.mapper';
+import * as cartServiceUtil from '../utils/cart.service.util';
 import {
   NotFoundError,
   BadRequestError,
 } from '../../../lib/errors/customErrors';
 
 jest.mock('../cart.repository');
+jest.mock('../utils/cart.mapper');
+jest.mock('../utils/cart.service.util');
 
-describe('장바구니 서비스 유닛 테스트', () => {
-  const mockedRepository = cartRepository as jest.Mocked<typeof cartRepository>;
+const service = new CartService();
+const mockRepo = cartRepository as jest.Mocked<typeof cartRepository>;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
+const mockCart = {
+  id: 'cart-1',
+  buyerId: 'buyer-1',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+const mockCartDto = {
+  id: 'cart-1',
+  buyerId: 'buyer-1',
+  createdAt: expect.any(String),
+  updatedAt: expect.any(String),
+};
+
+const mockCartItem = {
+  id: 'item-1',
+  cartId: 'cart-1',
+  productId: 'product-1',
+  sizeId: 1,
+  quantity: 3,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+const mockCartItemDto = {
+  id: 'item-1',
+  cartId: 'cart-1',
+  productId: 'product-1',
+  sizeId: 1,
+  quantity: 3,
+  createdAt: expect.any(String),
+  updatedAt: expect.any(String),
+};
+
+const mockCartItemWithRelations = {
+  ...mockCartItem,
+  cart: { ...mockCart, buyerId: 'buyer-1' },
+  product: {
+    id: 'product-1',
+    storeId: 'store-1',
+    name: '상품',
+    price: 10000,
+    imageUrl: null,
+    imageKey: null,
+    store: { id: 'store-1' },
+    stocks: [],
+  },
+  size: { id: 1, name: 'M', nameEn: 'Medium', nameKo: '중간' },
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  (cartMapper.toResponseDto as jest.Mock).mockReturnValue(mockCartDto);
+  (cartMapper.toCartItemDto as jest.Mock).mockReturnValue(mockCartItemDto);
+  (cartMapper.toCartWithItemsDto as jest.Mock).mockReturnValue({
+    ...mockCartDto,
+    items: [],
+  });
+  (cartMapper.toCartItemDetailDto as jest.Mock).mockReturnValue(
+    mockCartItemDto,
+  );
+});
+
+describe('CartService', () => {
+  // ─── createCart ───
+  describe('createCart', () => {
+    test('장바구니가 없으면 새로 생성한다', async () => {
+      mockRepo.findCartByBuyerId.mockResolvedValue(null);
+      mockRepo.createCart.mockResolvedValue(mockCart as any);
+
+      const result = await service.createCart('buyer-1');
+
+      expect(mockRepo.createCart).toHaveBeenCalledWith('buyer-1');
+      expect(result).toEqual(mockCartDto);
+    });
+
+    test('장바구니가 이미 있으면 기존 장바구니를 반환한다', async () => {
+      mockRepo.findCartByBuyerId.mockResolvedValue(mockCart as any);
+
+      const result = await service.createCart('buyer-1');
+
+      expect(mockRepo.createCart).not.toHaveBeenCalled();
+      expect(result).toEqual(mockCartDto);
+    });
   });
 
-  describe('createCart - 장바구니 생성', () => {
-    test('새로운 장바구니를 생성한다', async () => {
-      const buyerId = 'buyer-123';
-      const now = new Date();
-      const mockCart = {
-        id: 'cart-123',
-        buyerId,
-        createdAt: now,
-        updatedAt: now,
-      };
+  // ─── getCart ───
+  describe('getCart', () => {
+    test('장바구니를 정상적으로 반환한다', async () => {
+      const cartWithItems = { ...mockCart, items: [] };
+      mockRepo.findCartByBuyerIdWithItems.mockResolvedValue(
+        cartWithItems as any,
+      );
+      (cartServiceUtil.resolveCartImages as jest.Mock).mockResolvedValue(
+        cartWithItems,
+      );
 
-      (mockedRepository.findCartByBuyerId as jest.Mock).mockResolvedValue(null);
-      (mockedRepository.createCart as jest.Mock).mockResolvedValue(mockCart);
+      const result = await service.getCart('buyer-1');
 
-      const result = await cartService.createCart(buyerId);
+      expect(mockRepo.findCartByBuyerIdWithItems).toHaveBeenCalledWith(
+        'buyer-1',
+      );
+      expect(result).toHaveProperty('items');
+    });
 
-      expect(result).toEqual({
-        id: 'cart-123',
-        buyerId,
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
+    test('장바구니가 없으면 NotFoundError를 던진다', async () => {
+      mockRepo.findCartByBuyerIdWithItems.mockResolvedValue(null);
+
+      await expect(service.getCart('buyer-1')).rejects.toThrow(NotFoundError);
+    });
+  });
+
+  // ─── updateCart ───
+  describe('updateCart', () => {
+    test('새 아이템을 추가한다', async () => {
+      mockRepo.findProductById.mockResolvedValue({ id: 'product-1' } as any);
+      mockRepo.findCartByBuyerId.mockResolvedValue(mockCart as any);
+      mockRepo.findCartItem.mockResolvedValue(null);
+      mockRepo.addCartItem.mockResolvedValue(mockCartItem as any);
+
+      const result = await service.updateCart('buyer-1', {
+        productId: 'product-1',
+        sizes: [{ sizeId: 1, quantity: 3 }],
       });
-      expect(mockedRepository.findCartByBuyerId).toHaveBeenCalledWith(buyerId);
-      expect(mockedRepository.createCart).toHaveBeenCalledWith(buyerId);
-    });
 
-    test('이미 존재하는 장바구니는 반환한다', async () => {
-      const buyerId = 'buyer-123';
-      const now = new Date();
-      const existingCart = {
-        id: 'cart-123',
-        buyerId,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      (mockedRepository.findCartByBuyerId as jest.Mock).mockResolvedValue(
-        existingCart,
-      );
-
-      const result = await cartService.createCart(buyerId);
-
-      expect(result).toEqual({
-        id: 'cart-123',
-        buyerId,
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
-      });
-      expect(mockedRepository.createCart).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('getCart - 장바구니 조회', () => {
-    test('아이템을 포함한 장바구니를 반환한다', async () => {
-      const buyerId = 'buyer-123';
-      const mockCart = {
-        id: 'cart-123',
-        buyerId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        items: [
-          {
-            id: 'item-1',
-            cartId: 'cart-123',
-            productId: 'prod-1',
-            sizeId: 1,
-            quantity: 2,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            product: {
-              id: 'prod-1',
-              storeId: 'store-1',
-              name: 'Product 1',
-              price: 20000,
-              image: null,
-              discountRate: null,
-              discountStartTime: null,
-              discountEndTime: null,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              reviewsRating: 4.5,
-              categoryId: 'cat-1',
-              content: 'Product content',
-              isSoldOut: false,
-              store: {
-                id: 'store-1',
-                userId: 'seller-1',
-                name: 'Store 1',
-                address: 'Address',
-                phoneNumber: '010-1234-5678',
-                content: 'Store content',
-                image: 'https://example.com/store.jpg',
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                detailAddress: '101호',
-              },
-              stocks: [
-                {
-                  id: 'stock-1',
-                  productId: 'prod-1',
-                  sizeId: 1,
-                  quantity: 100,
-                  size: {
-                    id: 1,
-                    size: { en: 'M', ko: '미디움' },
-                    name: 'M',
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      };
-
-      (
-        mockedRepository.findCartByBuyerIdWithItems as jest.Mock
-      ).mockResolvedValue(mockCart);
-
-      const result = await cartService.getCart(buyerId);
-
-      expect(result).toHaveProperty('id', 'cart-123');
-      expect(result.items).toHaveLength(1);
-      expect(mockedRepository.findCartByBuyerIdWithItems).toHaveBeenCalledWith(
-        buyerId,
-      );
-    });
-
-    test('장바구니가 없으면 NotFoundError를 throw한다', async () => {
-      const buyerId = 'buyer-123';
-
-      (
-        mockedRepository.findCartByBuyerIdWithItems as jest.Mock
-      ).mockResolvedValue(null);
-
-      await expect(cartService.getCart(buyerId)).rejects.toThrow(NotFoundError);
-    });
-  });
-
-  describe('updateCart - 장바구니 상품 추가/수정', () => {
-    test('상품을 장바구니에 추가한다', async () => {
-      const buyerId = 'buyer-123';
-      const updateDto = {
-        productId: 'prod-123',
-        sizes: [{ sizeId: 1, quantity: 2 }],
-      };
-
-      const mockProduct = { id: 'prod-123', name: 'Test Product' };
-      const mockCart = { id: 'cart-123', buyerId };
-      const mockCartItem = {
-        id: 'item-1',
-        cartId: 'cart-123',
-        productId: 'prod-123',
-        sizeId: 1,
-        quantity: 2,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      (mockedRepository.findProductById as jest.Mock).mockResolvedValue(
-        mockProduct,
-      );
-      (mockedRepository.findCartByBuyerId as jest.Mock).mockResolvedValue(
-        mockCart,
-      );
-      (mockedRepository.findCartItem as jest.Mock).mockResolvedValue(null);
-      (mockedRepository.addCartItem as jest.Mock).mockResolvedValue(
-        mockCartItem,
-      );
-
-      const result = await cartService.updateCart(buyerId, updateDto);
-
+      expect(mockRepo.addCartItem).toHaveBeenCalled();
       expect(result).toHaveLength(1);
-      expect(result[0]).toHaveProperty('productId', 'prod-123');
-      expect(mockedRepository.addCartItem).toHaveBeenCalled();
     });
 
-    test('이미 존재하는 상품이면 수량을 업데이트한다', async () => {
-      const buyerId = 'buyer-123';
-      const updateDto = {
-        productId: 'prod-123',
-        sizes: [{ sizeId: 1, quantity: 5 }],
-      };
+    test('기존 아이템의 수량을 업데이트한다', async () => {
+      mockRepo.findProductById.mockResolvedValue({ id: 'product-1' } as any);
+      mockRepo.findCartByBuyerId.mockResolvedValue(mockCart as any);
+      mockRepo.findCartItem.mockResolvedValue(mockCartItem as any);
+      mockRepo.updateCartItemQuantity.mockResolvedValue({
+        ...mockCartItem,
+        quantity: 10,
+      } as any);
 
-      const mockProduct = { id: 'prod-123', name: 'Test Product' };
-      const mockCart = { id: 'cart-123', buyerId };
-      const existingItem = {
-        id: 'item-1',
-        cartId: 'cart-123',
-        productId: 'prod-123',
-        sizeId: 1,
-        quantity: 2,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      const updatedItem = { ...existingItem, quantity: 5 };
+      const result = await service.updateCart('buyer-1', {
+        productId: 'product-1',
+        sizes: [{ sizeId: 1, quantity: 10 }],
+      });
 
-      (mockedRepository.findProductById as jest.Mock).mockResolvedValue(
-        mockProduct,
-      );
-      (mockedRepository.findCartByBuyerId as jest.Mock).mockResolvedValue(
-        mockCart,
-      );
-      (mockedRepository.findCartItem as jest.Mock).mockResolvedValue(
-        existingItem,
-      );
-      (mockedRepository.updateCartItemQuantity as jest.Mock).mockResolvedValue(
-        updatedItem,
-      );
-
-      const result = await cartService.updateCart(buyerId, updateDto);
-
-      expect(result[0].quantity).toBe(5);
-      expect(mockedRepository.updateCartItemQuantity).toHaveBeenCalledWith(
-        'item-1',
-        5,
-      );
+      expect(mockRepo.updateCartItemQuantity).toHaveBeenCalled();
+      expect(result).toHaveLength(1);
     });
 
-    test('productId가 없으면 BadRequestError를 throw한다', async () => {
-      const buyerId = 'buyer-123';
-      const updateDto = {
-        productId: '',
-        sizes: [{ sizeId: 1, quantity: 2 }],
-      };
-
-      await expect(cartService.updateCart(buyerId, updateDto)).rejects.toThrow(
-        BadRequestError,
-      );
+    test('productId가 없으면 BadRequestError를 던진다', async () => {
+      await expect(
+        service.updateCart('buyer-1', {
+          productId: '',
+          sizes: [{ sizeId: 1, quantity: 1 }],
+        }),
+      ).rejects.toThrow(BadRequestError);
     });
 
-    test('sizes 배열이 비어있으면 BadRequestError를 throw한다', async () => {
-      const buyerId = 'buyer-123';
-      const updateDto = {
-        productId: 'prod-123',
-        sizes: [],
-      };
-
-      await expect(cartService.updateCart(buyerId, updateDto)).rejects.toThrow(
-        BadRequestError,
-      );
+    test('sizes가 빈 배열이면 BadRequestError를 던진다', async () => {
+      await expect(
+        service.updateCart('buyer-1', { productId: 'product-1', sizes: [] }),
+      ).rejects.toThrow(BadRequestError);
     });
 
-    test('존재하지 않는 상품이면 BadRequestError를 throw한다', async () => {
-      const buyerId = 'buyer-123';
-      const updateDto = {
-        productId: 'non-exist-product',
-        sizes: [{ sizeId: 1, quantity: 1 }],
-      };
-
-      (mockedRepository.findProductById as jest.Mock).mockResolvedValue(null);
-
-      await expect(cartService.updateCart(buyerId, updateDto)).rejects.toThrow(
-        BadRequestError,
-      );
+    test('sizes가 배열이 아니면 BadRequestError를 던진다', async () => {
+      await expect(
+        service.updateCart('buyer-1', {
+          productId: 'product-1',
+          sizes: null as any,
+        }),
+      ).rejects.toThrow(BadRequestError);
     });
 
-    test('수량이 0 이하면 BadRequestError를 throw한다', async () => {
-      const buyerId = 'buyer-123';
-      const updateDto = {
-        productId: 'prod-123',
-        sizes: [{ sizeId: 1, quantity: 0 }],
-      };
-
-      const mockProduct = { id: 'prod-123', name: 'Test Product' };
-      const mockCart = { id: 'cart-123', buyerId };
-
-      (mockedRepository.findProductById as jest.Mock).mockResolvedValue(
-        mockProduct,
-      );
-      (mockedRepository.findCartByBuyerId as jest.Mock).mockResolvedValue(
-        mockCart,
-      );
-
-      await expect(cartService.updateCart(buyerId, updateDto)).rejects.toThrow(
-        BadRequestError,
-      );
-    });
-
-    test('수량이 999를 초과하면 BadRequestError를 throw한다', async () => {
-      const buyerId = 'buyer-123';
-      const updateDto = {
-        productId: 'prod-123',
-        sizes: [{ sizeId: 1, quantity: 1000 }],
-      };
-
-      const mockProduct = { id: 'prod-123', name: 'Test Product' };
-      const mockCart = { id: 'cart-123', buyerId };
-
-      (mockedRepository.findProductById as jest.Mock).mockResolvedValue(
-        mockProduct,
-      );
-      (mockedRepository.findCartByBuyerId as jest.Mock).mockResolvedValue(
-        mockCart,
-      );
-
-      await expect(cartService.updateCart(buyerId, updateDto)).rejects.toThrow(
-        BadRequestError,
-      );
-    });
-  });
-
-  describe('getCartItemDetail - 장바구니 아이템 상세 조회', () => {
-    test('아이템 상세 정보를 반환한다', async () => {
-      const cartItemId = 'item-123';
-      const buyerId = 'buyer-123';
-      const mockCartItem = {
-        id: cartItemId,
-        cartId: 'cart-123',
-        productId: 'prod-123',
-        sizeId: 1,
-        quantity: 2,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        product: {
-          id: 'prod-123',
-          storeId: 'store-1',
-          name: 'Test Product',
-          price: 20000,
-          image: 'https://example.com/product.jpg',
-          discountRate: null,
-          discountStartTime: null,
-          discountEndTime: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        cart: {
-          id: 'cart-123',
-          buyerId: buyerId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        size: { id: 1, name: 'M', nameEn: 'M', nameKo: '미디움' },
-      };
-
-      (mockedRepository.findCartItemById as jest.Mock).mockResolvedValue(
-        mockCartItem,
-      );
-
-      const result = await cartService.getCartItemDetail(buyerId, cartItemId);
-
-      expect(result).toHaveProperty('id', cartItemId);
-      expect(result).toHaveProperty('product');
-      expect(mockedRepository.findCartItemById).toHaveBeenCalledWith(
-        cartItemId,
-      );
-    });
-
-    test('아이템이 없으면 NotFoundError를 throw한다', async () => {
-      const cartItemId = 'invalid-item';
-      const buyerId = 'buyer-123';
-
-      (mockedRepository.findCartItemById as jest.Mock).mockResolvedValue(null);
+    test('존재하지 않는 상품이면 BadRequestError를 던진다', async () => {
+      mockRepo.findProductById.mockResolvedValue(null);
 
       await expect(
-        cartService.getCartItemDetail(buyerId, cartItemId),
+        service.updateCart('buyer-1', {
+          productId: 'non-existent',
+          sizes: [{ sizeId: 1, quantity: 1 }],
+        }),
+      ).rejects.toThrow(BadRequestError);
+    });
+
+    test('장바구니가 없으면 NotFoundError를 던진다', async () => {
+      mockRepo.findProductById.mockResolvedValue({ id: 'product-1' } as any);
+      mockRepo.findCartByBuyerId.mockResolvedValue(null);
+
+      await expect(
+        service.updateCart('buyer-1', {
+          productId: 'product-1',
+          sizes: [{ sizeId: 1, quantity: 1 }],
+        }),
       ).rejects.toThrow(NotFoundError);
     });
 
-    test('cartItemId가 없으면 BadRequestError를 throw한다', async () => {
-      const buyerId = 'buyer-123';
+    test('수량이 0이면 BadRequestError를 던진다', async () => {
+      mockRepo.findProductById.mockResolvedValue({ id: 'product-1' } as any);
+      mockRepo.findCartByBuyerId.mockResolvedValue(mockCart as any);
 
-      await expect(cartService.getCartItemDetail(buyerId, '')).rejects.toThrow(
+      await expect(
+        service.updateCart('buyer-1', {
+          productId: 'product-1',
+          sizes: [{ sizeId: 1, quantity: 0 }],
+        }),
+      ).rejects.toThrow(BadRequestError);
+    });
+
+    test('수량이 999 초과이면 BadRequestError를 던진다', async () => {
+      mockRepo.findProductById.mockResolvedValue({ id: 'product-1' } as any);
+      mockRepo.findCartByBuyerId.mockResolvedValue(mockCart as any);
+
+      await expect(
+        service.updateCart('buyer-1', {
+          productId: 'product-1',
+          sizes: [{ sizeId: 1, quantity: 1000 }],
+        }),
+      ).rejects.toThrow(BadRequestError);
+    });
+
+    test('수량이 소수이면 BadRequestError를 던진다', async () => {
+      mockRepo.findProductById.mockResolvedValue({ id: 'product-1' } as any);
+      mockRepo.findCartByBuyerId.mockResolvedValue(mockCart as any);
+
+      await expect(
+        service.updateCart('buyer-1', {
+          productId: 'product-1',
+          sizes: [{ sizeId: 1, quantity: 1.5 }],
+        }),
+      ).rejects.toThrow(BadRequestError);
+    });
+  });
+
+  // ─── getCartItemDetail ───
+  describe('getCartItemDetail', () => {
+    test('장바구니 아이템 상세를 정상 반환한다', async () => {
+      mockRepo.findCartItemById.mockResolvedValue(
+        mockCartItemWithRelations as any,
+      );
+      (
+        cartServiceUtil.resolveCartItemDetailImage as jest.Mock
+      ).mockResolvedValue(mockCartItemWithRelations);
+
+      const result = await service.getCartItemDetail('buyer-1', 'item-1');
+
+      expect(mockRepo.findCartItemById).toHaveBeenCalledWith('item-1');
+      expect(result).toEqual(mockCartItemDto);
+    });
+
+    test('cartItemId가 없으면 BadRequestError를 던진다', async () => {
+      await expect(service.getCartItemDetail('buyer-1', '')).rejects.toThrow(
         BadRequestError,
       );
     });
 
-    test('다른 구매자의 아이템이면 NotFoundError를 throw한다', async () => {
-      const cartItemId = 'item-123';
-      const buyerId = 'buyer-123';
-      const otherBuyerId = 'buyer-456';
-
-      const mockCartItem = {
-        id: cartItemId,
-        cartId: 'cart-123',
-        productId: 'prod-123',
-        sizeId: 1,
-        quantity: 2,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        product: {
-          id: 'prod-123',
-          storeId: 'store-1',
-          name: 'Test Product',
-          price: 20000,
-          image: 'https://example.com/product.jpg',
-          discountRate: null,
-          discountStartTime: null,
-          discountEndTime: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        cart: {
-          id: 'cart-123',
-          buyerId: otherBuyerId, // 다른 구매자의 장바구니
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        size: { id: 1, name: 'M', nameEn: 'M', nameKo: '미디움' },
-      };
-
-      (mockedRepository.findCartItemById as jest.Mock).mockResolvedValue(
-        mockCartItem,
-      );
+    test('아이템이 존재하지 않으면 NotFoundError를 던진다', async () => {
+      mockRepo.findCartItemById.mockResolvedValue(null);
 
       await expect(
-        cartService.getCartItemDetail(buyerId, cartItemId),
+        service.getCartItemDetail('buyer-1', 'non-existent'),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    test('다른 바이어의 아이템이면 NotFoundError를 던진다', async () => {
+      mockRepo.findCartItemById.mockResolvedValue({
+        ...mockCartItemWithRelations,
+        cart: { ...mockCart, buyerId: 'other-buyer' },
+      } as any);
+
+      await expect(
+        service.getCartItemDetail('buyer-1', 'item-1'),
       ).rejects.toThrow(NotFoundError);
     });
   });
 
-  describe('deleteCartItem - 장바구니 아이템 삭제', () => {
-    test('아이템을 삭제한다', async () => {
-      const cartItemId = 'item-123';
-      const buyerId = 'buyer-123';
-      const mockCartItem = {
-        id: cartItemId,
-        cartId: 'cart-123',
-        productId: 'prod-123',
-        sizeId: 1,
-        quantity: 2,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        cart: {
-          id: 'cart-123',
-          buyerId: buyerId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      };
-
-      (mockedRepository.findCartItemById as jest.Mock).mockResolvedValue(
-        mockCartItem,
+  // ─── deleteCartItem ───
+  describe('deleteCartItem', () => {
+    test('장바구니 아이템을 정상적으로 삭제한다', async () => {
+      mockRepo.findCartItemById.mockResolvedValue(
+        mockCartItemWithRelations as any,
       );
-      (mockedRepository.deleteCartItem as jest.Mock).mockResolvedValue(true);
+      mockRepo.deleteCartItem.mockResolvedValue(undefined as any);
 
-      await expect(
-        cartService.deleteCartItem(buyerId, cartItemId),
-      ).resolves.not.toThrow();
-      expect(mockedRepository.deleteCartItem).toHaveBeenCalledWith(cartItemId);
+      await service.deleteCartItem('buyer-1', 'item-1');
+
+      expect(mockRepo.deleteCartItem).toHaveBeenCalledWith('item-1');
     });
 
-    test('아이템이 없으면 NotFoundError를 throw한다', async () => {
-      const cartItemId = 'invalid-item';
-      const buyerId = 'buyer-123';
-
-      (mockedRepository.findCartItemById as jest.Mock).mockResolvedValue(null);
-
-      await expect(
-        cartService.deleteCartItem(buyerId, cartItemId),
-      ).rejects.toThrow(NotFoundError);
-    });
-
-    test('cartItemId가 없으면 BadRequestError를 throw한다', async () => {
-      const buyerId = 'buyer-123';
-
-      await expect(cartService.deleteCartItem(buyerId, '')).rejects.toThrow(
+    test('cartItemId가 없으면 BadRequestError를 던진다', async () => {
+      await expect(service.deleteCartItem('buyer-1', '')).rejects.toThrow(
         BadRequestError,
       );
     });
 
-    test('다른 구매자의 아이템이면 NotFoundError를 throw한다', async () => {
-      const cartItemId = 'item-123';
-      const buyerId = 'buyer-123';
-      const otherBuyerId = 'buyer-456';
-
-      const mockCartItem = {
-        id: cartItemId,
-        cartId: 'cart-123',
-        productId: 'prod-123',
-        sizeId: 1,
-        quantity: 2,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        cart: {
-          id: 'cart-123',
-          buyerId: otherBuyerId, // 다른 구매자의 장바구니
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      };
-
-      (mockedRepository.findCartItemById as jest.Mock).mockResolvedValue(
-        mockCartItem,
-      );
+    test('아이템이 존재하지 않으면 NotFoundError를 던진다', async () => {
+      mockRepo.findCartItemById.mockResolvedValue(null);
 
       await expect(
-        cartService.deleteCartItem(buyerId, cartItemId),
+        service.deleteCartItem('buyer-1', 'non-existent'),
       ).rejects.toThrow(NotFoundError);
+    });
+
+    test('다른 바이어의 아이템이면 NotFoundError를 던진다', async () => {
+      mockRepo.findCartItemById.mockResolvedValue({
+        ...mockCartItemWithRelations,
+        cart: { ...mockCart, buyerId: 'other-buyer' },
+      } as any);
+
+      await expect(service.deleteCartItem('buyer-1', 'item-1')).rejects.toThrow(
+        NotFoundError,
+      );
     });
   });
 });

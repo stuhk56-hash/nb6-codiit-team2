@@ -1,4 +1,4 @@
-import * as cartRepository from './cart.repository';
+import { cartRepository } from './cart.repository';
 import {
   toResponseDto,
   toCartWithItemsDto,
@@ -16,139 +16,127 @@ import {
   resolveCartItemDetailImage,
 } from './utils/cart.service.util';
 
-// 장바구니 생성
-export async function createCart(buyerId: string): Promise<CartResponseDto> {
-  let cart = await cartRepository.findCartByBuyerId(buyerId);
+export class CartService {
+  async createCart(buyerId: string): Promise<CartResponseDto> {
+    let cart = await cartRepository.findCartByBuyerId(buyerId);
 
-  if (!cart) {
-    cart = await cartRepository.createCart(buyerId);
-  }
-
-  return toResponseDto(cart);
-}
-
-//장바구니 조회 (아이템 포함)
-export async function getCart(buyerId: string): Promise<CartWithItemsDto> {
-  const cart = await cartRepository.findCartByBuyerIdWithItems(buyerId);
-
-  if (!cart) {
-    throw new NotFoundError('장바구니를 찾을 수 없습니다.');
-  }
-
-  const resolvedCart = await resolveCartImages(cart);
-  return toCartWithItemsDto(resolvedCart);
-}
-
-//장바구니에 상품 추가 또는 수량 수정
-export async function updateCart(
-  buyerId: string,
-  updateDto: UpdateCartBySizesDto,
-): Promise<CartItemDto[]> {
-  if (
-    !updateDto.productId ||
-    !Array.isArray(updateDto.sizes) ||
-    updateDto.sizes.length === 0
-  ) {
-    throw new BadRequestError('잘못된 요청입니다.');
-  }
-
-  // 상품 존재 여부 확인
-  const product = await cartRepository.findProductById(updateDto.productId);
-  if (!product) {
-    throw new BadRequestError('존재하지 않는 상품입니다.');
-  }
-
-  const cart = await cartRepository.findCartByBuyerId(buyerId);
-
-  if (!cart) {
-    throw new NotFoundError('장바구니를 찾을 수 없습니다.');
-  }
-
-  const updatedItems: CartItemDto[] = [];
-
-  for (const sizeData of updateDto.sizes) {
-    if (
-      !Number.isInteger(sizeData.quantity) ||
-      sizeData.quantity <= 0 ||
-      sizeData.quantity > 999
-    ) {
-      throw new BadRequestError('유효하지 않은 수량입니다.');
+    if (!cart) {
+      cart = await cartRepository.createCart(buyerId);
     }
 
-    // 기존 아이템 찾기
-    let cartItem = await cartRepository.findCartItem(
-      cart.id,
-      updateDto.productId,
-      sizeData.sizeId,
-    );
+    return toResponseDto(cart);
+  }
 
-    if (cartItem) {
-      // 수량 업데이트
-      cartItem = await cartRepository.updateCartItemQuantity(
-        cartItem.id,
-        sizeData.quantity,
-      );
-    } else {
-      // 새 아이템 추가
-      cartItem = await cartRepository.addCartItem(
+  async getCart(buyerId: string): Promise<CartWithItemsDto> {
+    const cart = await cartRepository.findCartByBuyerIdWithItems(buyerId);
+
+    if (!cart) {
+      throw new NotFoundError('장바구니를 찾을 수 없습니다.');
+    }
+
+    const resolvedCart = await resolveCartImages(cart);
+    return toCartWithItemsDto(resolvedCart);
+  }
+
+  async updateCart(
+    buyerId: string,
+    updateDto: UpdateCartBySizesDto,
+  ): Promise<CartItemDto[]> {
+    if (
+      !updateDto.productId ||
+      !Array.isArray(updateDto.sizes) ||
+      updateDto.sizes.length === 0
+    ) {
+      throw new BadRequestError('잘못된 요청입니다.');
+    }
+
+    const product = await cartRepository.findProductById(updateDto.productId);
+    if (!product) {
+      throw new BadRequestError('존재하지 않는 상품입니다.');
+    }
+
+    const cart = await cartRepository.findCartByBuyerId(buyerId);
+
+    if (!cart) {
+      throw new NotFoundError('장바구니를 찾을 수 없습니다.');
+    }
+
+    const updatedItems: CartItemDto[] = [];
+
+    for (const sizeData of updateDto.sizes) {
+      if (
+        !Number.isInteger(sizeData.quantity) ||
+        sizeData.quantity <= 0 ||
+        sizeData.quantity > 999
+      ) {
+        throw new BadRequestError('유효하지 않은 수량입니다.');
+      }
+
+      let cartItem = await cartRepository.findCartItem(
         cart.id,
         updateDto.productId,
         sizeData.sizeId,
-        sizeData.quantity,
       );
+
+      if (cartItem) {
+        cartItem = await cartRepository.updateCartItemQuantity(
+          cartItem.id,
+          sizeData.quantity,
+        );
+      } else {
+        cartItem = await cartRepository.addCartItem(
+          cart.id,
+          updateDto.productId,
+          sizeData.sizeId,
+          sizeData.quantity,
+        );
+      }
+
+      updatedItems.push(toCartItemDto(cartItem));
     }
 
-    updatedItems.push(toCartItemDto(cartItem));
+    return updatedItems;
   }
 
-  return updatedItems;
+  async getCartItemDetail(
+    buyerId: string,
+    cartItemId: string,
+  ): Promise<CartItemDetailDto> {
+    if (!cartItemId) {
+      throw new BadRequestError('잘못된 요청입니다.');
+    }
+
+    const cartItem = await cartRepository.findCartItemById(cartItemId);
+
+    if (!cartItem) {
+      throw new NotFoundError('장바구니 아이템을 찾을 수 없습니다.');
+    }
+
+    if (cartItem.cart.buyerId !== buyerId) {
+      throw new NotFoundError('장바구니 아이템을 찾을 수 없습니다.');
+    }
+
+    const resolvedCartItem = await resolveCartItemDetailImage(cartItem);
+    return toCartItemDetailDto(resolvedCartItem);
+  }
+
+  async deleteCartItem(buyerId: string, cartItemId: string): Promise<void> {
+    if (!cartItemId) {
+      throw new BadRequestError('잘못된 요청입니다.');
+    }
+
+    const cartItem = await cartRepository.findCartItemById(cartItemId);
+
+    if (!cartItem) {
+      throw new NotFoundError('장바구니 아이템을 찾을 수 없습니다.');
+    }
+
+    if (cartItem.cart.buyerId !== buyerId) {
+      throw new NotFoundError('장바구니 아이템을 찾을 수 없습니다.');
+    }
+
+    await cartRepository.deleteCartItem(cartItemId);
+  }
 }
 
-//장바구니 아이템 상세 조회
-
-export async function getCartItemDetail(
-  buyerId: string,
-  cartItemId: string,
-): Promise<CartItemDetailDto> {
-  if (!cartItemId) {
-    throw new BadRequestError('잘못된 요청입니다.');
-  }
-
-  const cartItem = await cartRepository.findCartItemById(cartItemId);
-
-  if (!cartItem) {
-    throw new NotFoundError('장바구니 아이템을 찾을 수 없습니다.');
-  }
-
-  // 현재 구매자의 장바구니에 속한 아이템인지 확인
-  if (cartItem.cart.buyerId !== buyerId) {
-    throw new NotFoundError('장바구니 아이템을 찾을 수 없습니다.');
-  }
-
-  const resolvedCartItem = await resolveCartItemDetailImage(cartItem);
-  return toCartItemDetailDto(resolvedCartItem);
-}
-
-//장바구니 아이템 삭제
-
-export async function deleteCartItem(
-  buyerId: string,
-  cartItemId: string,
-): Promise<void> {
-  if (!cartItemId) {
-    throw new BadRequestError('잘못된 요청입니다.');
-  }
-
-  const cartItem = await cartRepository.findCartItemById(cartItemId);
-
-  if (!cartItem) {
-    throw new NotFoundError('장바구니 아이템을 찾을 수 없습니다.');
-  }
-
-  // 현재 구매자의 장바구니에 속한 아이템인지 확인
-  if (cartItem.cart.buyerId !== buyerId) {
-    throw new NotFoundError('장바구니 아이템을 찾을 수 없습니다.');
-  }
-
-  await cartRepository.deleteCartItem(cartItemId);
-}
+export const cartService = new CartService();
