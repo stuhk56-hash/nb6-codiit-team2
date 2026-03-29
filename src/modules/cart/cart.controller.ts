@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import * as cartService from './cart.service';
+import { cartService } from './cart.service';
 import { UpdateCartBySizesDto } from './dto/update-cart-by-sizes.dto';
 import { UpdateCartStruct } from './structs/cart.struct';
 import { assert } from 'superstruct';

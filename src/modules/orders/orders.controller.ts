@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import * as ordersService from './orders.service';
+import { orderService } from './orders.service';
 import { AuthenticatedRequest } from '../../types/auth-request.type';
 import { requireBuyer } from '../../lib/request/auth-user';
 
@@ -10,7 +10,7 @@ export async function getOrders(req: AuthenticatedRequest, res: Response) {
   const page = Number(req.query.page) || 1;
   const status = req.query.status as string | undefined;
 
-  const result = await ordersService.getOrders(buyerId, limit, page, status);
+  const result = await orderService.getOrders(buyerId, limit, page, status);
   return res.status(200).send(result);
 }
 
@@ -19,7 +19,7 @@ export async function getOrdersById(req: AuthenticatedRequest, res: Response) {
   const buyerId = requireBuyer(req.user).id;
   const { orderId } = req.params;
 
-  const result = await ordersService.getOrdersById(buyerId, orderId);
+  const result = await orderService.getOrdersById(buyerId, orderId);
   return res.status(200).send(result);
 }
 
@@ -28,7 +28,7 @@ export async function createOrder(req: AuthenticatedRequest, res: Response) {
   const buyerId = requireBuyer(req.user).id;
   const createOrderDto = req.body;
 
-  const result = await ordersService.createOrder(buyerId, createOrderDto);
+  const result = await orderService.createOrder(buyerId, createOrderDto);
   return res.status(201).send(result);
 }
 
@@ -38,7 +38,7 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response) {
   const { orderId } = req.params;
   const updateOrderDto = req.body;
 
-  const result = await ordersService.updateOrder(
+  const result = await orderService.updateOrder(
     buyerId,
     orderId,
     updateOrderDto,
@@ -56,7 +56,7 @@ export async function cancelOrder(req: AuthenticatedRequest, res: Response) {
     const buyerId = requireBuyer(req.user).id;
     console.log('  buyerId:', buyerId);
 
-    const result = await ordersService.cancelOrder(buyerId, req.params.orderId);
+    const result = await orderService.cancelOrder(buyerId, req.params.orderId);
 
     return res.status(200).send({
       success: true,

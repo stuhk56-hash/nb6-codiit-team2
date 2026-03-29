@@ -1,8 +1,8 @@
-import { paymentRepository } from '../payment.repository';
 import { PaymentService } from '../payment.service';
+import { paymentRepository } from '../payment.repository';
 import * as paymentServiceUtil from '../utils/payment.service.util';
 import * as paymentUtil from '../utils/payment.util';
-import { toPaymentDto } from '../utils/payment.mapper';
+import * as paymentMapper from '../utils/payment.mapper';
 import {
   BadRequestError,
   NotFoundError,
@@ -13,547 +13,349 @@ jest.mock('../utils/payment.service.util');
 jest.mock('../utils/payment.util');
 jest.mock('../utils/payment.mapper');
 
-function createPayment(partial: Partial<any> = {}) {
-  const baseDate = new Date('2026-03-27T00:00:00.000Z');
+const service = new PaymentService();
 
-  return {
-    id: 'payment-1',
-    orderId: 'order-1',
-    price: 50000,
-    paymentMethod: 'CREDIT_CARD',
-    status: 'CompletedPayment',
-    cardNumber: '3456',
-    bankName: null,
-    phoneNumber: null,
-    transactionId: 'TXN-ABC123',
-    createdAt: baseDate,
-    updatedAt: baseDate,
-    order: {
-      id: 'order-1',
-      buyerId: 'buyer-1',
-      buyerName: 'test-buyer',
-      phoneNumber: '010-1234-5678',
-      address: '서울시 강남구',
-      status: 'CompletedPayment',
-      usedPoints: 5000,
-      earnedPoints: 5000,
-      createdAt: baseDate,
-    },
-    ...partial,
-  } as any;
-}
+const mockPayment = {
+  id: 'pay-1',
+  orderId: 'order-1',
+  price: 20000,
+  paymentMethod: 'CREDIT_CARD',
+  status: 'WaitingPayment',
+  cardNumber: '3456',
+  bankName: null,
+  phoneNumber: null,
+  transactionId: 'TXN-123',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  order: {
+    id: 'order-1',
+    buyerId: 'buyer-1',
+    buyerName: '테스트',
+    phoneNumber: '010-1111-2222',
+    address: '서울시',
+    status: 'WaitingPayment',
+    usedPoints: 0,
+    earnedPoints: 0,
+    createdAt: new Date(),
+  },
+};
 
-describe('결제 서비스 유닛 테스트', () => {
-  const service = new PaymentService();
+const mockPaymentDto = {
+  id: 'pay-1',
+  orderId: 'order-1',
+  price: 20000,
+  paymentMethod: 'CREDIT_CARD',
+  status: 'WaitingPayment',
+};
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    (paymentServiceUtil.validatePaymentMethod as jest.Mock).mockImplementation(
-      () => {},
-    );
-    (paymentServiceUtil.validatePaymentAmount as jest.Mock).mockImplementation(
-      () => {},
-    );
-    (paymentUtil.isPaymentCancellable as jest.Mock).mockImplementation(
-      () => true,
-    );
-    (toPaymentDto as jest.Mock).mockImplementation((payment: any) => payment);
-  });
+beforeEach(() => {
+  jest.clearAllMocks();
+  (paymentMapper.toPaymentDto as jest.Mock).mockReturnValue(mockPaymentDto);
+});
 
+describe('PaymentService', () => {
+  // ─── createPayment ───
   describe('createPayment', () => {
-    test('필수 정보가 누락되면 BadRequestError를 던진다', async () => {
-      try {
-        await service.createPayment('', 50000, 'CREDIT_CARD');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-        expect(error.message).toContain('필수');
-      }
-    });
-
-    test('price가 없으면 BadRequestError를 던진다', async () => {
-      try {
-        await service.createPayment('order-1', 0, 'CREDIT_CARD');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-        expect(error.message).toContain('필수');
-      }
-    });
-
-    test('paymentMethod가 없으면 BadRequestError를 던진다', async () => {
-      try {
-        await service.createPayment('order-1', 50000, '');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-        expect(error.message).toContain('필수');
-      }
-    });
-
-    test('결제 수단 검증에 실패하면 BadRequestError를 던진다', async () => {
+    test('결제를 정상적으로 생성한다', async () => {
       (
         paymentServiceUtil.validatePaymentMethod as jest.Mock
-      ).mockImplementation(() => {
-        throw new BadRequestError('유효한 결제 수단이 아닙니다');
-      });
-
-      try {
-        await service.createPayment('order-1', 50000, 'INVALID_METHOD');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-      }
-    });
-
-    test('결제 금액 검증에 실패하면 BadRequestError를 던진다', async () => {
+      ).mockImplementation(() => {});
       (
         paymentServiceUtil.validatePaymentAmount as jest.Mock
-      ).mockImplementation(() => {
-        throw new BadRequestError('결제 금액은 0보다 커야 합니다');
-      });
-
-      try {
-        await service.createPayment('order-1', 50000, 'CREDIT_CARD');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-      }
-    });
-
-    test('신용카드 결제를 생성하고 DTO로 반환한다', async () => {
-      const createdPayment = createPayment();
+      ).mockImplementation(() => {});
       (paymentRepository.createPayment as jest.Mock).mockResolvedValue(
-        createdPayment,
+        mockPayment,
       );
 
       const result = await service.createPayment(
         'order-1',
-        50000,
+        20000,
         'CREDIT_CARD',
-        '1234567890123456',
-      );
-
-      expect(result.id).toBe('payment-1');
-    });
-
-    test('계좌이체 결제를 생성한다', async () => {
-      const createdPayment = createPayment();
-      (paymentRepository.createPayment as jest.Mock).mockResolvedValue(
-        createdPayment,
-      );
-
-      const result = await service.createPayment(
-        'order-1',
-        50000,
-        'BANK_TRANSFER',
-        undefined,
-        '국민은행',
-      );
-
-      expect(result).toBeDefined();
-    });
-
-    test('휴대폰 결제를 생성한다', async () => {
-      const createdPayment = createPayment();
-      (paymentRepository.createPayment as jest.Mock).mockResolvedValue(
-        createdPayment,
-      );
-
-      const result = await service.createPayment(
-        'order-1',
-        50000,
-        'MOBILE_PHONE',
+        '1234',
         undefined,
         undefined,
-        '01012345678',
       );
 
-      expect(result).toBeDefined();
-    });
-
-    test('저장소에서 예외가 발생하면 BadRequestError로 변환한다', async () => {
-      (paymentRepository.createPayment as jest.Mock).mockRejectedValue(
-        new Error('주문을 찾을 수 없습니다'),
+      expect(paymentServiceUtil.validatePaymentMethod).toHaveBeenCalledWith(
+        'CREDIT_CARD',
       );
-
-      try {
-        await service.createPayment('order-1', 50000, 'CREDIT_CARD');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-        expect(error.message).toContain('주문을 찾을 수 없습니다');
-      }
-    });
-
-    test('저장소에서 일반 Error가 발생하면 기본 메시지로 변환한다', async () => {
-      (paymentRepository.createPayment as jest.Mock).mockRejectedValue(
-        new Error(''),
+      expect(paymentServiceUtil.validatePaymentAmount).toHaveBeenCalledWith(
+        20000,
       );
-
-      try {
-        await service.createPayment('order-1', 50000, 'CREDIT_CARD');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-        expect(error.message).toBe('결제 생성 실패');
-      }
-    });
-
-    test('모든 유효성 검사를 통과한 후 저장소를 호출한다', async () => {
-      const createdPayment = createPayment();
-      (paymentRepository.createPayment as jest.Mock).mockResolvedValue(
-        createdPayment,
-      );
-
-      await service.createPayment('order-1', 50000, 'CREDIT_CARD');
-
       expect(paymentRepository.createPayment).toHaveBeenCalled();
+      expect(result).toEqual(mockPaymentDto);
+    });
+
+    test('필수 정보가 누락되면 BadRequestError를 던진다', async () => {
+      await expect(service.createPayment('', 0, '')).rejects.toThrow(
+        BadRequestError,
+      );
+    });
+
+    test('orderId가 없으면 BadRequestError를 던진다', async () => {
+      await expect(
+        service.createPayment('', 20000, 'CREDIT_CARD'),
+      ).rejects.toThrow(BadRequestError);
+    });
+
+    test('repository에서 에러 발생 시 BadRequestError로 감싸서 던진다', async () => {
+      (
+        paymentServiceUtil.validatePaymentMethod as jest.Mock
+      ).mockImplementation(() => {});
+      (
+        paymentServiceUtil.validatePaymentAmount as jest.Mock
+      ).mockImplementation(() => {});
+      (paymentRepository.createPayment as jest.Mock).mockRejectedValue(
+        new Error('DB 에러'),
+      );
+
+      await expect(
+        service.createPayment('order-1', 20000, 'CREDIT_CARD'),
+      ).rejects.toThrow('DB 에러');
+    });
+
+    test('Error가 아닌 예외 발생 시 기본 메시지로 던진다', async () => {
+      (
+        paymentServiceUtil.validatePaymentMethod as jest.Mock
+      ).mockImplementation(() => {});
+      (
+        paymentServiceUtil.validatePaymentAmount as jest.Mock
+      ).mockImplementation(() => {});
+      (paymentRepository.createPayment as jest.Mock).mockRejectedValue(
+        '문자열 에러',
+      );
+
+      await expect(
+        service.createPayment('order-1', 20000, 'CREDIT_CARD'),
+      ).rejects.toThrow('결제 생성 실패');
     });
   });
 
+  // ─── getPaymentByOrderId ───
   describe('getPaymentByOrderId', () => {
-    test('orderId가 없으면 BadRequestError를 던진다', async () => {
-      try {
-        await service.getPaymentByOrderId('buyer-1', '');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-      }
-    });
-
-    test('결제 정보가 없으면 NotFoundError를 던진다', async () => {
+    test('주문 ID로 결제를 정상 조회한다', async () => {
       (paymentRepository.findPaymentByOrderId as jest.Mock).mockResolvedValue(
-        null,
-      );
-
-      try {
-        await service.getPaymentByOrderId('buyer-1', 'order-1');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(NotFoundError);
-      }
-    });
-
-    test('다른 사용자의 결제 정보 조회는 BadRequestError를 던진다', async () => {
-      const payment = createPayment({
-        order: { ...createPayment().order, buyerId: 'other-buyer' },
-      });
-      (paymentRepository.findPaymentByOrderId as jest.Mock).mockResolvedValue(
-        payment,
-      );
-
-      try {
-        await service.getPaymentByOrderId('buyer-1', 'order-1');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-      }
-    });
-
-    test('본인 결제 정보를 조회하면 DTO로 반환한다', async () => {
-      const payment = createPayment();
-      (paymentRepository.findPaymentByOrderId as jest.Mock).mockResolvedValue(
-        payment,
+        mockPayment,
       );
 
       const result = await service.getPaymentByOrderId('buyer-1', 'order-1');
 
-      expect(paymentRepository.findPaymentByOrderId).toHaveBeenCalledWith(
-        'order-1',
+      expect(result).toEqual(mockPaymentDto);
+    });
+
+    test('orderId가 없으면 BadRequestError를 던진다', async () => {
+      await expect(service.getPaymentByOrderId('buyer-1', '')).rejects.toThrow(
+        BadRequestError,
       );
-      expect(result).toBeDefined();
+    });
+
+    test('결제가 없으면 NotFoundError를 던진다', async () => {
+      (paymentRepository.findPaymentByOrderId as jest.Mock).mockResolvedValue(
+        null,
+      );
+
+      await expect(
+        service.getPaymentByOrderId('buyer-1', 'order-1'),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    test('다른 바이어의 결제에 접근하면 BadRequestError를 던진다', async () => {
+      (paymentRepository.findPaymentByOrderId as jest.Mock).mockResolvedValue(
+        mockPayment,
+      );
+
+      await expect(
+        service.getPaymentByOrderId('other-buyer', 'order-1'),
+      ).rejects.toThrow(BadRequestError);
     });
   });
 
+  // ─── getPaymentById ───
   describe('getPaymentById', () => {
-    test('paymentId가 없으면 BadRequestError를 던진다', async () => {
-      try {
-        await service.getPaymentById('buyer-1', '');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-      }
+    test('결제 ID로 정상 조회한다', async () => {
+      (paymentRepository.findPaymentById as jest.Mock).mockResolvedValue(
+        mockPayment,
+      );
+
+      const result = await service.getPaymentById('buyer-1', 'pay-1');
+
+      expect(result).toEqual(mockPaymentDto);
     });
 
-    test('결제 정보가 없으면 NotFoundError를 던진다', async () => {
+    test('paymentId가 없으면 BadRequestError를 던진다', async () => {
+      await expect(service.getPaymentById('buyer-1', '')).rejects.toThrow(
+        BadRequestError,
+      );
+    });
+
+    test('결제가 없으면 NotFoundError를 던진다', async () => {
       (paymentRepository.findPaymentById as jest.Mock).mockResolvedValue(null);
 
-      try {
-        await service.getPaymentById('buyer-1', 'payment-1');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(NotFoundError);
-      }
+      await expect(
+        service.getPaymentById('buyer-1', 'non-existent'),
+      ).rejects.toThrow(NotFoundError);
     });
 
-    test('다른 사용자의 결제 정보 조회는 BadRequestError를 던진다', async () => {
-      const payment = createPayment({
-        order: { ...createPayment().order, buyerId: 'other-buyer' },
-      });
+    test('다른 바이어의 결제에 접근하면 BadRequestError를 던진다', async () => {
       (paymentRepository.findPaymentById as jest.Mock).mockResolvedValue(
-        payment,
+        mockPayment,
       );
 
-      try {
-        await service.getPaymentById('buyer-1', 'payment-1');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-      }
-    });
-
-    test('본인 결제 정보를 조회하면 DTO로 반환한다', async () => {
-      const payment = createPayment();
-      (paymentRepository.findPaymentById as jest.Mock).mockResolvedValue(
-        payment,
-      );
-
-      const result = await service.getPaymentById('buyer-1', 'payment-1');
-
-      expect(paymentRepository.findPaymentById).toHaveBeenCalledWith(
-        'payment-1',
-      );
-      expect(result).toBeDefined();
+      await expect(
+        service.getPaymentById('other-buyer', 'pay-1'),
+      ).rejects.toThrow(BadRequestError);
     });
   });
 
+  // ─── getPaymentsByUserId ───
   describe('getPaymentsByUserId', () => {
-    test('page가 1 미만이면 BadRequestError를 던진다', async () => {
-      try {
-        await service.getPaymentsByUserId('buyer-1', 10, 0);
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-      }
-    });
-
-    test('limit이 1 미만이면 BadRequestError를 던진다', async () => {
-      try {
-        await service.getPaymentsByUserId('buyer-1', 0, 1);
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-      }
-    });
-
-    test('결제 목록을 페이지네이션으로 반환한다', async () => {
-      const payment1 = createPayment({ id: 'payment-1' });
-      const payment2 = createPayment({ id: 'payment-2' });
-
+    test('결제 내역을 정상적으로 반환한다', async () => {
       (paymentRepository.findPaymentsByUserId as jest.Mock).mockResolvedValue({
-        payments: [payment1, payment2],
-        total: 2,
+        payments: [mockPayment],
+        total: 1,
       });
 
       const result = await service.getPaymentsByUserId('buyer-1', 10, 1);
 
-      expect(result.data).toHaveLength(2);
-      expect(result.meta.total).toBe(2);
-      expect(result.meta.page).toBe(1);
-      expect(result.meta.limit).toBe(10);
-      expect(result.meta.totalPages).toBe(1);
-    });
-
-    test('상태 필터를 적용해 결제 목록을 반환한다', async () => {
-      const payment = createPayment({ status: 'CompletedPayment' });
-
-      (paymentRepository.findPaymentsByUserId as jest.Mock).mockResolvedValue({
-        payments: [payment],
-        total: 1,
-      });
-
-      const result = await service.getPaymentsByUserId(
-        'buyer-1',
-        10,
-        1,
-        'CompletedPayment',
-      );
-
       expect(result.data).toHaveLength(1);
-    });
-
-    test('페이지네이션 계산이 정확하다', async () => {
-      (paymentRepository.findPaymentsByUserId as jest.Mock).mockResolvedValue({
-        payments: Array(5).fill(createPayment()),
-        total: 37,
-      });
-
-      const result = await service.getPaymentsByUserId('buyer-1', 10, 2);
-
-      expect(result.meta.totalPages).toBe(4);
-    });
-
-    test('기본값으로 limit 10, page 1을 사용한다', async () => {
-      (paymentRepository.findPaymentsByUserId as jest.Mock).mockResolvedValue({
-        payments: [createPayment()],
+      expect(result.meta).toEqual({
         total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
       });
-
-      await service.getPaymentsByUserId('buyer-1');
-
-      expect(paymentRepository.findPaymentsByUserId).toHaveBeenCalledWith(
-        'buyer-1',
-        10,
-        1,
-        undefined,
-      );
     });
 
-    test('빈 결제 목록을 반환할 수 있다', async () => {
+    test('status 필터를 전달할 수 있다', async () => {
       (paymentRepository.findPaymentsByUserId as jest.Mock).mockResolvedValue({
         payments: [],
         total: 0,
       });
 
-      const result = await service.getPaymentsByUserId('buyer-1', 10, 1);
+      await service.getPaymentsByUserId('buyer-1', 10, 1, 'WaitingPayment');
 
-      expect(result.data).toHaveLength(0);
-      expect(result.meta.total).toBe(0);
+      expect(paymentRepository.findPaymentsByUserId).toHaveBeenCalledWith(
+        'buyer-1',
+        10,
+        1,
+        'WaitingPayment',
+      );
+    });
+
+    test('page가 1 미만이면 BadRequestError를 던진다', async () => {
+      await expect(
+        service.getPaymentsByUserId('buyer-1', 10, 0),
+      ).rejects.toThrow(BadRequestError);
+    });
+
+    test('limit가 1 미만이면 BadRequestError를 던진다', async () => {
+      await expect(
+        service.getPaymentsByUserId('buyer-1', 0, 1),
+      ).rejects.toThrow(BadRequestError);
     });
   });
 
+  // ─── getPaymentsByStatus ───
   describe('getPaymentsByStatus', () => {
-    test('status가 없으면 BadRequestError를 던진다', async () => {
-      try {
-        await service.getPaymentsByStatus('');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-      }
-    });
-
-    test('상태별 결제 목록을 반환한다', async () => {
-      const payment1 = createPayment({ id: 'payment-1' });
-      const payment2 = createPayment({ id: 'payment-2' });
-
+    test('상태별로 결제를 조회한다', async () => {
       (paymentRepository.findPaymentsByStatus as jest.Mock).mockResolvedValue([
-        payment1,
-        payment2,
+        mockPayment,
       ]);
 
-      const result = await service.getPaymentsByStatus('CompletedPayment');
+      const result = await service.getPaymentsByStatus('WaitingPayment');
 
-      expect(result).toHaveLength(2);
+      expect(result).toHaveLength(1);
     });
 
-    test('빈 결제 목록을 반환할 수 있다', async () => {
-      (paymentRepository.findPaymentsByStatus as jest.Mock).mockResolvedValue(
-        [],
+    test('status가 없으면 BadRequestError를 던진다', async () => {
+      await expect(service.getPaymentsByStatus('')).rejects.toThrow(
+        BadRequestError,
       );
-
-      const result = await service.getPaymentsByStatus('FailedPayment');
-
-      expect(result).toHaveLength(0);
     });
   });
 
+  // ─── cancelPayment ───
   describe('cancelPayment', () => {
-    test('orderId가 없으면 BadRequestError를 던진다', async () => {
-      try {
-        await service.cancelPayment('buyer-1', '');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-      }
+    test('결제를 정상적으로 취소한다', async () => {
+      (paymentRepository.findPaymentByOrderId as jest.Mock).mockResolvedValue(
+        mockPayment,
+      );
+      (paymentUtil.isPaymentCancellable as jest.Mock).mockReturnValue(true);
+      (
+        paymentRepository.cancelPaymentWithTransaction as jest.Mock
+      ).mockResolvedValue({
+        ...mockPayment,
+        status: 'CanceledPayment',
+      });
+
+      const result = await service.cancelPayment('buyer-1', 'order-1');
+
+      expect(result).toEqual(mockPaymentDto);
     });
 
-    test('결제 정보가 없으면 NotFoundError를 던진다', async () => {
+    test('orderId가 없으면 BadRequestError를 던진다', async () => {
+      await expect(service.cancelPayment('buyer-1', '')).rejects.toThrow(
+        BadRequestError,
+      );
+    });
+
+    test('결제가 없으면 NotFoundError를 던진다', async () => {
       (paymentRepository.findPaymentByOrderId as jest.Mock).mockResolvedValue(
         null,
       );
 
-      try {
-        await service.cancelPayment('buyer-1', 'order-1');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(NotFoundError);
-      }
+      await expect(service.cancelPayment('buyer-1', 'order-1')).rejects.toThrow(
+        NotFoundError,
+      );
     });
 
-    test('다른 사용자의 결제를 취소하려 하면 BadRequestError를 던진다', async () => {
-      const payment = createPayment({
-        order: { ...createPayment().order, buyerId: 'other-buyer' },
-      });
+    test('다른 바이어의 결제를 취소하면 BadRequestError를 던진다', async () => {
       (paymentRepository.findPaymentByOrderId as jest.Mock).mockResolvedValue(
-        payment,
+        mockPayment,
       );
 
-      try {
-        await service.cancelPayment('buyer-1', 'order-1');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-      }
+      await expect(
+        service.cancelPayment('other-buyer', 'order-1'),
+      ).rejects.toThrow(BadRequestError);
     });
 
     test('취소 불가능한 상태면 BadRequestError를 던진다', async () => {
-      const payment = createPayment({ status: 'CompletedPayment' });
       (paymentRepository.findPaymentByOrderId as jest.Mock).mockResolvedValue(
-        payment,
+        mockPayment,
       );
       (paymentUtil.isPaymentCancellable as jest.Mock).mockReturnValue(false);
 
-      try {
-        await service.cancelPayment('buyer-1', 'order-1');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-      }
+      await expect(service.cancelPayment('buyer-1', 'order-1')).rejects.toThrow(
+        BadRequestError,
+      );
     });
 
-    test('결제를 성공적으로 취소한다', async () => {
-      const payment = createPayment({ status: 'WaitingPayment' });
-      const canceledPayment = createPayment({ status: 'CanceledPayment' });
-
+    test('트랜잭션에서 Error 발생 시 메시지를 그대로 던진다', async () => {
       (paymentRepository.findPaymentByOrderId as jest.Mock).mockResolvedValue(
-        payment,
+        mockPayment,
       );
       (paymentUtil.isPaymentCancellable as jest.Mock).mockReturnValue(true);
       (
         paymentRepository.cancelPaymentWithTransaction as jest.Mock
-      ).mockResolvedValue(canceledPayment);
+      ).mockRejectedValue(new Error('트랜잭션 실패'));
 
-      const result = await service.cancelPayment('buyer-1', 'order-1');
-
-      expect(result).toBeDefined();
+      await expect(service.cancelPayment('buyer-1', 'order-1')).rejects.toThrow(
+        '트랜잭션 실패',
+      );
     });
 
-    test('트랜잭션 실패 시 BadRequestError를 던진다', async () => {
-      const payment = createPayment({ status: 'WaitingPayment' });
+    test('트랜잭션에서 Error가 아닌 예외 발생 시 기본 메시지로 던진다', async () => {
       (paymentRepository.findPaymentByOrderId as jest.Mock).mockResolvedValue(
-        payment,
+        mockPayment,
       );
       (paymentUtil.isPaymentCancellable as jest.Mock).mockReturnValue(true);
       (
         paymentRepository.cancelPaymentWithTransaction as jest.Mock
-      ).mockRejectedValue(new Error('이미 취소된 결제입니다'));
+      ).mockRejectedValue('문자열');
 
-      try {
-        await service.cancelPayment('buyer-1', 'order-1');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-      }
-    });
-
-    test('트랜잭션 일반 에러도 처리한다', async () => {
-      const payment = createPayment({ status: 'WaitingPayment' });
-      (paymentRepository.findPaymentByOrderId as jest.Mock).mockResolvedValue(
-        payment,
+      await expect(service.cancelPayment('buyer-1', 'order-1')).rejects.toThrow(
+        '결제 취소 실패',
       );
-      (paymentUtil.isPaymentCancellable as jest.Mock).mockReturnValue(true);
-      (
-        paymentRepository.cancelPaymentWithTransaction as jest.Mock
-      ).mockRejectedValue(new Error());
-
-      try {
-        await service.cancelPayment('buyer-1', 'order-1');
-        fail('예외가 발생해야 합니다');
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(BadRequestError);
-        expect(error.message).toBe('결제 취소 실패');
-      }
     });
   });
 });

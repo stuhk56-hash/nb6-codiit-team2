@@ -1,12 +1,7 @@
 import { prisma } from '../../../lib/constants/prismaClient';
-import {
-  UserType,
-  PaymentMethod,
-  PaymentStatus,
-  OrderStatus,
-} from '@prisma/client';
+import { UserType, ShippingStatus, OrderStatus } from '@prisma/client';
 import express from 'express';
-import { paymentsRouter } from '../payment.module';
+import { shippingRouter } from '../shipping.module';
 import {
   defaultNotFoundHandler,
   globalErrorHandler,
@@ -17,7 +12,7 @@ import { makeAccessToken } from '../../../lib/constants/token';
 export function createTestApp() {
   const app = express();
   app.use(express.json());
-  app.use('/api/payments', paymentsRouter);
+  app.use('/api/shipping', shippingRouter);
   app.use(defaultNotFoundHandler);
   app.use(globalErrorHandler);
   return app;
@@ -41,23 +36,6 @@ export async function seedBuyer(
       name: overrides.name ?? '테스트바이어',
       passwordHash: 'hashed-password',
       points: 10000,
-      lifetimeSpend: 0,
-    },
-  });
-}
-
-// ─── 다른 바이어 시드 ───
-export async function seedOtherBuyer(
-  overrides: Partial<{ id: string; email: string; name: string }> = {},
-) {
-  return prisma.user.create({
-    data: {
-      id: overrides.id ?? 'other-buyer-id',
-      type: UserType.BUYER,
-      email: overrides.email ?? 'other-buyer@test.com',
-      name: overrides.name ?? '다른바이어',
-      passwordHash: 'hashed-password',
-      points: 5000,
       lifetimeSpend: 0,
     },
   });
@@ -132,45 +110,17 @@ export async function seedProductStock(
   });
 }
 
-// ─── 주문 시드 (결제 없이) ───
-export async function seedOrderWithoutPayment(
-  buyerId: string,
-  overrides: Partial<{ id: string; status: OrderStatus }> = {},
-) {
-  const orderId = overrides.id ?? `order-${Date.now()}-${Math.random()}`;
-  return prisma.order.create({
-    data: {
-      id: orderId,
-      buyerId,
-      buyerName: '테스트바이어',
-      phoneNumber: '010-1111-2222',
-      address: '서울시 강남구 테스트동',
-      status: overrides.status ?? 'WaitingPayment',
-      items: {
-        create: {
-          productId: 'test-product-id',
-          sizeId: 1,
-          quantity: 2,
-          unitPrice: 10000,
-          productName: '테스트상품',
-        },
-      },
-    },
-    include: { items: true },
-  });
-}
-
-// ─── 주문 + 결제 시드 ───
-export async function seedOrderWithPayment(
+// ─── 주문 + 배송 시드 ───
+export async function seedOrderWithShipping(
   buyerId: string,
   overrides: Partial<{
     orderId: string;
-    paymentStatus: PaymentStatus;
-    paymentMethod: PaymentMethod;
     orderStatus: OrderStatus;
+    shippingStatus: ShippingStatus;
   }> = {},
 ) {
   const orderId = overrides.orderId ?? `order-${Date.now()}-${Math.random()}`;
+
   return prisma.order.create({
     data: {
       id: orderId,
@@ -178,7 +128,7 @@ export async function seedOrderWithPayment(
       buyerName: '테스트바이어',
       phoneNumber: '010-1111-2222',
       address: '서울시 강남구 테스트동',
-      status: overrides.orderStatus ?? 'WaitingPayment',
+      status: overrides.orderStatus ?? 'CompletedPayment',
       items: {
         create: {
           productId: 'test-product-id',
@@ -191,14 +141,23 @@ export async function seedOrderWithPayment(
       payment: {
         create: {
           price: 20000,
-          status: overrides.paymentStatus ?? 'WaitingPayment',
-          paymentMethod: overrides.paymentMethod ?? 'CREDIT_CARD',
-          transactionId:
-            `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`.toUpperCase(),
+          status: 'CompletedPayment',
+          paymentMethod: 'CREDIT_CARD',
+        },
+      },
+      shipping: {
+        create: {
+          status: overrides.shippingStatus ?? 'ReadyToShip',
+          trackingNumber: String(Math.floor(Math.random() * 10000000000000)),
+          carrier: '로켓배송',
         },
       },
     },
-    include: { items: true, payment: true },
+    include: {
+      items: true,
+      payment: true,
+      shipping: true,
+    },
   });
 }
 

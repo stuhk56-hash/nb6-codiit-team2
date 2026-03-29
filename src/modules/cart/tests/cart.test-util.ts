@@ -1,132 +1,194 @@
-import express from 'express';
-import { makeAccessToken } from '../../../lib/constants/token';
 import { prisma } from '../../../lib/constants/prismaClient';
+import { UserType } from '@prisma/client';
+import express from 'express';
 import { cartRouter } from '../cart.module';
 import {
   defaultNotFoundHandler,
   globalErrorHandler,
 } from '../../../middlewares/errorHandler';
+import { makeAccessToken } from '../../../lib/constants/token';
 
+// ─── 테스트 앱 생성 ───
 export function createTestApp() {
   const app = express();
   app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
   app.use('/api/cart', cartRouter);
   app.use(defaultNotFoundHandler);
   app.use(globalErrorHandler);
   return app;
 }
 
-export async function clearCartTestData() {
-  await prisma.cartItem.deleteMany();
-  await prisma.cart.deleteMany();
-  await prisma.productStock.deleteMany();
-  await prisma.product.deleteMany();
-  await prisma.category.deleteMany();
-  await prisma.size.deleteMany();
-  await prisma.store.deleteMany();
-  await prisma.refreshToken.deleteMany();
-  await prisma.user.deleteMany();
+// ─── 인증 헤더 생성 ───
+export function createAuthHeader(userId: string) {
+  const token = makeAccessToken(userId);
+  return { Authorization: `Bearer ${token}` };
 }
 
-export async function seedBuyer() {
-  const unique = `${Date.now()}+${Math.random()}`;
+// ─── 바이어 시드 ───
+export async function seedBuyer(
+  overrides: Partial<{ id: string; email: string; name: string }> = {},
+) {
   return prisma.user.create({
     data: {
-      type: 'BUYER',
-      email: `buyer_${unique}@example.com`,
-      name: `buyer_${unique}`,
+      id: overrides.id ?? 'test-buyer-id',
+      type: UserType.BUYER,
+      email: overrides.email ?? 'buyer@test.com',
+      name: overrides.name ?? '테스트바이어',
       passwordHash: 'hashed-password',
       points: 10000,
+      lifetimeSpend: 0,
     },
   });
 }
 
-export async function seedSeller() {
-  const unique = `${Date.now()}_${Math.random()}`;
+// ─── 다른 바이어 시드 ───
+export async function seedOtherBuyer(
+  overrides: Partial<{ id: string; email: string; name: string }> = {},
+) {
   return prisma.user.create({
     data: {
-      type: 'SELLER',
-      email: `seller_${unique}@example.com`,
-      name: `seller_${unique}`,
+      id: overrides.id ?? 'other-buyer-id',
+      type: UserType.BUYER,
+      email: overrides.email ?? 'other-buyer@test.com',
+      name: overrides.name ?? '다른바이어',
+      passwordHash: 'hashed-password',
+      points: 5000,
+      lifetimeSpend: 0,
+    },
+  });
+}
+
+// ─── 셀러 시드 ───
+export async function seedSeller(
+  overrides: Partial<{ id: string; email: string }> = {},
+) {
+  return prisma.user.create({
+    data: {
+      id: overrides.id ?? 'test-seller-id',
+      type: UserType.SELLER,
+      email: overrides.email ?? 'seller@test.com',
+      name: '테스트셀러',
       passwordHash: 'hashed-password',
     },
   });
 }
 
-export async function seedSellerAndStore() {
-  const unique = `${Date.now()}+${Math.random()}`;
-  const seller = await prisma.user.create({
+// ─── 스토어 시드 ───
+export async function seedStore(sellerId: string) {
+  return prisma.store.create({
     data: {
-      type: 'SELLER',
-      email: `seller_${unique}@example.com`,
-      name: `seller_${unique}`,
-      passwordHash: 'hashed-password',
-    },
-  });
-
-  const store = await prisma.store.create({
-    data: {
-      sellerId: seller.id,
-      name: '테스트 스토어',
-      address: '서울시 용산구',
-      detailAddress: '101호',
+      id: 'test-store-id',
+      sellerId,
+      name: '테스트스토어',
+      address: '서울시 강남구',
+      detailAddress: '1층',
       phoneNumber: '010-1234-5678',
-      content: '스토어 소개',
-      imageUrl: 'https://example.com/store.jpg',
+      content: '테스트 스토어입니다',
     },
   });
-
-  return { seller, store };
 }
 
-export async function seedCategory(name: string) {
+// ─── 카테고리 시드 ───
+export async function seedCategory() {
   return prisma.category.create({
-    data: { name },
+    data: { id: 'test-category-id', name: '테스트카테고리' },
   });
 }
 
-export async function seedSize() {
+// ─── 사이즈 시드 ───
+export async function seedSize(
+  overrides: Partial<{
+    id: number;
+    name: string;
+    nameEn: string;
+    nameKo: string;
+  }> = {},
+) {
+  const id = overrides.id ?? 1;
+  await prisma.size.deleteMany({ where: { id } });
   return prisma.size.create({
     data: {
-      name: 'M',
-      nameEn: 'M',
-      nameKo: '미디움',
+      id,
+      name: overrides.name ?? 'M',
+      nameEn: overrides.nameEn ?? 'Medium',
+      nameKo: overrides.nameKo ?? '중간',
     },
   });
 }
 
-export async function seedProduct(input: {
-  storeId: string;
-  categoryId: string;
-  sizeId: number;
-  name: string;
-  price: number;
-  content?: string;
-  imageUrl?: string;
-}) {
+// ─── 상품 시드 ───
+export async function seedProduct(
+  storeId: string,
+  categoryId: string,
+  overrides: Partial<{ id: string; name: string; price: number }> = {},
+) {
   return prisma.product.create({
     data: {
-      storeId: input.storeId,
-      categoryId: input.categoryId,
-      name: input.name,
-      price: input.price,
-      content: input.content,
-      imageUrl: input.imageUrl,
-      stocks: {
-        create: [{ sizeId: input.sizeId, quantity: 100 }],
-      },
+      id: overrides.id ?? 'test-product-id',
+      storeId,
+      categoryId,
+      name: overrides.name ?? '테스트상품',
+      price: overrides.price ?? 10000,
     },
   });
 }
 
+// ─── 재고 시드 ───
+export async function seedProductStock(
+  productId: string,
+  sizeId: number,
+  quantity: number = 100,
+) {
+  return prisma.productStock.create({
+    data: { productId, sizeId, quantity },
+  });
+}
+
+// ─── 장바구니 시드 ───
 export async function seedCart(buyerId: string) {
   return prisma.cart.create({
     data: { buyerId },
   });
 }
 
-export function authHeader(userId: string) {
-  const token = makeAccessToken(userId);
-  return { Authorization: `Bearer ${token}` };
+// ─── 장바구니 아이템 시드 ───
+export async function seedCartItem(
+  cartId: string,
+  productId: string,
+  sizeId: number,
+  quantity: number = 2,
+) {
+  return prisma.cartItem.create({
+    data: {
+      cartId,
+      productId,
+      sizeId,
+      quantity,
+    },
+  });
+}
+
+// ─── 전체 데이터 정리 ───
+export async function cleanupDatabase() {
+  await prisma.notification.deleteMany();
+  await prisma.shippingHistory.deleteMany();
+  await prisma.shipping.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.review.deleteMany();
+  await prisma.orderItem.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.cartItem.deleteMany();
+  await prisma.cart.deleteMany();
+  await prisma.productStock.deleteMany();
+  await prisma.productSizeSpec.deleteMany();
+  await prisma.inquiry.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.category.deleteMany();
+  await prisma.storeFavorite.deleteMany();
+  await prisma.storeAuditLog.deleteMany();
+  await prisma.store.deleteMany();
+  await prisma.refreshToken.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.size.deleteMany();
+  await prisma.grade.deleteMany();
 }

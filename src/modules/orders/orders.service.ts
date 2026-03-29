@@ -66,28 +66,31 @@ export class OrderService {
     buyerId: string,
     createOrderDto: CreateOrderDto,
   ): Promise<OrderResponseDto> {
-    orderServiceUtil.validateShippingInfo(
-      createOrderDto.name,
-      createOrderDto.phone,
-      createOrderDto.address,
-    );
-
+    // ✅ 배송 정보 검증보다 먼저 실행되어야 함
     if (
       !Array.isArray(createOrderDto.orderItems) ||
       createOrderDto.orderItems.length === 0
     ) {
-      throw new BadRequestError('주문 상품이 없습니다.');
+      throw new BadRequestError('주문 상품이 없습니다');
     }
 
+    // ✅ 수량 검증
     for (const item of createOrderDto.orderItems) {
       if (
         !Number.isInteger(item.quantity) ||
         item.quantity <= 0 ||
         item.quantity > 999
       ) {
-        throw new BadRequestError('유효하지 않은 수량입니다.');
+        throw new BadRequestError('유효하지 않은 수량입니다');
       }
     }
+
+    // ✅ 배송 정보 검증 (이 다음)
+    orderServiceUtil.validateShippingInfo(
+      createOrderDto.name,
+      createOrderDto.phone,
+      createOrderDto.address,
+    );
 
     const { processedItems, totalPrice } =
       await orderServiceUtil.validateAndCalculateOrderItems(

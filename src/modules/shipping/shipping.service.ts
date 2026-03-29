@@ -11,7 +11,7 @@ export class ShippingService {
     const shipping = await shippingRepository.findShippingByOrderId(orderId);
 
     if (!shipping) {
-      throw new NotFoundError('배송 정보를 찾을 수 없습��다');
+      throw new NotFoundError('배송 정보를 찾을 수 없습니다');
     }
 
     return shipping;
