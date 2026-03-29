@@ -9,6 +9,7 @@ import PaymentModal from "@/components/payment/PaymentModal";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
 import { useOrderStore } from "@/store/orderStore";
 import { PaymentResponse } from "@/types/payment";
+import axios from "axios";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -94,9 +95,13 @@ export default function OrderPage() {
         setIsLoading(false);
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error("❌ 주문 생성 실패:", error);
-      const errorMessage = error?.response?.data?.message || error?.message || "주문 생성에 실패했습니다";
+      const errorMessage = axios.isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message || error.message
+        : error instanceof Error
+          ? error.message
+          : "주문 생성에 실패했습니다";
       alert(errorMessage);
       setIsLoading(false);
     },

@@ -6,6 +6,7 @@ function getErrorName(statusCode: number) {
   if (statusCode === 403) return 'Forbidden';
   if (statusCode === 404) return 'Not Found';
   if (statusCode === 409) return 'Conflict';
+  if (statusCode === 413) return 'Payload Too Large';
   return 'Internal Server Error';
 }
 

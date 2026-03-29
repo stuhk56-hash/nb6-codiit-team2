@@ -6,10 +6,20 @@ function isTokenPayload(payload: JwtPayload, type: TokenType): payload is TokenP
   return typeof payload.sub === 'string' && payload.type === type;
 }
 
+function requireEnv(name: string) {
+  const value = process.env[name];
+
+  if (!value) {
+    throw new Error(`${name} is required`);
+  }
+
+  return value;
+}
+
 function getSecret(type: TokenType) {
   return type === 'access'
-    ? (process.env.JWT_ACCESS_SECRET ?? 'dev-access-secret')
-    : (process.env.JWT_REFRESH_SECRET ?? 'dev-refresh-secret');
+    ? requireEnv('JWT_ACCESS_SECRET')
+    : requireEnv('JWT_REFRESH_SECRET');
 }
 
 function getTtlSec(type: TokenType) {

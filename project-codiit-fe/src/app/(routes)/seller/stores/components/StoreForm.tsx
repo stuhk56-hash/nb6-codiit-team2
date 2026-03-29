@@ -87,9 +87,9 @@ export default function StoreForm({ mode, onClose, onSubmit, defaultValues, imag
     >
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="relative w-[599px] text-left"
+        className="relative w-full text-left"
       >
-        <div className="relative w-[599px] text-left">
+        <div className="relative w-full text-left">
           <p className="text-[28px] font-extrabold">{mode === "create" ? "스토어 등록" : "스토어 수정"}</p>
           <div className="bg-gray04 mt-5 mb-10 h-px w-full" />
           <div className="mb-8 rounded-md border border-gray-200 bg-gray-50 p-4">

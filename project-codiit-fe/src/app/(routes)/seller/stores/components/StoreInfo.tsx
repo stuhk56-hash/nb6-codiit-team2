@@ -9,6 +9,11 @@ export interface StoreInfoProps {
     address: string;
     detailAddress?: string;
     phoneNumber: string;
+    businessRegistrationNumber?: string | null;
+    businessPhoneNumber?: string | null;
+    mailOrderSalesNumber?: string | null;
+    representativeName?: string | null;
+    businessAddress?: string | null;
     favoriteCount: number;
     content: string;
     image: string;
@@ -33,15 +38,35 @@ export function StoreInfo({ store }: StoreInfoProps) {
               수정
             </button>
           </div>
-          <div className="mt-5 flex items-center gap-[2.375rem]">
-            <span className="text-gray01 text-base font-bold">주소</span>
-            <span className="text-black02 text-base">
+          <div className="mt-5">
+            <p className="text-gray01 text-base font-bold">주소</p>
+            <p className="text-black02 mt-2 text-base">
               {store.address} {store.detailAddress ?? ""}
-            </span>
+            </p>
           </div>
-          <div className="mt-[0.875rem] flex items-center gap-6">
-            <span className="text-gray01 text-base font-bold">연락처</span>
-            <span className="text-black02 text-base">{store.phoneNumber}</span>
+          <div className="mt-4">
+            <p className="text-gray01 text-base font-bold">연락처</p>
+            <p className="text-black02 mt-2 text-base">{store.phoneNumber}</p>
+          </div>
+          <div className="mt-4">
+            <p className="text-gray01 text-base font-bold">대표자명</p>
+            <p className="text-black02 mt-2 text-base">{store.representativeName || "미제공"}</p>
+          </div>
+          <div className="mt-4">
+            <p className="text-gray01 text-base font-bold">사업자등록번호</p>
+            <p className="text-black02 mt-2 text-base">{store.businessRegistrationNumber || "미제공"}</p>
+          </div>
+          <div className="mt-4">
+            <p className="text-gray01 text-base font-bold">통신판매업 신고번호</p>
+            <p className="text-black02 mt-2 text-base">{store.mailOrderSalesNumber || "미제공"}</p>
+          </div>
+          <div className="mt-4">
+            <p className="text-gray01 text-base font-bold">사업자 연락처</p>
+            <p className="text-black02 mt-2 text-base">{store.businessPhoneNumber || "미제공"}</p>
+          </div>
+          <div className="mt-4">
+            <p className="text-gray01 text-base font-bold">사업장 소재지</p>
+            <p className="text-black02 mt-2 text-base">{store.businessAddress || "미제공"}</p>
           </div>
         </div>
         <div className="flex flex-col gap-[0.375rem] px-[1.625rem] py-[0.7188rem]">
@@ -65,6 +90,11 @@ export function StoreInfo({ store }: StoreInfoProps) {
             detailAddress: store.detailAddress,
             phone: store.phoneNumber,
             content: store.content,
+            businessRegistrationNumber: store.businessRegistrationNumber,
+            businessPhoneNumber: store.businessPhoneNumber,
+            mailOrderSalesNumber: store.mailOrderSalesNumber,
+            representativeName: store.representativeName,
+            businessAddress: store.businessAddress,
             imageUrl: store.image,
           }}
         />

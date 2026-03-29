@@ -202,7 +202,7 @@ export async function seedCompletedOrderItem(input: {
   unitPrice?: number;
   quantity?: number;
 }) {
-  const order = await prisma.order.create({
+  const createdOrder = await prisma.order.create({
     data: {
       buyerId: input.buyerId,
       status: 'CompletedPayment',
@@ -223,15 +223,24 @@ export async function seedCompletedOrderItem(input: {
       payment: {
         create: {
           price: (input.unitPrice ?? 12000) * (input.quantity ?? 1),
-          status: 'Paid',
+          status: 'CompletedPayment',
+          paymentMethod: 'CREDIT_CARD',
         },
       },
     },
+  });
+
+  const order = await prisma.order.findUnique({
+    where: { id: createdOrder.id },
     include: {
       items: true,
       payment: true,
     },
   });
+
+  if (!order || order.items.length === 0) {
+    throw new Error('Failed to seed completed order item');
+  }
 
   return {
     order,

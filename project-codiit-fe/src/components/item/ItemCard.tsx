@@ -16,6 +16,15 @@ interface ItemCardProps {
   orders?: Order[];
 }
 
+type ItemSizeShape = OrderItem["size"] & {
+  nameKo?: string;
+  name?: string;
+  size?: {
+    ko?: string;
+    en?: string;
+  };
+};
+
 export default function ItemCard({ purchases, orders = [] }: ItemCardProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -57,17 +66,9 @@ export default function ItemCard({ purchases, orders = [] }: ItemCardProps) {
     await queryClient.refetchQueries({ queryKey: ["mypage-orders"] });
   };
 
-  const getShippingStatusLabel = (status?: ShippingStatus) => {
-    switch (status) {
-      case ShippingStatus.ReadyToShip:
-        return "배송 준비중";
-      case ShippingStatus.InShipping:
-        return "배송 중";
-      case ShippingStatus.Delivered:
-        return "배송 완료";
-      default:
-        return "배송 정보 없음";
-    }
+  const getSizeLabel = (item: OrderItem): string => {
+    const size = item.size as ItemSizeShape | undefined;
+    return size?.size?.ko ?? size?.nameKo ?? size?.name ?? "사이즈 정보 없음";
   };
 
   const getRelatedOrder = (itemId: string): Order | undefined => {
@@ -132,10 +133,7 @@ export default function ItemCard({ purchases, orders = [] }: ItemCardProps) {
                   </div>
                   <div className="text-black01 text-lg font-normal">
                     사이즈 :{" "}
-                    {(item.size as any)?.size?.ko ||
-                      (item.size as any)?.nameKo ||
-                      (item.size as any)?.name ||
-                      "사이즈 정보 없음"}{" "}
+                    {getSizeLabel(item)}{" "}
                     {/* ✅ 수정됨 */}
                   </div>
                   <div className="flex items-center gap-[0.625rem]">

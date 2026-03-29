@@ -6,6 +6,7 @@ import { getAxiosInstance } from "@/lib/api/axiosInstance";
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { OrderItem } from "@/types/order";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import Button from "../button/Button";
@@ -26,6 +27,20 @@ interface ReviewViewModalProps {
   onEditComplete: () => void;
 }
 
+type ProductReviewLike = {
+  id: string;
+  rating: number;
+  content: string;
+  createdAt: string;
+  orderItemId?: string | null;
+};
+
+type ItemSizeShape = OrderItem["size"] & {
+  size?: {
+    ko?: string;
+  };
+};
+
 export default function ReviewViewModal({ open, onClose, purchase, onEditComplete }: ReviewViewModalProps) {
   const axiosInstance = getAxiosInstance();
   const queryClient = useQueryClient();
@@ -39,7 +54,8 @@ export default function ReviewViewModal({ open, onClose, purchase, onEditComplet
       return;
     }
 
-    const myReview = purchase.product.reviews.find((r: any) => r.orderItemId === purchase.id);
+    const reviews = purchase.product.reviews as ProductReviewLike[];
+    const myReview = reviews.find((r) => r.orderItemId === purchase.id);
 
     setReview(myReview || null);
   }, [purchase]);
@@ -73,15 +89,20 @@ export default function ReviewViewModal({ open, onClose, purchase, onEditComplet
         queryClient.refetchQueries({ queryKey: ["mypage-orders"] });
       }, 100);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error("❌ 리뷰 삭제 실패:", error);
 
-      if (error.response?.status === 403) {
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const message = axios.isAxiosError(error)
+        ? (error.response?.data as { message?: string } | undefined)?.message
+        : undefined;
+
+      if (status === 403) {
         toaster("warn", "리뷰 삭제 권한이 없습니다.");
-      } else if (error.response?.status === 404) {
+      } else if (status === 404) {
         toaster("warn", "리뷰를 찾을 수 없습니다.");
       } else {
-        toaster("warn", error.response?.data?.message || "리뷰 삭제 중 오류가 발생했습니다.");
+        toaster("warn", message || "리뷰 삭제 중 오류가 발생했습니다.");
       }
     },
   });
@@ -120,6 +141,8 @@ export default function ReviewViewModal({ open, onClose, purchase, onEditComplet
   }
 
   const imageUrl = purchase.product?.image || purchase.productImageUrl || "/images/Mask-group.svg";
+  const size = purchase.size as ItemSizeShape | undefined;
+  const sizeLabel = size?.size?.ko ?? "사이즈 정보 없음";
 
   return (
     <>
@@ -166,7 +189,7 @@ export default function ReviewViewModal({ open, onClose, purchase, onEditComplet
                   </div>
                 </div>
                 <div className="text-black01 text-lg/5 font-normal">
-                  사이즈 : {(purchase.size as any)?.size?.ko || "사이즈 정보 없음"}
+                  사이즈 : {sizeLabel}
                 </div>
                 <div className="flex items-center gap-[0.625rem]">
                   <span className="text-lg/5 font-extrabold">

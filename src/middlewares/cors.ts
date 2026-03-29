@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express';
+import cors from 'cors';
 
 function parseAllowedOrigins() {
   return (process.env.CORS_ORIGIN ?? '*')
@@ -7,34 +7,27 @@ function parseAllowedOrigins() {
     .filter(Boolean);
 }
 
-function resolveAllowedOrigin(req: Request) {
-  const requestOrigin = req.headers.origin;
-  const allowedOrigins = parseAllowedOrigins();
+const ALLOWED_METHODS = ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'];
+const ALLOWED_HEADERS = ['Content-Type', 'Authorization'];
 
-  if (allowedOrigins.includes('*')) {
-    return requestOrigin ?? '*';
-  }
+export const corsMiddleware = cors({
+  origin(origin, callback) {
+    const allowedOrigins = parseAllowedOrigins();
 
-  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
-    return requestOrigin;
-  }
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
 
-  return allowedOrigins[0] ?? '*';
-}
+    if (allowedOrigins.includes('*')) {
+      callback(null, true);
+      return;
+    }
 
-export const corsMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const allowedOrigin = resolveAllowedOrigin(req);
-
-  res.header('Access-Control-Allow-Origin', allowedOrigin);
-  res.header('Vary', 'Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    res.status(204).send();
-    return;
-  }
-
-  next();
-};
+    callback(null, allowedOrigins.includes(origin));
+  },
+  credentials: true,
+  methods: ALLOWED_METHODS,
+  allowedHeaders: ALLOWED_HEADERS,
+  optionsSuccessStatus: 204,
+});

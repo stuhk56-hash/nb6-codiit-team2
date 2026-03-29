@@ -63,7 +63,7 @@ export default function MobilePhoneForm({ orderId, price, onBack, onSuccess }: M
       setTimeout(() => {
         onSuccess(payment);
       }, 3000);
-    } catch (error) {
+    } catch {
       setIsLoading(false);
       alert("❌ 결제에 실패했습니다");
     }

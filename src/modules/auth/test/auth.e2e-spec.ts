@@ -123,6 +123,7 @@ describe('Auth Module (E2E)', () => {
         .send({ email: 'e2e.test@example.com', password: 'password123' });
 
       const refreshTokenCookie = loginRes.headers['set-cookie'][0];
+      const accessToken = loginRes.body.accessToken as string;
       const dbTokenBefore = await prisma.refreshToken.findFirst({
         where: { userId: user.id },
       });
@@ -131,6 +132,7 @@ describe('Auth Module (E2E)', () => {
       // 2. Logout with the cookie
       const logoutRes = await request
         .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${accessToken}`)
         .set('Cookie', refreshTokenCookie);
 
       expect(logoutRes.status).toBe(200);

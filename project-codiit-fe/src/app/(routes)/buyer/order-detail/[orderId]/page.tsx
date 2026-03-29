@@ -5,11 +5,32 @@ import OrderCancelModal from "@/components/order/OrderCancelModal";
 import OrderEditModal from "@/components/order/OrderEditModal";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
 import { canCancelOrder, getCancelRestrictReason } from "@/lib/api/orders.util";
-import { Order, ShippingStatus } from "@/types/order";
+import { Order, OrderItem, ShippingStatus } from "@/types/order";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+type OrderResponseShape = Order & {
+  payments?: Order["payment"];
+};
+
+type PaymentLike = NonNullable<Order["payment"]> & {
+  paymentMethod?: string;
+  cardNumber?: string;
+  bankName?: string;
+  phoneNumber?: string;
+  status?: string;
+};
+
+type ItemSizeShape = OrderItem["size"] & {
+  nameKo?: string;
+  name?: string;
+  size?: {
+    ko?: string;
+    en?: string;
+  };
+};
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -36,7 +57,7 @@ export default function OrderDetailPage() {
       if (!orderId) return null;
 
       try {
-        const { data } = await axiosInstance.get(`/orders/${orderId}`);
+        const { data } = await axiosInstance.get<OrderResponseShape>(`/orders/${orderId}`);
 
         console.log("📦 Full Order Response:", data);
         console.log("💰 usedPoints:", data?.usedPoints);
@@ -45,7 +66,7 @@ export default function OrderDetailPage() {
 
         // ✅ items의 각 item 확인
         if (data?.items && Array.isArray(data.items)) {
-          (data.items as any[]).forEach((item: any, index: number) => {
+          data.items.forEach((item: OrderItem, index: number) => {
             console.log(`📌 Item ${index}:`, {
               id: item.id,
               productName: item.productName,
@@ -82,7 +103,7 @@ export default function OrderDetailPage() {
 
       // ✅ 각 아이템의 사이즈 확인
       if (order.items && Array.isArray(order.items)) {
-        (order.items as any[]).forEach((item: any, index: number) => {
+        order.items.forEach((item: OrderItem, index: number) => {
           console.log(`  Item ${index} size:`, item.size);
         });
       }
@@ -126,7 +147,7 @@ export default function OrderDetailPage() {
   };
 
   // ✅ 결제수단 레이블
-  const getPaymentMethodLabel = (payment?: any): string => {
+  const getPaymentMethodLabel = (payment?: PaymentLike): string => {
     if (!payment) return "정보 없음";
 
     if (payment.paymentMethod) {
@@ -142,6 +163,11 @@ export default function OrderDetailPage() {
     if (payment.phoneNumber) return "휴대폰";
 
     return payment.status || "정보 없음";
+  };
+
+  const getSizeLabel = (item: OrderItem): string => {
+    const size = item.size as ItemSizeShape | undefined;
+    return size?.size?.ko ?? size?.nameKo ?? size?.name ?? "정보 없음";
   };
 
   // ✅ 결제 상태 레이블 (한글 변환)
@@ -266,7 +292,7 @@ export default function OrderDetailPage() {
         <div className="mb-8 rounded-lg border border-gray-300 p-6">
           <h2 className="mb-6 text-xl font-extrabold">상품 정보</h2>
           <div className="space-y-4">
-            {items.map((item: any) => {
+            {items.map((item) => {
               console.log(`🛍️ Rendering Item:`, {
                 productName: item.productName,
                 size: item.size,
@@ -288,11 +314,7 @@ export default function OrderDetailPage() {
                   <div className="flex-1">
                     <p className="mb-1 font-bold">{item.product?.name || item.productName}</p>
                     <p className="mb-1 text-sm text-gray-600">
-                      사이즈:{" "}
-                      {(item.size as any)?.size?.ko ||
-                        (item.size as any)?.nameKo ||
-                        (item.size as any)?.name ||
-                        "정보 없음"}
+                      사이즈: {getSizeLabel(item)}
                     </p>
                     <p className="text-sm">
                       {(item.price ?? item.unitPrice ?? 0).toLocaleString()}원 × {item.quantity}개
@@ -320,7 +342,7 @@ export default function OrderDetailPage() {
                 <span className="text-gray-600">상품금액</span>
                 <span className="font-bold">
                   {items
-                    .reduce((sum: number, item: any) => sum + (item.price ?? item.unitPrice ?? 0) * item.quantity, 0)
+                    .reduce((sum: number, item) => sum + (item.price ?? item.unitPrice ?? 0) * item.quantity, 0)
                     .toLocaleString()}
                   원
                 </span>

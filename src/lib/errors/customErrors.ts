@@ -37,3 +37,9 @@ export class ConflictError extends BaseError {
     super(message, 409);
   }
 }
+
+export class UploadTooLargeError extends BaseError {
+  constructor(message = '업로드 가능한 최대 파일 용량을 초과했습니다.') {
+    super(message, 413);
+  }
+}

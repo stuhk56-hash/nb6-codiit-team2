@@ -15,57 +15,17 @@ import {
 } from './structs/reviews.struct';
 
 export async function createReview(req: AuthenticatedRequest, res: Response) {
-  try {
-    console.log('📝 리뷰 생성 요청 받음');
-    console.log('req.params:', req.params);
-    console.log('req.body:', req.body);
+  const authUser = requireAuthUser(req);
+  const params = structCreate(req.params, ProductReviewParamsStruct);
+  const body: CreateReviewDto = structCreate(req.body, CreateReviewBodyStruct);
 
-    const authUser = requireAuthUser(req);
-    console.log('✅ 인증 확인 - userId:', authUser.id);
+  const review = await reviewsService.createReview(
+    authUser,
+    params.productId,
+    body,
+  );
 
-    // ✅ params 검증
-    let params;
-    try {
-      params = structCreate(req.params, ProductReviewParamsStruct);
-      console.log('✅ params 검증 통과:', params);
-    } catch (error) {
-      console.error('❌ params 검증 실패:', error);
-      throw error;
-    }
-
-    // ✅ body 검증
-    let body: CreateReviewDto;
-    try {
-      body = structCreate(req.body, CreateReviewBodyStruct);
-      console.log('✅ body 검증 통과:', body);
-    } catch (error) {
-      console.error('❌ body 검증 실패:', error);
-      console.error('❌ 실패 상세:', JSON.stringify(error, null, 2));
-      throw error;
-    }
-
-    const review = await reviewsService.createReview(
-      authUser,
-      params.productId,
-      body,
-    );
-    console.log('✅ 리뷰 생성 완료:', review);
-
-    res.status(201).send(review);
-  } catch (error) {
-    console.error('❌ createReview 에러:', error);
-    console.error(
-      '❌ 에러 메시지:',
-      error instanceof Error ? error.message : String(error),
-    );
-
-    // ✅ 에러 응답
-    res.status(400).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Unknown error',
-      error: String(error),
-    });
-  }
+  res.status(201).send(review);
 }
 
 export async function findProductReviews(req: Request, res: Response) {

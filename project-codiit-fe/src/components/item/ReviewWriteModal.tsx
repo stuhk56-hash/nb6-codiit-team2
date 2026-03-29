@@ -8,6 +8,7 @@ import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { OrderItem } from "@/types/order";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import Image from "next/image";
 import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -21,6 +22,12 @@ interface ReviewWriteModalProps {
   purchase: OrderItem | null;
   onSubmit?: () => void;
 }
+
+type ItemSizeShape = OrderItem["size"] & {
+  size?: {
+    ko?: string;
+  };
+};
 
 export default function ReviewWriteModal({ open, onClose, purchase, onSubmit }: ReviewWriteModalProps) {
   const axiosInstance = getAxiosInstance();
@@ -66,14 +73,16 @@ export default function ReviewWriteModal({ open, onClose, purchase, onSubmit }: 
 
         console.log("✅ 리뷰 작성 성공:", response.data);
         return response.data;
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("❌ 리뷰 작성 실패");
-        console.error("📌 Status:", error.response?.status);
-        console.error("📌 Error Response:", JSON.stringify(error.response?.data, null, 2));
+        if (axios.isAxiosError(error)) {
+          console.error("📌 Status:", error.response?.status);
+          console.error("📌 Error Response:", JSON.stringify(error.response?.data, null, 2));
+        }
         throw error;
       }
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       console.log("✅ 리뷰 작성 완료");
       toaster("info", "리뷰가 작성되었습니다.");
 
@@ -101,9 +110,12 @@ export default function ReviewWriteModal({ open, onClose, purchase, onSubmit }: 
         onClose();
       }, 100);
     },
-    onError: (error: any) => {
-      console.error("❌ 리뷰 작성 최종 실패:", error.message);
-      toaster("warn", error.response?.data?.message || "리뷰 작성 중 오류가 발생했습니다.");
+    onError: (error: unknown) => {
+      const message = axios.isAxiosError(error)
+        ? (error.response?.data as { message?: string } | undefined)?.message
+        : undefined;
+      console.error("❌ 리뷰 작성 최종 실패:", error);
+      toaster("warn", message || "리뷰 작성 중 오류가 발생했습니다.");
     },
   });
 
@@ -117,6 +129,8 @@ export default function ReviewWriteModal({ open, onClose, purchase, onSubmit }: 
   }
 
   const imageUrl = purchase.product?.image || purchase.productImageUrl || "/images/Mask-group.svg";
+  const size = purchase.size as ItemSizeShape | undefined;
+  const sizeLabel = size?.size?.ko ?? "사이즈 정보 없음";
 
   return (
     <Modal
@@ -163,7 +177,7 @@ export default function ReviewWriteModal({ open, onClose, purchase, onSubmit }: 
                 </div>
               </div>
               <div className="text-black01 text-lg/5 font-normal">
-                사이즈 : {(purchase.size as any)?.size?.ko || "사이즈 정보 없음"} {/* ✅ 수정 */}
+                사이즈 : {sizeLabel} {/* ✅ 수정 */}
               </div>
               <div className="flex items-center gap-[0.625rem]">
                 <span className="text-lg/5 font-extrabold">

@@ -3,7 +3,7 @@
 import { usePayment } from "@/lib/api/usePayment";
 import { PaymentResponse } from "@/types/payment";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import PaymentLoading from "./PaymentLoading";
@@ -70,7 +70,7 @@ export default function CreditCardForm({ orderId, price, onBack, onSuccess }: Cr
       setTimeout(() => {
         onSuccess(payment);
       }, 3000);
-    } catch (error) {
+    } catch {
       setIsLoading(false);
       alert("❌ 결제에 실패했습니다");
     }

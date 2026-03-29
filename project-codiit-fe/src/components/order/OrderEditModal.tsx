@@ -5,6 +5,7 @@ import Button from "@/components/button/Button";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
 import { Order } from "@/types/order";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { useState } from "react";
 
 interface OrderEditModalProps {
@@ -45,10 +46,12 @@ export default function OrderEditModal({ open, onClose, order, orderId }: OrderE
 
       onClose();
     },
-    onError: (error: any) => {
-      const errorMsg = error.response?.data?.message || "주문 정보 수정에 실패했습니다.";
+    onError: (error: unknown) => {
+      const errorMsg = axios.isAxiosError<{ message?: string; error?: string }>(error)
+        ? error.response?.data?.message || error.response?.data?.error || "주문 정보 수정에 실패했습니다."
+        : "주문 정보 수정에 실패했습니다.";
       setError(errorMsg);
-      console.error("수정 실패:", error.response?.data);
+      console.error("수정 실패:", axios.isAxiosError(error) ? error.response?.data : error);
     },
   });
 

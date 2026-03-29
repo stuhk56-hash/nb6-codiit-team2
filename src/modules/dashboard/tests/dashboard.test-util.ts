@@ -224,7 +224,8 @@ export async function seedCompletedSale(input: {
       payment: {
         create: {
           price: (input.unitPrice ?? 30000) * (input.quantity ?? 2),
-          status: 'Paid',
+          status: 'CompletedPayment',
+          paymentMethod: 'CREDIT_CARD',
         },
       },
     },

@@ -1,16 +1,14 @@
-import multer from 'multer';
 import { Router } from 'express';
 import { withAsync } from '../../lib/withAsync';
 import { authenticate } from '../../middlewares/authenticate';
 import { uploadFile } from './s3.controller';
-
-const upload = multer();
+import { s3Upload } from './s3.upload';
 
 export const s3Router = Router();
 
 s3Router.post(
   '/upload',
   authenticate(),
-  upload.single('image'),
+  s3Upload,
   withAsync(uploadFile),
 );
