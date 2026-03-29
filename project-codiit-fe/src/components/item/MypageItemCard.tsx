@@ -15,6 +15,15 @@ interface MypageItemCardProps {
   orders?: Order[];
 }
 
+type ItemSizeShape = OrderItem["size"] & {
+  nameKo?: string;
+  name?: string;
+  size?: {
+    ko?: string;
+    en?: string;
+  };
+};
+
 export default function MypageItemCard({ purchases, orders = [] }: MypageItemCardProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -72,6 +81,11 @@ export default function MypageItemCard({ purchases, orders = [] }: MypageItemCar
 
   const getRelatedOrder = (itemId: string): Order | undefined => {
     return orders.find((order) => (order.items ?? order.orderItems ?? []).some((oi) => oi.id === itemId));
+  };
+
+  const getSizeLabel = (item: OrderItem): string => {
+    const size = item.size as ItemSizeShape | undefined;
+    return size?.size?.ko ?? size?.nameKo ?? size?.name ?? "정보 없음";
   };
 
   // ✅ 리뷰 여부 판단 (product.reviews 배열의 길이로 판단)
@@ -140,16 +154,11 @@ export default function MypageItemCard({ purchases, orders = [] }: MypageItemCar
                 </div>
 
                 {/* 사이즈, 가격, 수량 */}
-                <div className="flex items-center gap-4">
-                  <div className="text-black01 text-base font-normal">
-                    사이즈:{" "}
-                    <span className="font-bold">
-                      {(item.size as any)?.size?.ko ||
-                        (item.size as any)?.nameKo ||
-                        (item.size as any)?.name ||
-                        "정보 없음"}
-                    </span>
-                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-black01 text-base font-normal">
+                      사이즈:{" "}
+                      <span className="font-bold">{getSizeLabel(item)}</span>
+                    </div>
                   <div className="flex items-center gap-3">
                     <span className="text-lg font-extrabold">
                       {(item.price ?? item.unitPrice ?? 0).toLocaleString()}원

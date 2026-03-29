@@ -7,7 +7,7 @@ import { menuItems } from "@/data/buyerMenuItems";
 import { tabList } from "@/data/reviewTabList";
 import useIntersectionObserver from "@/hooks/useIntersection";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
-import type { Order, OrderItem, OrderStatus, OrdersResponse } from "@/types/order";
+import type { Order, OrderItem, OrdersResponse } from "@/types/order";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

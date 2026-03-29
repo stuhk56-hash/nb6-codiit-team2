@@ -6,6 +6,7 @@ import { getAxiosInstance } from "@/lib/api/axiosInstance";
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { OrderItem } from "@/types/order";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import Image from "next/image";
 import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -27,6 +28,12 @@ interface ReviewEditModalProps {
   review: Review;
   onComplete: () => void;
 }
+
+type ItemSizeShape = OrderItem["size"] & {
+  size?: {
+    ko?: string;
+  };
+};
 
 export default function ReviewEditModal({ open, onClose, purchase, review, onComplete }: ReviewEditModalProps) {
   const axiosInstance = getAxiosInstance();
@@ -84,9 +91,12 @@ export default function ReviewEditModal({ open, onClose, purchase, review, onCom
         onComplete();
       }, 100);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error("❌ 리뷰 수정 실패:", error);
-      toaster("warn", error.response?.data?.message || "리뷰 수정 중 오류가 발생했습니다.");
+      const message = axios.isAxiosError(error)
+        ? (error.response?.data as { message?: string } | undefined)?.message
+        : undefined;
+      toaster("warn", message || "리뷰 수정 중 오류가 발생했습니다.");
     },
   });
 
@@ -97,6 +107,8 @@ export default function ReviewEditModal({ open, onClose, purchase, review, onCom
   if (!purchase) return null;
 
   const imageUrl = purchase.product?.image || purchase.productImageUrl || "/images/Mask-group.svg";
+  const size = purchase.size as ItemSizeShape | undefined;
+  const sizeLabel = size?.size?.ko ?? "사이즈 정보 없음";
 
   return (
     <Modal
@@ -143,7 +155,7 @@ export default function ReviewEditModal({ open, onClose, purchase, review, onCom
                 </div>
               </div>
               <div className="text-black01 text-lg/5 font-normal">
-                사이즈 : {(purchase.size as any)?.size?.ko || "사이즈 정보 없음"}
+                사이즈 : {sizeLabel}
               </div>
               <div className="flex items-center gap-[0.625rem]">
                 <span className="text-lg/5 font-extrabold">

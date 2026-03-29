@@ -1,7 +1,7 @@
 "use client";
 
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
-import { Shipping, ShippingHistory } from "@/types/order";
+import { Shipping } from "@/types/order";
 import axios from "axios";
 import Image from "next/image";
 import { useEffect, useState } from "react";

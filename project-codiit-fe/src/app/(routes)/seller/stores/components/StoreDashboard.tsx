@@ -25,7 +25,7 @@ export default function StoreDashboard({ store }: { store: StoreDetailResponse }
           className="object-cover"
         />
       </div>
-      <div className="mt-10 flex justify-between gap-10">
+      <div className="mt-10 flex items-start justify-between gap-10">
         {/* 스토어 정보 */}
         <StoreInfo store={store} />
         {/* 스토어 통계 */}

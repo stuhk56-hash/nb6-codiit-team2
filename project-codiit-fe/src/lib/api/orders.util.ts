@@ -1,5 +1,6 @@
-// ✅ 새 파일 생성
-export function canCancelOrder(order: any): boolean {
+import type { Order } from "@/types/order";
+
+export function canCancelOrder(order: Order | null | undefined): boolean {
   // 배송 상태로 확인 (배송준비중이면 취소 가능)
   if (order?.shipping?.status === "ReadyToShip") {
     return true;
@@ -8,7 +9,7 @@ export function canCancelOrder(order: any): boolean {
   return false;
 }
 
-export function getCancelRestrictReason(order: any): string {
+export function getCancelRestrictReason(order: Order | null | undefined): string {
   if (!order?.shipping) {
     return "배송 정보가 없습니다.";
   }

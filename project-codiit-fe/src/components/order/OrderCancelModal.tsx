@@ -3,7 +3,8 @@
 import Modal from "@/components/Modal";
 import Button from "@/components/button/Button";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { useState } from "react";
 
 interface OrderCancelModalProps {
@@ -52,15 +53,18 @@ export default function OrderCancelModal({ open, onClose, orderId, onSuccess }: 
       onSuccess();
 
       setIsLoading(false); // ✅ 로딩 상태 해제 추가
-    } catch (error: any) {
+    } catch (error: unknown) {
       setIsLoading(false);
 
       console.error("❌ 주문 취소 에러:", error);
-      console.error("  status:", error.response?.status);
-      console.error("  message:", error.response?.data?.message);
+      console.error("  status:", axios.isAxiosError(error) ? error.response?.status : undefined);
+      console.error("  message:", axios.isAxiosError(error) ? error.response?.data?.message : undefined);
 
-      let errorMsg =
-        error.response?.data?.message || error.response?.data?.error || `취소 실패 (${error.response?.status})`;
+      const errorMsg = axios.isAxiosError<{ message?: string; error?: string }>(error)
+        ? error.response?.data?.message ||
+          error.response?.data?.error ||
+          `취소 실패 (${error.response?.status ?? "unknown"})`
+        : "주문 취소 중 오류가 발생했습니다.";
 
       setError(errorMsg);
     }

@@ -105,7 +105,7 @@ export default function InquiryAnswerModal({ type, open, inquiry, onClose }: Inq
       isOpen={open}
       onClose={onClose}
     >
-      <div className="relative w-[600px] text-left">
+      <div className="relative w-full text-left">
         <button
           className="absolute top-0 right-0"
           onClick={onClose}
@@ -119,7 +119,7 @@ export default function InquiryAnswerModal({ type, open, inquiry, onClose }: Inq
         </button>
         <div className="text-black01 mb-6 text-[1.75rem] font-extrabold">문의 답변하기</div>
         <Divder className="mt-5 mb-10" />
-        <div className="mb-10 flex w-130 flex-col gap-5">
+        <div className="mb-10 flex w-full min-w-0 flex-col gap-5">
           <div className="mb-3 flex items-center gap-5">
             <div className="relative h-20 w-20">
               <Image

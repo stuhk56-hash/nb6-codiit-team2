@@ -25,7 +25,7 @@ export default function StorePage() {
   }
 
   return (
-    <div className="mx-auto flex w-[1520px] gap-10 pt-[3.625rem]">
+    <div className="mx-auto flex w-[1520px] gap-10 pt-[3.625rem] pb-16">
       {/* 왼쪽 메뉴, 오른쪽 내스토어 */}
       <MyPageMenu
         items={menuItems}

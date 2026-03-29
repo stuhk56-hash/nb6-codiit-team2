@@ -51,7 +51,7 @@ export default function BankTransferForm({ orderId, price, onBack, onSuccess }: 
       setTimeout(() => {
         onSuccess(payment);
       }, 3000);
-    } catch (error) {
+    } catch {
       setIsLoading(false);
       alert("❌ 결제에 실패했습니다");
     }
