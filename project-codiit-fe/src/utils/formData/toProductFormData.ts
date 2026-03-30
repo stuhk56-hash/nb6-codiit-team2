@@ -25,19 +25,40 @@ export function toProductFormData(data: ProductFormValues): FormData {
 
   // 재고
   const sizeNameToIdMap: Record<string, number> = {
-    xs: 1,
-    s: 2,
-    m: 3,
-    l: 4,
-    xl: 5,
-    free: 6,
+    xs: 21,
+    s: 22,
+    m: 23,
+    l: 24,
+    xl: 25,
+    free: 26,
+    "230": 27,
+    "235": 28,
+    "240": 29,
+    "245": 30,
+    "250": 31,
+    "255": 32,
+    "260": 33,
+    "265": 34,
+    "270": 35,
+    "275": 36,
+    "280": 37,
+    "285": 38,
+    "290": 39,
   };
   const runtimeSizeIdMap = data.sizeIdMap || {};
+  const hasRuntimeSizeMap = Object.keys(runtimeSizeIdMap).length > 0;
+  const unresolvedSizes = new Set<string>();
   const stocksArray = Object.entries(data.stocks || {})
     .filter(([, quantity]) => typeof quantity === "number")
     .map(([sizeName, quantity]) => {
       const normalizedSizeName = sizeName.toUpperCase();
-      const resolvedSizeId = runtimeSizeIdMap[normalizedSizeName] ?? sizeNameToIdMap[sizeName.toLowerCase()];
+      const resolvedSizeId = hasRuntimeSizeMap
+        ? runtimeSizeIdMap[normalizedSizeName]
+        : sizeNameToIdMap[sizeName.toLowerCase()];
+
+      if (typeof resolvedSizeId !== "number" || !Number.isFinite(resolvedSizeId)) {
+        unresolvedSizes.add(normalizedSizeName);
+      }
 
       return {
         sizeId: resolvedSizeId,
@@ -48,6 +69,10 @@ export function toProductFormData(data: ProductFormValues): FormData {
       (row): row is { sizeId: number; quantity: number } =>
         typeof row.sizeId === "number" && Number.isFinite(row.sizeId)
     );
+  if (unresolvedSizes.size > 0) {
+    const unknownSizes = Array.from(unresolvedSizes).join(", ");
+    throw new Error(`사이즈 ID 매핑을 찾을 수 없습니다: ${unknownSizes}`);
+  }
   formData.append("stocks", JSON.stringify(stocksArray));
 
   // 할인

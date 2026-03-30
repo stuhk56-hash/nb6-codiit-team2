@@ -23,11 +23,25 @@ const SALT_BYTES = 16;
 
 const categoryNames = ['TOP', 'BOTTOM', 'OUTER', 'DRESS', 'SKIRT', 'SHOES', 'ACC'];
 const sizeDefs = [
+  { name: 'FREE', nameEn: 'Free', nameKo: '프리' },
   { name: 'XS', nameEn: 'XS', nameKo: 'XS' },
   { name: 'S', nameEn: 'S', nameKo: 'S' },
   { name: 'M', nameEn: 'M', nameKo: 'M' },
   { name: 'L', nameEn: 'L', nameKo: 'L' },
   { name: 'XL', nameEn: 'XL', nameKo: 'XL' },
+  { name: '230', nameEn: '230', nameKo: '230' },
+  { name: '235', nameEn: '235', nameKo: '235' },
+  { name: '240', nameEn: '240', nameKo: '240' },
+  { name: '245', nameEn: '245', nameKo: '245' },
+  { name: '250', nameEn: '250', nameKo: '250' },
+  { name: '255', nameEn: '255', nameKo: '255' },
+  { name: '260', nameEn: '260', nameKo: '260' },
+  { name: '265', nameEn: '265', nameKo: '265' },
+  { name: '270', nameEn: '270', nameKo: '270' },
+  { name: '275', nameEn: '275', nameKo: '275' },
+  { name: '280', nameEn: '280', nameKo: '280' },
+  { name: '285', nameEn: '285', nameKo: '285' },
+  { name: '290', nameEn: '290', nameKo: '290' },
 ];
 const gradeDefs = [
   { id: 'grade_green', name: 'Green', rate: 1, minAmount: 0 },

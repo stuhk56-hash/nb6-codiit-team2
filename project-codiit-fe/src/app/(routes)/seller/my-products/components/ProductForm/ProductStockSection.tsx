@@ -2,9 +2,11 @@
 
 import { ProductFormValues } from "@/lib/schemas/productForm.schema";
 import Image from "next/image";
+import { useEffect, useMemo } from "react";
 import { Control, FieldErrors, useController } from "react-hook-form";
 
-const SIZES = ["FREE", "XS", "S", "M", "L", "XL"];
+const APPAREL_SIZES = ["FREE", "XS", "S", "M", "L", "XL"];
+const SHOES_SIZES = ["230", "235", "240", "245", "250", "255", "260", "265", "270", "275", "280", "285", "290"];
 
 export function ProductStockSection({
   control,
@@ -15,23 +17,50 @@ export function ProductStockSection({
 }) {
   const { field: sizesField } = useController({ name: "sizes", control });
   const { field: stocksField } = useController({ name: "stocks", control });
+  const { field: categoryField } = useController({ name: "category", control });
 
   const selectedSizes: string[] = sizesField.value || [];
   const stocks: Record<string, number | undefined> = stocksField.value || {};
+  const isShoesCategory = String(categoryField.value || "").toUpperCase() === "SHOES";
+  const availableSizes = useMemo(
+    () => (isShoesCategory ? SHOES_SIZES : APPAREL_SIZES),
+    [isShoesCategory]
+  );
+
+  useEffect(() => {
+    const allowed = new Set(availableSizes);
+    const normalizedSizes = selectedSizes.filter((size) => allowed.has(size));
+    const normalizedStocks = Object.fromEntries(
+      Object.entries(stocks).filter(([size]) => allowed.has(size))
+    );
+
+    if (JSON.stringify(selectedSizes) !== JSON.stringify(normalizedSizes)) {
+      sizesField.onChange(normalizedSizes);
+    }
+    if (JSON.stringify(stocks) !== JSON.stringify(normalizedStocks)) {
+      stocksField.onChange(normalizedStocks);
+    }
+  }, [availableSizes, selectedSizes, stocks, sizesField, stocksField]);
 
   const toggleSize = (size: string) => {
     let newSizes: string[];
+    const isFree = size === "FREE";
+
     if (selectedSizes.includes(size)) {
-      // 사이즈 배열에서 사이즈 제거
       newSizes = selectedSizes.filter((s) => s !== size);
-      // stocks 에서 사이즈 제거, stocks 업데이트
       const newStocks = { ...stocks };
       delete newStocks[size];
       stocksField.onChange(newStocks);
     } else {
-      // 사이즈 배열에 사이즈 추가
-      newSizes = [...selectedSizes, size];
-      stocksField.onChange({ ...stocks, [size]: undefined });
+      if (!isShoesCategory && isFree) {
+        newSizes = ["FREE"];
+        stocksField.onChange({ FREE: stocks.FREE });
+      } else {
+        newSizes = !isShoesCategory
+          ? [...selectedSizes.filter((s) => s !== "FREE"), size]
+          : [...selectedSizes, size];
+        stocksField.onChange({ ...stocks, [size]: undefined, ...(isShoesCategory ? {} : { FREE: undefined }) });
+      }
     }
     sizesField.onChange(newSizes);
   };
@@ -64,7 +93,7 @@ export function ProductStockSection({
         {/* 왼쪽: 사이즈 버튼 */}
         <div className="flex w-[120px] flex-col gap-[20px]">
           <div className="mt-[30px] font-bold">사이즈</div>
-          {SIZES.map((size) => {
+          {availableSizes.map((size) => {
             const isSelected = selectedSizes.includes(size);
             return (
               <button
@@ -94,7 +123,7 @@ export function ProductStockSection({
             <span className="font-bold">재고</span>
             <span className="text-sm"> (총 재고수량 : {totalStock}) </span>
           </div>
-          {SIZES.map((size) => {
+          {availableSizes.map((size) => {
             const isSelected = selectedSizes.includes(size);
             const stockError = errors.stocks && errors.stocks[size]?.message;
             return (
