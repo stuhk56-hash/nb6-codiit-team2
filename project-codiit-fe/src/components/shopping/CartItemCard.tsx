@@ -3,26 +3,6 @@ import Image from "next/image";
 import ShoppingCountButton from "../button/ShoppintCountButton";
 import { ProductInfoData } from "@/types/Product";
 
-// sizeId에 따른 사이즈 매핑
-const getSizeLabel = (sizeId: number): string => {
-  switch (sizeId) {
-    case 1:
-      return "XS";
-    case 2:
-      return "S";
-    case 3:
-      return "M";
-    case 4:
-      return "L";
-    case 5:
-      return "XL";
-    case 6:
-      return "Free";
-    default:
-      return "Unknown";
-  }
-};
-
 interface CartItemCardProps {
   item: CartItem;
   isChecked: boolean;
@@ -34,6 +14,12 @@ interface CartItemCardProps {
 export default function CartItemCard({ item, isChecked, onCheck, onQuantityChange, onDelete }: CartItemCardProps) {
   const discountedPrice = Math.floor((item.product as ProductInfoData).discountPrice ?? item.product.price * (1 - item.product.discountRate / 100));
   const totalPrice = discountedPrice * item.quantity;
+  const selectedStock = item.product.stocks.find((stock) => stock.size.id === item.sizeId);
+  const sizeLabel = (() => {
+    if (!selectedStock) return String(item.sizeId);
+    const resolvedSize = selectedStock.size as { name: string; size?: { ko?: string } };
+    return resolvedSize.size?.ko ?? resolvedSize.name;
+  })();
 
   return (
     <div className="border-gray03 relative rounded-2xl border bg-white p-7.5">
@@ -64,7 +50,7 @@ export default function CartItemCard({ item, isChecked, onCheck, onQuantityChang
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-[4.75rem]">
                   <div className="flex items-center gap-5">
-                    <p className="text-black01 text-base font-normal">사이즈 : {getSizeLabel(item.sizeId)}</p>
+                    <p className="text-black01 text-base font-normal">사이즈 : {sizeLabel}</p>
                   </div>
                   <ShoppingCountButton
                     count={item.quantity}
