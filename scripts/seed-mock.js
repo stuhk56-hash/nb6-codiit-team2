@@ -94,7 +94,7 @@ function getShippingStatusFromOrder(orderStatus, index) {
 }
 
 function makeSizeSpecs(categoryName, i) {
-  const rows = ['S', 'M', 'L', 'XL'];
+  const rows = ['XS', 'S', 'M', 'L', 'XL'];
 
   if (categoryName === 'BOTTOM' || categoryName === 'SKIRT') {
     return rows.map((label, idx) => ({
@@ -558,23 +558,92 @@ async function seedInquiriesAndAnswers(buyers, products) {
   }
 }
 
-async function seedNotifications(sellers, buyers) {
-  const sellerTemplates = [
-    '상품 "시드 상품"에 새로운 문의가 등록되었습니다.',
-    '판매중인 상품 "시드 상품" (M) 사이즈가 품절되었습니다.',
-    '판매중인 상품 "시드 상품"의 모든 사이즈가 품절되었습니다.',
-  ];
-  const buyerTemplates = [
-    '문의하신 상품 "시드 상품"에 답변이 등록되었습니다.',
-    '장바구니/주문 상품 "시드 상품" (M)이(가) 품절되었습니다.',
-  ];
+function cycleMessages(messages, count) {
+  if (messages.length === 0) return [];
+  return Array.from({ length: count }, (_, idx) => messages[idx % messages.length]);
+}
+
+async function seedNotifications(sellers, buyers, products) {
+  if (!products[0]?.name) {
+    throw new Error('seedNotifications requires at least one product');
+  }
 
   for (const seller of sellers) {
+    const inquiryRows = await prisma.inquiry.findMany({
+      where: {
+        product: {
+          store: {
+            sellerId: seller.id,
+          },
+        },
+      },
+      select: {
+        product: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: NOTIFICATIONS_PER_USER,
+    });
+
+    const soldOutRows = await prisma.product.findMany({
+      where: {
+        isSoldOut: true,
+        store: {
+          sellerId: seller.id,
+        },
+      },
+      select: {
+        name: true,
+        stocks: {
+          where: {
+            quantity: 0,
+          },
+          select: {
+            size: {
+              select: { name: true },
+            },
+          },
+          take: 1,
+        },
+      },
+      take: NOTIFICATIONS_PER_USER,
+    });
+
+    const sellerMessages = [];
+    for (const row of inquiryRows) {
+      sellerMessages.push(
+        `상품 "${row.product.name}"에 새로운 문의가 등록되었습니다.`,
+      );
+    }
+    for (const row of soldOutRows) {
+      const sizeName = row.stocks[0]?.size?.name;
+      if (sizeName) {
+        sellerMessages.push(
+          `판매중인 상품 "${row.name}" (${sizeName}) 사이즈가 품절되었습니다.`,
+        );
+      }
+      sellerMessages.push(
+        `판매중인 상품 "${row.name}"의 모든 사이즈가 품절되었습니다.`,
+      );
+    }
+
+    const sellerUniqueMessages = [...new Set(sellerMessages)];
+    if (sellerUniqueMessages.length === 0) {
+      continue;
+    }
+    const sellerFinalMessages = cycleMessages(
+      sellerUniqueMessages,
+      NOTIFICATIONS_PER_USER,
+    );
+
     for (let i = 0; i < NOTIFICATIONS_PER_USER; i += 1) {
       await prisma.notification.create({
         data: {
           userId: seller.id,
-          content: `[판매자] ${pick(sellerTemplates, i)} (${i + 1})`,
+          content: sellerFinalMessages[i],
           isChecked: i % 2 === 0,
         },
       });
@@ -582,11 +651,89 @@ async function seedNotifications(sellers, buyers) {
   }
 
   for (const buyer of buyers) {
+    const answeredInquiryRows = await prisma.inquiry.findMany({
+      where: {
+        buyerId: buyer.id,
+        status: InquiryStatus.CompletedAnswer,
+      },
+      select: {
+        product: {
+          select: { name: true },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: NOTIFICATIONS_PER_USER,
+    });
+
+    const soldOutOrderRows = await prisma.orderItem.findMany({
+      where: {
+        order: {
+          buyerId: buyer.id,
+        },
+        product: {
+          isSoldOut: true,
+        },
+      },
+      select: {
+        productName: true,
+        size: {
+          select: { name: true },
+        },
+      },
+      take: NOTIFICATIONS_PER_USER,
+    });
+
+    const soldOutCartRows = await prisma.cartItem.findMany({
+      where: {
+        cart: {
+          buyerId: buyer.id,
+        },
+        product: {
+          isSoldOut: true,
+        },
+      },
+      select: {
+        product: {
+          select: { name: true },
+        },
+        size: {
+          select: { name: true },
+        },
+      },
+      take: NOTIFICATIONS_PER_USER,
+    });
+
+    const buyerMessages = [];
+    for (const row of answeredInquiryRows) {
+      buyerMessages.push(
+        `문의하신 상품 "${row.product.name}"에 답변이 등록되었습니다.`,
+      );
+    }
+    for (const row of soldOutOrderRows) {
+      buyerMessages.push(
+        `장바구니/주문 상품 "${row.productName}" (${row.size.name})이(가) 품절되었습니다.`,
+      );
+    }
+    for (const row of soldOutCartRows) {
+      buyerMessages.push(
+        `장바구니/주문 상품 "${row.product.name}" (${row.size.name})이(가) 품절되었습니다.`,
+      );
+    }
+
+    const buyerUniqueMessages = [...new Set(buyerMessages)];
+    if (buyerUniqueMessages.length === 0) {
+      continue;
+    }
+    const buyerFinalMessages = cycleMessages(
+      buyerUniqueMessages,
+      NOTIFICATIONS_PER_USER,
+    );
+
     for (let i = 0; i < NOTIFICATIONS_PER_USER; i += 1) {
       await prisma.notification.create({
         data: {
           userId: buyer.id,
-          content: `[구매자] ${pick(buyerTemplates, i)} (${i + 1})`,
+          content: buyerFinalMessages[i],
           isChecked: i % 3 === 0,
         },
       });
@@ -606,7 +753,7 @@ async function main() {
   await seedFavoritesAndCarts(buyers, stores, products, sizes);
   await seedOrdersPaymentsShippingsAndReviews(buyers, products, sizes);
   await seedInquiriesAndAnswers(buyers, products);
-  await seedNotifications(sellers, buyers);
+  await seedNotifications(sellers, buyers, products);
 
   console.log('Mock seed completed');
   console.log(
