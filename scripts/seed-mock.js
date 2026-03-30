@@ -231,7 +231,7 @@ async function seedStores(sellers) {
         businessPhoneNumber: `02-100${idx}-200${idx}`,
         businessAddress: `서울시 강남구 테헤란로 ${10 + idx}`,
         imageUrl: `https://picsum.photos/seed/codiit-store-${idx}/800/800`,
-        imageKey: `stores/store-${idx}.jpg`,
+        imageKey: null,
       },
     });
 
@@ -314,7 +314,7 @@ async function seedProducts(stores, categories, sizes) {
           price,
           isSoldOut,
           imageUrl: `https://picsum.photos/seed/codiit-product-${s + 1}-${p + 1}/900/900`,
-          imageKey: `products/product-${s + 1}-${p + 1}.jpg`,
+          imageKey: null,
           discountRate,
           discountStartTime: discountRate
             ? new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
