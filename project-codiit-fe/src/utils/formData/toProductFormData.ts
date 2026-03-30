@@ -2,10 +2,20 @@ import { ProductFormValues } from "@/lib/schemas/productForm.schema";
 
 export function toProductFormData(data: ProductFormValues): FormData {
   const formData = new FormData();
+  const INVALID_TEXT_VALUES = new Set([
+    "?",
+    "-",
+    "n/a",
+    "na",
+    "none",
+    "null",
+    "undefined",
+  ]);
   const appendIfNotEmpty = (key: string, value?: string | null) => {
     if (typeof value !== "string") return;
     const trimmed = value.trim();
     if (!trimmed) return;
+    if (INVALID_TEXT_VALUES.has(trimmed.toLowerCase())) return;
     formData.append(key, trimmed);
   };
   const appendIfNumber = (key: string, value?: number | null) => {
@@ -77,7 +87,27 @@ export function toProductFormData(data: ProductFormValues): FormData {
   appendIfNumber("returnShippingFee", data.tradeInfo.returnShippingFee);
   appendIfNumber("exchangeShippingFee", data.tradeInfo.exchangeShippingFee);
   if (Array.isArray(data.sizeSpecs)) {
-    formData.append("sizeSpecs", JSON.stringify(data.sizeSpecs));
+    const normalizedSizeSpecs = data.sizeSpecs.map((spec) => {
+      const normalizeSpecValue = (value: number | null | undefined) =>
+        typeof value === "number" && Number.isFinite(value) && value > 0
+          ? value
+          : null;
+
+      return {
+        ...spec,
+        totalLengthCm: normalizeSpecValue(spec.totalLengthCm),
+        shoulderCm: normalizeSpecValue(spec.shoulderCm),
+        chestCm: normalizeSpecValue(spec.chestCm),
+        sleeveCm: normalizeSpecValue(spec.sleeveCm),
+        waistCm: normalizeSpecValue(spec.waistCm),
+        hipCm: normalizeSpecValue(spec.hipCm),
+        thighCm: normalizeSpecValue(spec.thighCm),
+        riseCm: normalizeSpecValue(spec.riseCm),
+        hemCm: normalizeSpecValue(spec.hemCm),
+      };
+    });
+
+    formData.append("sizeSpecs", JSON.stringify(normalizedSizeSpecs));
   }
 
   return formData;
