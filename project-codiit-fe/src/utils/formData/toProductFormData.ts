@@ -2,15 +2,7 @@ import { ProductFormValues } from "@/lib/schemas/productForm.schema";
 
 export function toProductFormData(data: ProductFormValues): FormData {
   const formData = new FormData();
-  const INVALID_TEXT_VALUES = new Set([
-    "?",
-    "-",
-    "n/a",
-    "na",
-    "none",
-    "null",
-    "undefined",
-  ]);
+  const INVALID_TEXT_VALUES = new Set(["?", "-", "n/a", "na", "none", "null", "undefined"]);
   const appendIfNotEmpty = (key: string, value?: string | null) => {
     if (typeof value !== "string") return;
     const trimmed = value.trim();
@@ -45,9 +37,7 @@ export function toProductFormData(data: ProductFormValues): FormData {
     .filter(([, quantity]) => typeof quantity === "number")
     .map(([sizeName, quantity]) => {
       const normalizedSizeName = sizeName.toUpperCase();
-      const resolvedSizeId =
-        runtimeSizeIdMap[normalizedSizeName] ??
-        sizeNameToIdMap[sizeName.toLowerCase()];
+      const resolvedSizeId = runtimeSizeIdMap[normalizedSizeName] ?? sizeNameToIdMap[sizeName.toLowerCase()];
 
       return {
         sizeId: resolvedSizeId,
@@ -84,10 +74,7 @@ export function toProductFormData(data: ProductFormValues): FormData {
   appendIfNotEmpty("manufactureCountry", data.noticeInfo.manufactureCountry);
   appendIfNotEmpty("manufactureDate", data.noticeInfo.manufactureDate);
   appendIfNotEmpty("caution", data.noticeInfo.caution);
-  appendIfNotEmpty(
-    "qualityGuaranteeStandard",
-    data.noticeInfo.qualityGuaranteeStandard
-  );
+  appendIfNotEmpty("qualityGuaranteeStandard", data.noticeInfo.qualityGuaranteeStandard);
   appendIfNotEmpty("asManagerName", data.noticeInfo.asManagerName);
   appendIfNotEmpty("asPhoneNumber", data.noticeInfo.asPhoneNumber);
   appendIfNumber("shippingFee", data.tradeInfo.shippingFee);
@@ -100,9 +87,7 @@ export function toProductFormData(data: ProductFormValues): FormData {
   if (Array.isArray(data.sizeSpecs)) {
     const normalizedSizeSpecs = data.sizeSpecs.map((spec) => {
       const normalizeSpecValue = (value: number | null | undefined) =>
-        typeof value === "number" && Number.isFinite(value) && value > 0
-          ? value
-          : null;
+        typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
 
       return {
         ...spec,
