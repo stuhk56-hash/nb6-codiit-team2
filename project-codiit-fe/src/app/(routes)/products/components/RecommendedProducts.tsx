@@ -1,15 +1,26 @@
 "use client";
 
 import { getProducts } from "@/lib/api/products";
+import { useSearchOptionStore } from "@/stores/searchOptionStore";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import ProductItem from "./ProductItem";
 
 const ITEMS_PER_PAGE = 4;
 
 const RecommendedProducts = () => {
+  const { searchOption } = useSearchOptionStore();
+
   const { data } = useQuery({
-    queryKey: ["RecommendedProducts"],
-    queryFn: () => getProducts({ page: 1, pageSize: ITEMS_PER_PAGE, sort: "salesRanking" }),
+    queryKey: ["RecommendedProducts", searchOption.categoryName],
+    queryFn: () =>
+      getProducts({
+        page: 1,
+        pageSize: ITEMS_PER_PAGE,
+        sort: "salesRanking",
+        ...(searchOption.categoryName
+          ? { categoryName: searchOption.categoryName }
+          : {}),
+      }),
     placeholderData: keepPreviousData,
   });
 
