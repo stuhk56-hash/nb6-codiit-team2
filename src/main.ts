@@ -9,6 +9,7 @@ import {
 import { corsMiddleware } from './middlewares/cors';
 import { startStoreBusinessInfoPurgeScheduler } from './modules/stores/jobs/store-business-info-purge.job';
 import { helmetMiddleware } from './middlewares/security';
+import { setupSwagger } from './swagger';
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use(
 app.use(corsMiddleware);
 app.use(cookieParser());
 
+setupSwagger(app);
 setupRoutes(app);
 app.use(defaultNotFoundHandler);
 app.use(globalErrorHandler);
