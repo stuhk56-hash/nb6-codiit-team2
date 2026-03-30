@@ -12,7 +12,7 @@ const options: swaggerJsdoc.Options = {
     },
     servers: [
       {
-        url: 'https://codiit.shop',
+        url: 'https://api.codiit.shop',
         description: 'Production server',
       },
       {
