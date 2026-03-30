@@ -28,6 +28,7 @@ const OptionalPhoneLikeStringStruct = s.optional(
 
 export const ProductStockBodyStruct = s.type({
   sizeId: positiveNumberFromUnknown,
+  sizeName: s.optional(nonEmptyString),
   quantity: nonNegativeNumberFromUnknown,
 });
 

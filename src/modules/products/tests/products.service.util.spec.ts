@@ -7,6 +7,7 @@ import { resolveS3ImageUrl } from '../../s3/utils/s3.service.util';
 import {
   ensureProductOwner,
   filterProductInquiries,
+  normalizeProductStocksInput,
   normalizeProductInquiryListQuery,
   normalizeProductListQuery,
   paginateProductInquiries,
@@ -15,6 +16,7 @@ import {
   resolveProductImage,
   sortProductInquiries,
   sortProducts,
+  toProductStockLookupKeys,
   validateCreateProductInput,
   validateUpdateProductInput,
 } from '../utils/products.service.util';
@@ -177,6 +179,48 @@ describe('상품 서비스 유틸 유닛 테스트', () => {
           createProduct(),
         ),
       ).toThrow(BadRequestError);
+    });
+  });
+
+  describe('normalizeProductStocksInput', () => {
+    test('sizeId가 DB에 있으면 해당 sizeId를 그대로 사용한다', () => {
+      const normalized = normalizeProductStocksInput(
+        [{ sizeId: 21, quantity: 3, sizeName: 'XS' }] as any,
+        [{ id: 21, name: 'XS' }],
+      );
+
+      expect(normalized).toEqual([{ sizeId: 21, quantity: 3 }]);
+    });
+
+    test('sizeId가 달라도 sizeName 매핑이 가능하면 DB sizeId로 보정한다', () => {
+      const normalized = normalizeProductStocksInput(
+        [{ sizeId: 1, quantity: 4, sizeName: '270' }] as any,
+        [{ id: 33, name: '270' }],
+      );
+
+      expect(normalized).toEqual([{ sizeId: 33, quantity: 4 }]);
+    });
+
+    test('sizeId/sizeName 모두 매핑 실패하면 BadRequestError를 던진다', () => {
+      expect(() =>
+        normalizeProductStocksInput(
+          [{ sizeId: 999, quantity: 2, sizeName: 'UNKNOWN' }] as any,
+          [{ id: 21, name: 'XS' }],
+        ),
+      ).toThrow(BadRequestError);
+    });
+  });
+
+  describe('toProductStockLookupKeys', () => {
+    test('stocks에서 중복 없는 sizeIds/sizeNames를 추출한다', () => {
+      const keys = toProductStockLookupKeys([
+        { sizeId: 21, sizeName: 'xs', quantity: 1 },
+        { sizeId: 21, sizeName: 'XS', quantity: 2 },
+        { sizeId: 33, sizeName: '270', quantity: 1 },
+      ] as any);
+
+      expect(keys.sizeIds).toEqual([21, 33]);
+      expect(keys.sizeNames).toEqual(['XS', '270']);
     });
   });
 

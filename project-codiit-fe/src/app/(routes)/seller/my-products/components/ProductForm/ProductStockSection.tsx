@@ -59,7 +59,11 @@ export function ProductStockSection({
         newSizes = !isShoesCategory
           ? [...selectedSizes.filter((s) => s !== "FREE"), size]
           : [...selectedSizes, size];
-        stocksField.onChange({ ...stocks, [size]: undefined, ...(isShoesCategory ? {} : { FREE: undefined }) });
+        const nextStocks = { ...stocks, [size]: undefined };
+        if (!isShoesCategory) {
+          delete nextStocks.FREE;
+        }
+        stocksField.onChange(nextStocks);
       }
     }
     sizesField.onChange(newSizes);

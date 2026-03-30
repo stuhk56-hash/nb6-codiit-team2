@@ -123,13 +123,17 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
           ["chestCm", "가슴단면"],
           ["sleeveCm", "소매길이"],
         ] as const)
-      : ([
+      : data.sizeGuideType === "BOTTOM"
+      ? ([
           ["totalLengthCm", "총장"],
           ["waistCm", "허리단면"],
           ["hipCm", "엉덩이단면"],
           ["thighCm", "허벅지단면"],
           ["riseCm", "밑위"],
           ["hemCm", "밑단단면"],
+        ] as const)
+      : ([
+          ["totalLengthCm", "발길이(mm)"],
         ] as const);
   const stockSizeLabels = Array.from(
     new Set(

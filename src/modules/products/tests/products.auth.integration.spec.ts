@@ -100,6 +100,30 @@ describe('상품 API 통합 테스트', () => {
 
         expect(res.status).toBe(201);
       });
+
+      test('sizeId가 달라도 sizeName이 맞으면 생성이 성공한다', async () => {
+        const { seller } = await seedSellerAndStore();
+        const category = await seedCategory('shoes');
+        await prisma.size.create({
+          data: {
+            name: '270',
+            nameEn: '270',
+            nameKo: '270',
+          },
+        });
+
+        const res = await request(app)
+          .post('/api/products')
+          .set(authHeader(seller.id))
+          .send({
+            name: '사이즈명 매핑 상품',
+            price: 12000,
+            categoryName: category.name,
+            stocks: [{ sizeId: 1, sizeName: '270', quantity: 5 }],
+          });
+
+        expect(res.status).toBe(201);
+      });
     });
 
     describe('PATCH /api/products/:productId', () => {
@@ -159,6 +183,37 @@ describe('상품 API 통합 테스트', () => {
           });
 
         expect(res.status).toBe(403);
+      });
+
+      test('수정 시 잘못된 sizeId라도 sizeName이 맞으면 200을 반환한다', async () => {
+        const { seller, store } = await seedSellerAndStore();
+        const category = await seedCategory('shoes');
+        const size270 = await prisma.size.create({
+          data: {
+            name: '270',
+            nameEn: '270',
+            nameKo: '270',
+          },
+        });
+        const product = await seedProduct({
+          storeId: store.id,
+          categoryId: category.id,
+          sizeId: size270.id,
+          name: '기존 신발 상품',
+          price: 10000,
+          content: '기존 설명',
+        });
+
+        const res = await request(app)
+          .patch(`/api/products/${product.id}`)
+          .set(authHeader(seller.id))
+          .send({
+            name: '수정 신발 상품',
+            stocks: [{ sizeId: 1, sizeName: '270', quantity: 3 }],
+          });
+
+        expect(res.status).toBe(200);
+        expect(res.body.name).toBe('수정 신발 상품');
       });
     });
 

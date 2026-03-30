@@ -86,13 +86,18 @@ function toSizeSpecs(product: ProductWithRelations) {
   }));
 }
 
-function toSizeGuideType(categoryName: string): 'TOP' | 'BOTTOM' | 'NONE' {
+function toSizeGuideType(
+  categoryName: string,
+): 'TOP' | 'BOTTOM' | 'SHOES' | 'NONE' {
   const upper = categoryName.toUpperCase();
   if (upper === 'TOP' || upper === 'OUTER' || upper === 'DRESS') {
     return 'TOP';
   }
   if (upper === 'BOTTOM' || upper === 'SKIRT') {
     return 'BOTTOM';
+  }
+  if (upper === 'SHOES') {
+    return 'SHOES';
   }
   return 'NONE';
 }

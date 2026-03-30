@@ -46,15 +46,14 @@ export function toProductFormData(data: ProductFormValues): FormData {
     "290": 39,
   };
   const runtimeSizeIdMap = data.sizeIdMap || {};
-  const hasRuntimeSizeMap = Object.keys(runtimeSizeIdMap).length > 0;
   const unresolvedSizes = new Set<string>();
   const stocksArray = Object.entries(data.stocks || {})
     .filter(([, quantity]) => typeof quantity === "number")
     .map(([sizeName, quantity]) => {
       const normalizedSizeName = sizeName.toUpperCase();
-      const resolvedSizeId = hasRuntimeSizeMap
-        ? runtimeSizeIdMap[normalizedSizeName]
-        : sizeNameToIdMap[sizeName.toLowerCase()];
+      const safeQuantity = Number(quantity);
+      const resolvedSizeId =
+        runtimeSizeIdMap[normalizedSizeName] ?? sizeNameToIdMap[sizeName.toLowerCase()];
 
       if (typeof resolvedSizeId !== "number" || !Number.isFinite(resolvedSizeId)) {
         unresolvedSizes.add(normalizedSizeName);
@@ -62,12 +61,15 @@ export function toProductFormData(data: ProductFormValues): FormData {
 
       return {
         sizeId: resolvedSizeId,
-        quantity,
+        sizeName: normalizedSizeName,
+        quantity: safeQuantity,
       };
     })
     .filter(
-      (row): row is { sizeId: number; quantity: number } =>
-        typeof row.sizeId === "number" && Number.isFinite(row.sizeId)
+      (row): row is { sizeId: number; sizeName: string; quantity: number } =>
+        typeof row.sizeId === "number" &&
+        Number.isFinite(row.sizeId) &&
+        Number.isFinite(row.quantity)
     );
   if (unresolvedSizes.size > 0) {
     const unknownSizes = Array.from(unresolvedSizes).join(", ");

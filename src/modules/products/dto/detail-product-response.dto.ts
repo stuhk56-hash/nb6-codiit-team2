@@ -80,7 +80,7 @@ export type DetailProductResponseDto = {
     returnShippingFee: number | null;
     exchangeShippingFee: number | null;
   };
-  sizeGuideType: 'TOP' | 'BOTTOM' | 'NONE';
+  sizeGuideType: 'TOP' | 'BOTTOM' | 'SHOES' | 'NONE';
   sizeSpecs: Array<{
     sizeLabel: string;
     displayOrder: number;

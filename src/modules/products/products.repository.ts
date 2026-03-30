@@ -33,6 +33,31 @@ export class ProductsRepository {
     });
   }
 
+  findSizesByIdsOrNames(ids: number[], names: string[]) {
+    const where: Prisma.SizeWhereInput = {};
+    const or: Prisma.SizeWhereInput[] = [];
+
+    if (ids.length > 0) {
+      or.push({ id: { in: ids } });
+    }
+
+    if (names.length > 0) {
+      or.push({ name: { in: names } });
+    }
+
+    if (or.length > 0) {
+      where.OR = or;
+    }
+
+    return prisma.size.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+  }
+
   findById(productId: string) {
     return prisma.product.findUnique({
       where: { id: productId },
