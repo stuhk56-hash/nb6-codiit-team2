@@ -2,6 +2,7 @@ import { CartItem } from "@/types/cart";
 import Image from "next/image";
 import ShoppingCountButton from "../button/ShoppintCountButton";
 import { ProductInfoData } from "@/types/Product";
+import { resolveSizeLabel } from "@/utils/sizeLabel";
 
 interface CartItemCardProps {
   item: CartItem;
@@ -15,11 +16,9 @@ export default function CartItemCard({ item, isChecked, onCheck, onQuantityChang
   const discountedPrice = Math.floor((item.product as ProductInfoData).discountPrice ?? item.product.price * (1 - item.product.discountRate / 100));
   const totalPrice = discountedPrice * item.quantity;
   const selectedStock = item.product.stocks.find((stock) => stock.size.id === item.sizeId);
-  const sizeLabel = (() => {
-    if (!selectedStock) return String(item.sizeId);
-    const resolvedSize = selectedStock.size as { name: string; size?: { ko?: string } };
-    return resolvedSize.size?.ko ?? resolvedSize.name;
-  })();
+  const sizeLabel = selectedStock
+    ? resolveSizeLabel(selectedStock.size, String(item.sizeId))
+    : String(item.sizeId);
 
   return (
     <div className="border-gray03 relative rounded-2xl border bg-white p-7.5">

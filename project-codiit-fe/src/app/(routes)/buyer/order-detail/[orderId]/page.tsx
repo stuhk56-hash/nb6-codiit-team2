@@ -6,6 +6,7 @@ import OrderEditModal from "@/components/order/OrderEditModal";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
 import { canCancelOrder, getCancelRestrictReason } from "@/lib/api/orders.util";
 import { Order, OrderItem, ShippingStatus } from "@/types/order";
+import { resolveSizeLabel } from "@/utils/sizeLabel";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
@@ -21,15 +22,6 @@ type PaymentLike = NonNullable<Order["payment"]> & {
   bankName?: string;
   phoneNumber?: string;
   status?: string;
-};
-
-type ItemSizeShape = OrderItem["size"] & {
-  nameKo?: string;
-  name?: string;
-  size?: {
-    ko?: string;
-    en?: string;
-  };
 };
 
 export default function OrderDetailPage() {
@@ -166,8 +158,7 @@ export default function OrderDetailPage() {
   };
 
   const getSizeLabel = (item: OrderItem): string => {
-    const size = item.size as ItemSizeShape | undefined;
-    return size?.size?.ko ?? size?.nameKo ?? size?.name ?? "정보 없음";
+    return resolveSizeLabel(item.size, "정보 없음");
   };
 
   // ✅ 결제 상태 레이블 (한글 변환)

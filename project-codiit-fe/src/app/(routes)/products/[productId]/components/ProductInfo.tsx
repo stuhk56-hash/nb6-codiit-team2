@@ -403,7 +403,7 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
                 className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm"
               >
               {isShoesGuide ? (
-                <table className="w-full min-w-[320px] border-collapse text-sm">
+                <table className="w-full min-w-[320px] table-fixed border-collapse text-sm">
                   <thead>
                     <tr className="bg-gray-50">
                       <th className="border border-gray-200 px-3 py-2 text-left">신발 사이즈(mm)</th>
@@ -418,10 +418,10 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
                   </tbody>
                 </table>
               ) : (
-              <table className="w-full min-w-[760px] border-collapse text-sm">
+              <table className="w-full min-w-[760px] table-fixed border-collapse text-sm">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="border border-gray-200 px-3 py-2 text-left">cm</th>
+                    <th className="border border-gray-200 px-3 py-2 text-left">사이즈</th>
                     {sizeGuideColumns.map(([key, label]) => (
                       <th
                         key={key}

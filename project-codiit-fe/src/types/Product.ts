@@ -38,6 +38,12 @@ export interface ProductListResponse {
 interface StockSize {
   id: number;
   name: string;
+  nameKo?: string;
+  nameEn?: string;
+  size?: {
+    ko?: string;
+    en?: string;
+  };
 }
 
 // 재고

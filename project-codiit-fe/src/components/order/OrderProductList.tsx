@@ -1,6 +1,7 @@
 import OrderProductCard from "@/components/order/OrderProductCard";
 import { useOrderStore } from "@/store/orderStore";
 import { ProductInfoData } from "@/types/Product";
+import { resolveSizeLabel } from "@/utils/sizeLabel";
 
 export default function OrderProductList() {
   const selectedItems = useOrderStore((state) => state.selectedItems);
@@ -11,11 +12,9 @@ export default function OrderProductList() {
       <div className="mt-8 flex h-[32.5rem] flex-col gap-4 overflow-auto pr-4">
         {selectedItems.map((item) => {
           const stock = item.product.stocks.find((currentStock) => currentStock.size.id === item.sizeId);
-          const sizeLabel = (() => {
-            if (!stock) return String(item.sizeId);
-            const resolvedSize = stock.size as { name: string; size?: { ko?: string } };
-            return resolvedSize.size?.ko ?? resolvedSize.name;
-          })();
+          const sizeLabel = stock
+            ? resolveSizeLabel(stock.size, String(item.sizeId))
+            : String(item.sizeId);
 
           return (
             <OrderProductCard
