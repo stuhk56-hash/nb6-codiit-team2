@@ -19,7 +19,7 @@ const OptionalNoticeTextStruct = s.optional(
 );
 
 const OptionalDateLikeStringStruct = s.optional(
-  s.pattern(s.string(), /^\d{4}(?:[-/.])\d{1,2}(?:[-/.])\d{1,2}$/),
+  s.pattern(s.string(), /^\d{4}(?:[-/.])\d{1,2}$/),
 );
 
 const OptionalPhoneLikeStringStruct = s.optional(

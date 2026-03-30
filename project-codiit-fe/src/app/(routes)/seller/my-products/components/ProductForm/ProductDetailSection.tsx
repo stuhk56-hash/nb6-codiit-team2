@@ -284,7 +284,7 @@ export function ProductDetailSection({
               className="border-gray03 h-[45px] rounded-md border bg-white px-4"
             />
             <input
-              placeholder="제조연월"
+              placeholder="제조연월 (YYYY-MM)"
               value={manufactureDateField.value ?? ""}
               onChange={manufactureDateField.onChange}
               className="border-gray03 h-[45px] rounded-md border bg-white px-4"

@@ -48,8 +48,13 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
   const displayManufactureDate = (value: string | null | undefined) => {
     const text = displayText(value);
     if (text === "미제공") return text;
-    if (!/^\d{4}(?:[-/.])\d{1,2}(?:[-/.])\d{1,2}$/.test(text)) return "미제공";
-    return text;
+    const monthOnlyMatch = text.match(/^(\d{4})([-/.])(\d{1,2})$/);
+    if (monthOnlyMatch) return `${monthOnlyMatch[1]}-${monthOnlyMatch[3].padStart(2, "0")}`;
+
+    const dateMatch = text.match(/^(\d{4})([-/.])(\d{1,2})(?:[-/.])(\d{1,2})$/);
+    if (dateMatch) return `${dateMatch[1]}-${dateMatch[3].padStart(2, "0")}`;
+
+    return "미제공";
   };
   const displayPrice = (value: number | null | undefined) =>
     typeof value === "number" ? `${value.toLocaleString()}원` : "미제공";

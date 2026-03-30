@@ -20,6 +20,7 @@ const NOTIFICATIONS_PER_USER = 6;
 const DEFAULT_PASSWORD = 'codiit1234';
 const SCRYPT_KEYLEN = 64;
 const SALT_BYTES = 16;
+const DEFAULT_FALLBACK_IMAGE_URL = '/images/Mask-group.svg';
 
 const categoryNames = ['TOP', 'BOTTOM', 'OUTER', 'DRESS', 'SKIRT', 'SHOES', 'ACC'];
 const APPAREL_SIZES = ['XS', 'S', 'M', 'L', 'XL'];
@@ -106,9 +107,7 @@ function shippingTimeline(createdAt) {
 
 function getPaymentStatusFromOrder(orderStatus, index) {
   if (orderStatus === OrderStatus.CompletedPayment) {
-    return index % 7 === 0
-      ? PaymentStatus.FailedPayment
-      : PaymentStatus.CompletedPayment;
+    return PaymentStatus.CompletedPayment;
   }
   if (orderStatus === OrderStatus.Canceled) {
     return PaymentStatus.CanceledPayment;
@@ -121,6 +120,14 @@ function getShippingStatusFromOrder(orderStatus, index) {
   if (index % 3 === 0) return ShippingStatus.Delivered;
   if (index % 3 === 1) return ShippingStatus.InShipping;
   return ShippingStatus.ReadyToShip;
+}
+
+function getSeedImageUrl(type, id, width, height) {
+  // 기본은 내부 fallback 이미지를 사용해서 외부 이미지 서비스 장애 영향 최소화.
+  if (process.env.SEED_USE_EXTERNAL_IMAGES !== 'true') {
+    return DEFAULT_FALLBACK_IMAGE_URL;
+  }
+  return `https://picsum.photos/seed/codiit-${type}-${id}/${width}/${height}`;
 }
 
 function getProductSizeNames(categoryName, index) {
@@ -202,6 +209,20 @@ async function resetData() {
   await prisma.size.deleteMany();
 }
 
+function assertSeedExecutionAllowed() {
+  if (process.env.SEED_MOCK_ALLOW_RESET === 'true') {
+    return;
+  }
+
+  throw new Error(
+    [
+      'Seed reset is blocked by default.',
+      'Set SEED_MOCK_ALLOW_RESET=true to run scripts/seed-mock.js intentionally.',
+      'Example: SEED_MOCK_ALLOW_RESET=true npm run seed:mock',
+    ].join(' '),
+  );
+}
+
 async function seedGrades() {
   for (const grade of gradeDefs) {
     await prisma.grade.create({ data: grade });
@@ -220,7 +241,7 @@ async function seedUsers(grades) {
         email: `seller${i}@codiit.com`,
         name: `셀러${i}`,
         passwordHash: hashPassword(DEFAULT_PASSWORD),
-        imageUrl: `https://picsum.photos/seed/codiit-seller-${i}/200/200`,
+        imageUrl: getSeedImageUrl('seller', i, 200, 200),
       },
     });
     sellers.push(seller);
@@ -239,7 +260,7 @@ async function seedUsers(grades) {
         email: `buyer${i}@codiit.com`,
         name: `바이어${i}`,
         passwordHash: hashPassword(DEFAULT_PASSWORD),
-        imageUrl: `https://picsum.photos/seed/codiit-buyer-${i}/200/200`,
+        imageUrl: getSeedImageUrl('buyer', i, 200, 200),
         points: 2000 + i * 3000,
         lifetimeSpend,
         gradeId: grade.id,
@@ -288,7 +309,7 @@ async function seedStores(sellers) {
         mailOrderSalesNumber: `2026-서울강남-${String(1000 + idx)}`,
         businessPhoneNumber: `02-100${idx}-200${idx}`,
         businessAddress: `서울시 강남구 테헤란로 ${10 + idx}`,
-        imageUrl: `https://picsum.photos/seed/codiit-store-${idx}/800/800`,
+        imageUrl: getSeedImageUrl('store', idx, 800, 800),
         imageKey: null,
       },
     });
@@ -374,7 +395,7 @@ async function seedProducts(stores, categories, sizes) {
           exchangeShippingFee: 6000,
           price,
           isSoldOut,
-          imageUrl: `https://picsum.photos/seed/codiit-product-${s + 1}-${p + 1}/900/900`,
+          imageUrl: getSeedImageUrl('product', `${s + 1}-${p + 1}`, 900, 900),
           imageKey: null,
           discountRate,
           discountStartTime: discountRate
@@ -814,6 +835,7 @@ async function seedNotifications(sellers, buyers, products) {
 }
 
 async function main() {
+  assertSeedExecutionAllowed();
   await resetData();
   const grades = await seedGrades();
   const { sellers, buyers } = await seedUsers(grades);
