@@ -40,13 +40,24 @@ export function toProductFormData(data: ProductFormValues): FormData {
     xl: 5,
     free: 6,
   };
+  const runtimeSizeIdMap = data.sizeIdMap || {};
   const stocksArray = Object.entries(data.stocks || {})
     .filter(([, quantity]) => typeof quantity === "number")
+    .map(([sizeName, quantity]) => {
+      const normalizedSizeName = sizeName.toUpperCase();
+      const resolvedSizeId =
+        runtimeSizeIdMap[normalizedSizeName] ??
+        sizeNameToIdMap[sizeName.toLowerCase()];
 
-    .map(([sizeName, quantity]) => ({
-      sizeId: sizeNameToIdMap[sizeName.toLowerCase()],
-      quantity,
-    }));
+      return {
+        sizeId: resolvedSizeId,
+        quantity,
+      };
+    })
+    .filter(
+      (row): row is { sizeId: number; quantity: number } =>
+        typeof row.sizeId === "number" && Number.isFinite(row.sizeId)
+    );
   formData.append("stocks", JSON.stringify(stocksArray));
 
   // 할인
