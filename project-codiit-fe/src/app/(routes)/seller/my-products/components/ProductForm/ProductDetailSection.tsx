@@ -235,9 +235,11 @@ export function ProductDetailSection({
   ) => {
     const next = [...sizeSpecRows];
     const parsed = raw === "" ? null : Number(raw);
+    const normalized =
+      parsed === null || !Number.isFinite(parsed) || parsed <= 0 ? null : parsed;
     next[rowIndex] = {
       ...next[rowIndex],
-      [key]: Number.isFinite(parsed) ? parsed : null,
+      [key]: normalized,
     };
     sizeSpecsField.onChange(next);
   };
@@ -396,7 +398,7 @@ export function ProductDetailSection({
                             <input
                               type="number"
                               step="0.1"
-                              placeholder="cm"
+                              placeholder="-"
                               value={toNumberInputValue(row[key])}
                               onChange={(e) =>
                                 updateSizeSpecValue(rowIndex, key, e.target.value)
