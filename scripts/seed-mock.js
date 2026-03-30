@@ -51,6 +51,22 @@ function randomTrackingNumber(seed) {
   return `TRK${String(100000000000 + seed).slice(0, 12)}`;
 }
 
+function makeBusinessRegistrationNumber(seed) {
+  // 9자리 본체 + 체크디지트(국세청 규칙) 생성
+  const body = String(120000000 + seed).padStart(9, '0');
+  const numbers = body.split('').map(Number);
+  const weights = [1, 3, 7, 1, 3, 7, 1, 3, 5];
+  const weightedSum = weights.reduce(
+    (sum, weight, index) => sum + numbers[index] * weight,
+    0,
+  );
+  const carry = Math.floor((numbers[8] * 5) / 10);
+  const checksum = (10 - ((weightedSum + carry) % 10)) % 10;
+  const digits = `${body}${checksum}`;
+
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5, 10)}`;
+}
+
 function shippingTimeline(createdAt) {
   const ready = new Date(createdAt.getTime() + 1 * 60 * 60 * 1000);
   const shipping = new Date(createdAt.getTime() + 8 * 60 * 60 * 1000);
@@ -210,7 +226,7 @@ async function seedStores(sellers) {
         phoneNumber: `02-0000-${String(1100 + idx)}`,
         content: `코디잇 스토어 ${idx} 소개입니다.`,
         representativeName: `대표자${idx}`,
-        businessRegistrationNumber: `123-45-67${String(800 + idx)}`,
+        businessRegistrationNumber: makeBusinessRegistrationNumber(idx),
         mailOrderSalesNumber: `2026-서울강남-${String(1000 + idx)}`,
         businessPhoneNumber: `02-100${idx}-200${idx}`,
         businessAddress: `서울시 강남구 테헤란로 ${10 + idx}`,
@@ -544,20 +560,13 @@ async function seedInquiriesAndAnswers(buyers, products) {
 
 async function seedNotifications(sellers, buyers) {
   const sellerTemplates = [
-    '판매중인 상품 재고가 부족합니다.',
-    '판매중인 상품이 품절되었습니다.',
-    '상품에 새로운 문의가 등록되었습니다.',
-    '문의에 대한 답변 작성이 필요합니다.',
-    '신규 주문이 접수되었습니다.',
-    '정산 대상 주문이 업데이트되었습니다.',
+    '상품 "시드 상품"에 새로운 문의가 등록되었습니다.',
+    '판매중인 상품 "시드 상품" (M) 사이즈가 품절되었습니다.',
+    '판매중인 상품 "시드 상품"의 모든 사이즈가 품절되었습니다.',
   ];
   const buyerTemplates = [
-    '장바구니 상품 재고가 변경되었습니다.',
-    '장바구니/주문 상품이 품절되었습니다.',
-    '주문 상태가 변경되었습니다.',
-    '문의에 판매자 답변이 등록되었습니다.',
-    '배송이 시작되었습니다.',
-    '배송이 완료되었습니다.',
+    '문의하신 상품 "시드 상품"에 답변이 등록되었습니다.',
+    '장바구니/주문 상품 "시드 상품" (M)이(가) 품절되었습니다.',
   ];
 
   for (const seller of sellers) {
