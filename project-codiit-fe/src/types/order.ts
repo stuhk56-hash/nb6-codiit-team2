@@ -63,9 +63,13 @@ export interface OrderItem {
     }>;
   };
   size?: {
+    id?: number;
+    name?: string;
+    nameKo?: string;
+    nameEn?: string;
     size?: {
-      en: string;
-      ko: string;
+      en?: string;
+      ko?: string;
     };
   };
 }

@@ -47,6 +47,17 @@ export const productsRouter = Router();
  *                 type: array
  *                 items:
  *                   type: object
+ *                   properties:
+ *                     sizeId:
+ *                       type: number
+ *                       example: 21
+ *                     sizeName:
+ *                       type: string
+ *                       description: 선택 사이즈명 (예: XS, FREE, 270)
+ *                       example: XS
+ *                     quantity:
+ *                       type: number
+ *                       example: 10
  *                 description: 사이즈 별 재고
  *               discountRate:
  *                 type: number
@@ -151,6 +162,25 @@ export const productsRouter = Router();
  *                     id:
  *                       type: string
  *                       example: CUID
+ *                 sizeGuideType:
+ *                   type: string
+ *                   enum: [TOP, BOTTOM, SHOES, NONE]
+ *                   example: SHOES
+ *                 sizeSpecs:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       sizeLabel:
+ *                         type: string
+ *                         example: 270
+ *                       displayOrder:
+ *                         type: number
+ *                         example: 0
+ *                       totalLengthCm:
+ *                         type: number
+ *                         nullable: true
+ *                         example: 270
  *                 stocks:
  *                   type: array
  *                   items:
@@ -389,6 +419,17 @@ productsRouter.get('/', withAsync(findList));
  *                 type: array
  *                 items:
  *                   type: object
+ *                   properties:
+ *                     sizeId:
+ *                       type: number
+ *                       example: 21
+ *                     sizeName:
+ *                       type: string
+ *                       description: 선택 사이즈명 (예: XS, FREE, 270)
+ *                       example: XS
+ *                     quantity:
+ *                       type: number
+ *                       example: 10
  *                 description: 사이즈 별 재고
  *               discountRate:
  *                 type: number
@@ -550,6 +591,25 @@ productsRouter.patch(
  *                       type: number
  *                     sumScore:
  *                       type: number
+ *                 sizeGuideType:
+ *                   type: string
+ *                   enum: [TOP, BOTTOM, SHOES, NONE]
+ *                   example: SHOES
+ *                 sizeSpecs:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       sizeLabel:
+ *                         type: string
+ *                         example: 270
+ *                       displayOrder:
+ *                         type: number
+ *                         example: 0
+ *                       totalLengthCm:
+ *                         type: number
+ *                         nullable: true
+ *                         example: 270
  *                 inquiries:
  *                   type: array
  *                   items:

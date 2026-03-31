@@ -2,10 +2,12 @@ import { ProductFormValues } from "@/lib/schemas/productForm.schema";
 
 export function toProductFormData(data: ProductFormValues): FormData {
   const formData = new FormData();
+  const INVALID_TEXT_VALUES = new Set(["?", "-", "n/a", "na", "none", "null", "undefined"]);
   const appendIfNotEmpty = (key: string, value?: string | null) => {
     if (typeof value !== "string") return;
     const trimmed = value.trim();
     if (!trimmed) return;
+    if (INVALID_TEXT_VALUES.has(trimmed.toLowerCase())) return;
     formData.append(key, trimmed);
   };
   const appendIfNumber = (key: string, value?: number | null) => {
@@ -23,20 +25,56 @@ export function toProductFormData(data: ProductFormValues): FormData {
 
   // 재고
   const sizeNameToIdMap: Record<string, number> = {
-    xs: 1,
-    s: 2,
-    m: 3,
-    l: 4,
-    xl: 5,
-    free: 6,
+    xs: 21,
+    s: 22,
+    m: 23,
+    l: 24,
+    xl: 25,
+    free: 26,
+    "230": 27,
+    "235": 28,
+    "240": 29,
+    "245": 30,
+    "250": 31,
+    "255": 32,
+    "260": 33,
+    "265": 34,
+    "270": 35,
+    "275": 36,
+    "280": 37,
+    "285": 38,
+    "290": 39,
   };
+  const runtimeSizeIdMap = data.sizeIdMap || {};
+  const unresolvedSizes = new Set<string>();
   const stocksArray = Object.entries(data.stocks || {})
     .filter(([, quantity]) => typeof quantity === "number")
+    .map(([sizeName, quantity]) => {
+      const normalizedSizeName = sizeName.toUpperCase();
+      const safeQuantity = Number(quantity);
+      const resolvedSizeId =
+        runtimeSizeIdMap[normalizedSizeName] ?? sizeNameToIdMap[sizeName.toLowerCase()];
 
-    .map(([sizeName, quantity]) => ({
-      sizeId: sizeNameToIdMap[sizeName.toLowerCase()],
-      quantity,
-    }));
+      if (typeof resolvedSizeId !== "number" || !Number.isFinite(resolvedSizeId)) {
+        unresolvedSizes.add(normalizedSizeName);
+      }
+
+      return {
+        sizeId: resolvedSizeId,
+        sizeName: normalizedSizeName,
+        quantity: safeQuantity,
+      };
+    })
+    .filter(
+      (row): row is { sizeId: number; sizeName: string; quantity: number } =>
+        typeof row.sizeId === "number" &&
+        Number.isFinite(row.sizeId) &&
+        Number.isFinite(row.quantity)
+    );
+  if (unresolvedSizes.size > 0) {
+    const unknownSizes = Array.from(unresolvedSizes).join(", ");
+    throw new Error(`사이즈 ID 매핑을 찾을 수 없습니다: ${unknownSizes}`);
+  }
   formData.append("stocks", JSON.stringify(stocksArray));
 
   // 할인
@@ -63,10 +101,7 @@ export function toProductFormData(data: ProductFormValues): FormData {
   appendIfNotEmpty("manufactureCountry", data.noticeInfo.manufactureCountry);
   appendIfNotEmpty("manufactureDate", data.noticeInfo.manufactureDate);
   appendIfNotEmpty("caution", data.noticeInfo.caution);
-  appendIfNotEmpty(
-    "qualityGuaranteeStandard",
-    data.noticeInfo.qualityGuaranteeStandard
-  );
+  appendIfNotEmpty("qualityGuaranteeStandard", data.noticeInfo.qualityGuaranteeStandard);
   appendIfNotEmpty("asManagerName", data.noticeInfo.asManagerName);
   appendIfNotEmpty("asPhoneNumber", data.noticeInfo.asPhoneNumber);
   appendIfNumber("shippingFee", data.tradeInfo.shippingFee);
@@ -77,7 +112,25 @@ export function toProductFormData(data: ProductFormValues): FormData {
   appendIfNumber("returnShippingFee", data.tradeInfo.returnShippingFee);
   appendIfNumber("exchangeShippingFee", data.tradeInfo.exchangeShippingFee);
   if (Array.isArray(data.sizeSpecs)) {
-    formData.append("sizeSpecs", JSON.stringify(data.sizeSpecs));
+    const normalizedSizeSpecs = data.sizeSpecs.map((spec) => {
+      const normalizeSpecValue = (value: number | null | undefined) =>
+        typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+
+      return {
+        ...spec,
+        totalLengthCm: normalizeSpecValue(spec.totalLengthCm),
+        shoulderCm: normalizeSpecValue(spec.shoulderCm),
+        chestCm: normalizeSpecValue(spec.chestCm),
+        sleeveCm: normalizeSpecValue(spec.sleeveCm),
+        waistCm: normalizeSpecValue(spec.waistCm),
+        hipCm: normalizeSpecValue(spec.hipCm),
+        thighCm: normalizeSpecValue(spec.thighCm),
+        riseCm: normalizeSpecValue(spec.riseCm),
+        hemCm: normalizeSpecValue(spec.hemCm),
+      };
+    });
+
+    formData.append("sizeSpecs", JSON.stringify(normalizedSizeSpecs));
   }
 
   return formData;

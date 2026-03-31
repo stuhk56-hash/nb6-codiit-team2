@@ -27,6 +27,7 @@ export const productFormSchema = z
     // 옵션 및 재고
     sizes: z.array(z.string()).min(1, "최소 하나 이상의 사이즈를 선택해야 합니다"),
     stocks: z.record(z.number().min(0).optional()).optional(),
+    sizeIdMap: z.record(z.number().int().positive()).optional(),
 
     // 상품 할인
     discount: z.object({
@@ -78,7 +79,7 @@ export const productFormSchema = z
       .optional(),
   })
   .superRefine((data, ctx) => {
-    const { sizes, stocks = {}, discount } = data;
+    const { category, sizes, stocks = {}, discount } = data;
 
     // 재고 검증
     const missing = sizes.filter((size) => !(size in stocks));
@@ -89,6 +90,20 @@ export const productFormSchema = z
         path: ["stocks", size],
       });
     });
+
+    const normalizedSizes = sizes.map((size) => size.toUpperCase());
+    const hasFree = normalizedSizes.includes("FREE");
+    const hasOtherApparelSizes = normalizedSizes.some(
+      (size) => size !== "FREE" && ["XS", "S", "M", "L", "XL"].includes(size)
+    );
+
+    if (category !== "SHOES" && hasFree && hasOtherApparelSizes) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "FREE 사이즈는 XS~XL과 함께 선택할 수 없습니다",
+        path: ["sizes"],
+      });
+    }
 
     // 할인 검증
     if (discount.enabled) {

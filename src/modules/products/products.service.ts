@@ -34,6 +34,8 @@ import {
   sortProducts,
   resolveProductImage,
   resolveProductsImage,
+  normalizeProductStocksInput,
+  toProductStockLookupKeys,
   validateCreateProductInput,
   validateUpdateProductInput,
 } from './utils/products.service.util';
@@ -43,13 +45,23 @@ import {
 } from './utils/products.payload.util';
 
 export class ProductsService {
+
   async create(
     user: AuthUser,
     data: CreateProductDto,
     image?: Express.Multer.File,
   ): Promise<DetailProductResponseDto> {
     requireSeller(user);
-    validateCreateProductInput(data);
+    const stockLookupKeys = toProductStockLookupKeys(data.stocks);
+    const sizes = await productsRepository.findSizesByIdsOrNames(
+      stockLookupKeys.sizeIds,
+      stockLookupKeys.sizeNames,
+    );
+    const normalizedData = {
+      ...data,
+      stocks: normalizeProductStocksInput(data.stocks, sizes),
+    };
+    validateCreateProductInput(normalizedData);
 
     const store = await productsRepository.findSellerStore(user.id);
     ensureSellerStore(store?.id);
@@ -65,7 +77,7 @@ export class ProductsService {
       toCreateProductPayload({
         storeId: store!.id,
         categoryId: category!.id,
-        data,
+        data: normalizedData,
         uploadedImage,
       }),
     );
@@ -131,7 +143,16 @@ export class ProductsService {
       await productsRepository.findById(productId),
     );
     ensureProductOwner(user.id, product);
-    validateUpdateProductInput(data, product);
+    const stockLookupKeys = toProductStockLookupKeys(data.stocks);
+    const sizes = await productsRepository.findSizesByIdsOrNames(
+      stockLookupKeys.sizeIds,
+      stockLookupKeys.sizeNames,
+    );
+    const normalizedData = {
+      ...data,
+      stocks: normalizeProductStocksInput(data.stocks, sizes),
+    };
+    validateUpdateProductInput(normalizedData, product);
 
     const category = data.categoryName
       ? await productsRepository.findCategoryByName(data.categoryName)
@@ -148,7 +169,7 @@ export class ProductsService {
         productId,
         toUpdateProductPayload({
           categoryId: category?.id,
-          data,
+          data: normalizedData,
           uploadedImage,
         }),
       ),

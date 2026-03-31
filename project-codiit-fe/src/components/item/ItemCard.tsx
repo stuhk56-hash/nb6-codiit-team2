@@ -2,6 +2,7 @@
 
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { Order, OrderItem, ShippingStatus } from "@/types/order";
+import { resolveSizeLabel } from "@/utils/sizeLabel";
 import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -15,15 +16,6 @@ interface ItemCardProps {
   purchases: OrderItem[];
   orders?: Order[];
 }
-
-type ItemSizeShape = OrderItem["size"] & {
-  nameKo?: string;
-  name?: string;
-  size?: {
-    ko?: string;
-    en?: string;
-  };
-};
 
 export default function ItemCard({ purchases, orders = [] }: ItemCardProps) {
   const router = useRouter();
@@ -67,8 +59,7 @@ export default function ItemCard({ purchases, orders = [] }: ItemCardProps) {
   };
 
   const getSizeLabel = (item: OrderItem): string => {
-    const size = item.size as ItemSizeShape | undefined;
-    return size?.size?.ko ?? size?.nameKo ?? size?.name ?? "사이즈 정보 없음";
+    return resolveSizeLabel(item.size);
   };
 
   const getRelatedOrder = (itemId: string): Order | undefined => {

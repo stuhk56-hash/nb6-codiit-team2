@@ -61,6 +61,7 @@ jest.mock('../products.repository', () => ({
   productsRepository: {
     findSellerStore: jest.fn(),
     findCategoryByName: jest.fn(),
+    findSizesByIdsOrNames: jest.fn(),
     findById: jest.fn(),
     findPageByQuery: jest.fn(),
     findFilteredByQuery: jest.fn(),
@@ -87,6 +88,13 @@ jest.mock('../utils/products.service.util', () => ({
   sortProducts: jest.fn((products: unknown[]) => products),
   resolveProductImage: jest.fn(async (product: unknown) => product),
   resolveProductsImage: jest.fn(async (products: unknown[]) => products),
+  normalizeProductStocksInput: jest.fn(
+    (stocks: unknown[]) => stocks,
+  ),
+  toProductStockLookupKeys: jest.fn((stocks: Array<{ sizeId: number }>) => ({
+    sizeIds: stocks.map((stock) => stock.sizeId),
+    sizeNames: [],
+  })),
   validateCreateProductInput: jest.fn(),
   validateUpdateProductInput: jest.fn(),
 }));

@@ -160,13 +160,16 @@ export function ProductDetailSection({
     [handleImageUpload]
   );
 
-  const sizeGuideType: "TOP" | "BOTTOM" | "NONE" = useMemo(() => {
+  const sizeGuideType: "TOP" | "BOTTOM" | "SHOES" | "NONE" = useMemo(() => {
     const category = (categoryField.value || "").toString().toUpperCase();
     if (category === "TOP" || category === "OUTER" || category === "DRESS") {
       return "TOP";
     }
     if (category === "BOTTOM" || category === "SKIRT") {
       return "BOTTOM";
+    }
+    if (category === "SHOES") {
+      return "SHOES";
     }
     return "NONE";
   }, [categoryField.value]);
@@ -208,13 +211,17 @@ export function ProductDetailSection({
           ["chestCm", "가슴단면"],
           ["sleeveCm", "소매길이"],
         ] as const)
-      : ([
+      : sizeGuideType === "BOTTOM"
+      ? ([
           ["totalLengthCm", "총장"],
           ["waistCm", "허리단면"],
           ["hipCm", "엉덩이단면"],
           ["thighCm", "허벅지단면"],
           ["riseCm", "밑위"],
           ["hemCm", "밑단단면"],
+        ] as const)
+      : ([
+          ["totalLengthCm", "발길이(mm)"],
         ] as const);
 
   const sizeSpecRows = Array.isArray(sizeSpecsField.value) ? sizeSpecsField.value : [];
@@ -235,9 +242,11 @@ export function ProductDetailSection({
   ) => {
     const next = [...sizeSpecRows];
     const parsed = raw === "" ? null : Number(raw);
+    const normalized =
+      parsed === null || !Number.isFinite(parsed) || parsed <= 0 ? null : parsed;
     next[rowIndex] = {
       ...next[rowIndex],
-      [key]: Number.isFinite(parsed) ? parsed : null,
+      [key]: normalized,
     };
     sizeSpecsField.onChange(next);
   };
@@ -275,7 +284,7 @@ export function ProductDetailSection({
               className="border-gray03 h-[45px] rounded-md border bg-white px-4"
             />
             <input
-              placeholder="제조연월"
+              placeholder="제조연월 (YYYY-MM)"
               value={manufactureDateField.value ?? ""}
               onChange={manufactureDateField.onChange}
               className="border-gray03 h-[45px] rounded-md border bg-white px-4"
@@ -364,7 +373,11 @@ export function ProductDetailSection({
         {sizeGuideType !== "NONE" ? (
           <div className="space-y-4">
             <h4 className="text-lg font-bold">
-              {sizeGuideType === "TOP" ? "상의 사이즈 스펙" : "하의 사이즈 스펙"}
+              {sizeGuideType === "TOP"
+                ? "상의 사이즈 스펙"
+                : sizeGuideType === "BOTTOM"
+                ? "하의 사이즈 스펙"
+                : "신발 사이즈 스펙"}
             </h4>
             {sizeSpecRows.length ? (
               <div className="overflow-x-auto rounded-md border border-gray-200">
@@ -396,7 +409,7 @@ export function ProductDetailSection({
                             <input
                               type="number"
                               step="0.1"
-                              placeholder="cm"
+                              placeholder="-"
                               value={toNumberInputValue(row[key])}
                               onChange={(e) =>
                                 updateSizeSpecValue(rowIndex, key, e.target.value)
@@ -416,7 +429,7 @@ export function ProductDetailSection({
           </div>
         ) : (
           <p className="text-sm text-gray-500">
-            SHOES/ACC 카테고리는 사이즈표 대신 규격/고시 필드 중심으로 안내됩니다.
+            ACC 카테고리는 사이즈표 대신 규격/고시 필드 중심으로 안내됩니다.
           </p>
         )}
         <ReactQuill

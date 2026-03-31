@@ -5,6 +5,7 @@ import Modal from "@/components/Modal";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { OrderItem } from "@/types/order";
+import { resolveSizeLabel } from "@/utils/sizeLabel";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import Image from "next/image";
@@ -33,12 +34,6 @@ type ProductReviewLike = {
   content: string;
   createdAt: string;
   orderItemId?: string | null;
-};
-
-type ItemSizeShape = OrderItem["size"] & {
-  size?: {
-    ko?: string;
-  };
 };
 
 export default function ReviewViewModal({ open, onClose, purchase, onEditComplete }: ReviewViewModalProps) {
@@ -141,8 +136,7 @@ export default function ReviewViewModal({ open, onClose, purchase, onEditComplet
   }
 
   const imageUrl = purchase.product?.image || purchase.productImageUrl || "/images/Mask-group.svg";
-  const size = purchase.size as ItemSizeShape | undefined;
-  const sizeLabel = size?.size?.ko ?? "사이즈 정보 없음";
+  const sizeLabel = resolveSizeLabel(purchase.size);
 
   return (
     <>

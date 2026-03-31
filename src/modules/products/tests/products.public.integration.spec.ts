@@ -154,6 +154,31 @@ describe('상품 API 통합 테스트', () => {
         const res = await request(app).get('/api/products/not-exists-id');
         expect(res.status).toBe(404);
       });
+
+      test('SHOES 카테고리 상품 상세 조회 시 sizeGuideType은 SHOES를 반환한다', async () => {
+        const { store } = await seedSellerAndStore();
+        const category = await seedCategory('shoes');
+        const size270 = await prisma.size.create({
+          data: {
+            name: '270',
+            nameEn: '270',
+            nameKo: '270',
+          },
+        });
+        const product = await seedProduct({
+          storeId: store.id,
+          categoryId: category.id,
+          sizeId: size270.id,
+          name: '신발 상세 상품',
+          price: 35000,
+          content: '신발 상세 설명',
+        });
+
+        const res = await request(app).get(`/api/products/${product.id}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.sizeGuideType).toBe('SHOES');
+      });
     });
 
     describe('GET /api/products/:productId/inquiries (공개 문의 목록 조회)', () => {

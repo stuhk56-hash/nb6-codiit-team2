@@ -1,6 +1,7 @@
 "use client";
 
 import { Order, OrderItem, ShippingStatus } from "@/types/order";
+import { resolveSizeLabel } from "@/utils/sizeLabel";
 import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -14,15 +15,6 @@ interface MypageItemCardProps {
   purchases: OrderItem[];
   orders?: Order[];
 }
-
-type ItemSizeShape = OrderItem["size"] & {
-  nameKo?: string;
-  name?: string;
-  size?: {
-    ko?: string;
-    en?: string;
-  };
-};
 
 export default function MypageItemCard({ purchases, orders = [] }: MypageItemCardProps) {
   const router = useRouter();
@@ -84,8 +76,7 @@ export default function MypageItemCard({ purchases, orders = [] }: MypageItemCar
   };
 
   const getSizeLabel = (item: OrderItem): string => {
-    const size = item.size as ItemSizeShape | undefined;
-    return size?.size?.ko ?? size?.nameKo ?? size?.name ?? "정보 없음";
+    return resolveSizeLabel(item.size, "정보 없음");
   };
 
   // ✅ 리뷰 여부 판단 (product.reviews 배열의 길이로 판단)

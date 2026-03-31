@@ -6,6 +6,7 @@ import { getAxiosInstance } from "@/lib/api/axiosInstance";
 import { ReviewCreateForm, reviewCreateSchemas } from "@/lib/schemas/reviewCreate.schemas";
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { OrderItem } from "@/types/order";
+import { resolveSizeLabel } from "@/utils/sizeLabel";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -22,12 +23,6 @@ interface ReviewWriteModalProps {
   purchase: OrderItem | null;
   onSubmit?: () => void;
 }
-
-type ItemSizeShape = OrderItem["size"] & {
-  size?: {
-    ko?: string;
-  };
-};
 
 export default function ReviewWriteModal({ open, onClose, purchase, onSubmit }: ReviewWriteModalProps) {
   const axiosInstance = getAxiosInstance();
@@ -129,8 +124,7 @@ export default function ReviewWriteModal({ open, onClose, purchase, onSubmit }: 
   }
 
   const imageUrl = purchase.product?.image || purchase.productImageUrl || "/images/Mask-group.svg";
-  const size = purchase.size as ItemSizeShape | undefined;
-  const sizeLabel = size?.size?.ko ?? "사이즈 정보 없음";
+  const sizeLabel = resolveSizeLabel(purchase.size);
 
   return (
     <Modal
