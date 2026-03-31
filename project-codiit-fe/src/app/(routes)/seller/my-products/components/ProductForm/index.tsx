@@ -31,6 +31,7 @@ export default function ProductForm({ initialValues, onSubmit }: ProductFormProp
       category: undefined,
       sizes: [],
       stocks: {},
+      sizeIdMap: {},
       discount: {
         enabled: false,
         value: null,

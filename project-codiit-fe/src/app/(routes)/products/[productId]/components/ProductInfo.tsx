@@ -48,8 +48,13 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
   const displayManufactureDate = (value: string | null | undefined) => {
     const text = displayText(value);
     if (text === "미제공") return text;
-    if (!/^\d{4}(?:[-/.])\d{1,2}(?:[-/.])\d{1,2}$/.test(text)) return "미제공";
-    return text;
+    const monthOnlyMatch = text.match(/^(\d{4})([-/.])(\d{1,2})$/);
+    if (monthOnlyMatch) return `${monthOnlyMatch[1]}-${monthOnlyMatch[3].padStart(2, "0")}`;
+
+    const dateMatch = text.match(/^(\d{4})([-/.])(\d{1,2})(?:[-/.])(\d{1,2})$/);
+    if (dateMatch) return `${dateMatch[1]}-${dateMatch[3].padStart(2, "0")}`;
+
+    return "미제공";
   };
   const displayPrice = (value: number | null | undefined) =>
     typeof value === "number" ? `${value.toLocaleString()}원` : "미제공";
@@ -123,21 +128,32 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
           ["chestCm", "가슴단면"],
           ["sleeveCm", "소매길이"],
         ] as const)
-      : ([
+      : data.sizeGuideType === "BOTTOM"
+      ? ([
           ["totalLengthCm", "총장"],
           ["waistCm", "허리단면"],
           ["hipCm", "엉덩이단면"],
           ["thighCm", "허벅지단면"],
           ["riseCm", "밑위"],
           ["hemCm", "밑단단면"],
+        ] as const)
+      : ([
+          ["totalLengthCm", "발길이(mm)"],
         ] as const);
+  const isShoesGuide = data.sizeGuideType === "SHOES";
   const stockSizeLabels = Array.from(
     new Set(
       data.stocks
         .map((stock) => stock.size.name?.trim().toUpperCase())
-        .filter((label): label is string => Boolean(label))
+      .filter((label): label is string => Boolean(label))
     )
   );
+  const shoeSizeLabels = [...stockSizeLabels].sort((a, b) => {
+    const aNumber = Number(a);
+    const bNumber = Number(b);
+    if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) return aNumber - bNumber;
+    return a.localeCompare(b);
+  });
   const sizeSpecMap = new Map(
     data.sizeSpecs.map((spec) => [spec.sizeLabel.trim().toUpperCase(), spec] as const)
   );
@@ -159,7 +175,9 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
       hemCm: null,
     };
   });
-  const hasSizeGuide = data.sizeGuideType !== "NONE" && sizeGuideRows.length > 0;
+  const hasSizeGuide =
+    data.sizeGuideType !== "NONE" &&
+    (isShoesGuide ? shoeSizeLabels.length > 0 : sizeGuideRows.length > 0);
 
   const { data: cartData, refetch: refetchCartData } = useQuery({
     queryKey: ["cartData"],
@@ -381,16 +399,34 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
           {hasSizeGuide ? (
             <div>
               <p className="mb-3 text-sm text-gray-600">
-                단위: cm | 측정 방식에 따라 1~3cm 오차가 발생할 수 있습니다.
+                {isShoesGuide
+                  ? "단위: mm | 브랜드/모델/측정 방식에 따라 착화감이 달라질 수 있습니다."
+                  : "단위: cm | 측정 방식에 따라 1~3cm 오차가 발생할 수 있습니다."}
               </p>
               <div
                 id="size-guide-section"
                 className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm"
               >
-              <table className="w-full min-w-[760px] border-collapse text-sm">
+              {isShoesGuide ? (
+                <table className="w-full min-w-[320px] table-fixed border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border border-gray-200 px-3 py-2 text-left">신발 사이즈(mm)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shoeSizeLabels.map((sizeLabel) => (
+                      <tr key={sizeLabel}>
+                        <td className="border border-gray-200 px-3 py-2 font-semibold">{sizeLabel}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+              <table className="w-full min-w-[760px] table-fixed border-collapse text-sm">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="border border-gray-200 px-3 py-2 text-left">cm</th>
+                    <th className="border border-gray-200 px-3 py-2 text-left">사이즈</th>
                     {sizeGuideColumns.map(([key, label]) => (
                       <th
                         key={key}
@@ -419,6 +455,7 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
                   ))}
                 </tbody>
               </table>
+              )}
               </div>
             </div>
           ) : (

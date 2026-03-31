@@ -173,6 +173,54 @@ export function validateUpdateProductInput(
   validateSizeSpecs(nextCategory, data.sizeSpecs);
 }
 
+export function normalizeProductStocksInput(
+  stocks: CreateProductDto['stocks'],
+  sizes: Array<{ id: number; name: string }>,
+) {
+  const sizeIdsInDb = new Set(sizes.map((size) => size.id));
+  const sizeIdByName = new Map(
+    sizes.map((size) => [size.name.toUpperCase(), size.id]),
+  );
+
+  return stocks.map((stock) => {
+    if (sizeIdsInDb.has(stock.sizeId)) {
+      return {
+        sizeId: stock.sizeId,
+        quantity: stock.quantity,
+      };
+    }
+
+    const normalizedName = stock.sizeName?.trim().toUpperCase();
+    if (normalizedName) {
+      const resolved = sizeIdByName.get(normalizedName);
+      if (resolved) {
+        return {
+          sizeId: resolved,
+          quantity: stock.quantity,
+        };
+      }
+    }
+
+    throw new BadRequestError('잘못된 사이즈 정보입니다.');
+  });
+}
+
+export function toProductStockLookupKeys(stocks: CreateProductDto['stocks']) {
+  const sizeIds = Array.from(new Set(stocks.map((stock) => stock.sizeId)));
+  const sizeNames = Array.from(
+    new Set(
+      stocks
+        .map((stock) => stock.sizeName?.trim().toUpperCase())
+        .filter((name): name is string => Boolean(name)),
+    ),
+  );
+
+  return {
+    sizeIds,
+    sizeNames,
+  };
+}
+
 export function requireProduct(
   product: ProductWithRelations | null,
 ): ProductWithRelations {

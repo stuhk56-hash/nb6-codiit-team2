@@ -19,6 +19,10 @@ export function transformToFormValues(data: ProductInfoData): ProductFormValues 
       acc[curr.size.name.toUpperCase()] = curr.quantity;
       return acc;
     }, {}),
+    sizeIdMap: data.stocks.reduce<Record<string, number>>((acc, curr) => {
+      acc[curr.size.name.toUpperCase()] = curr.size.id;
+      return acc;
+    }, {}),
 
     discount: {
       enabled: data.discountRate > 0,

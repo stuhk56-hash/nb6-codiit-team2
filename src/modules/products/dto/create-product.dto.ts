@@ -1,5 +1,6 @@
 export type CreateProductStockDto = {
   sizeId: number;
+  sizeName?: string;
   quantity: number;
 };
 

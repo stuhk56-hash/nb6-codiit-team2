@@ -20,14 +20,45 @@ const NOTIFICATIONS_PER_USER = 6;
 const DEFAULT_PASSWORD = 'codiit1234';
 const SCRYPT_KEYLEN = 64;
 const SALT_BYTES = 16;
+const DEFAULT_FALLBACK_IMAGE_URL = '/images/Mask-group.svg';
 
 const categoryNames = ['TOP', 'BOTTOM', 'OUTER', 'DRESS', 'SKIRT', 'SHOES', 'ACC'];
+const APPAREL_SIZES = ['XS', 'S', 'M', 'L', 'XL'];
+const SHOES_SIZES = [
+  '230',
+  '235',
+  '240',
+  '245',
+  '250',
+  '255',
+  '260',
+  '265',
+  '270',
+  '275',
+  '280',
+  '285',
+  '290',
+];
 const sizeDefs = [
+  { name: 'FREE', nameEn: 'Free', nameKo: '프리' },
   { name: 'XS', nameEn: 'XS', nameKo: 'XS' },
   { name: 'S', nameEn: 'S', nameKo: 'S' },
   { name: 'M', nameEn: 'M', nameKo: 'M' },
   { name: 'L', nameEn: 'L', nameKo: 'L' },
   { name: 'XL', nameEn: 'XL', nameKo: 'XL' },
+  { name: '230', nameEn: '230', nameKo: '230' },
+  { name: '235', nameEn: '235', nameKo: '235' },
+  { name: '240', nameEn: '240', nameKo: '240' },
+  { name: '245', nameEn: '245', nameKo: '245' },
+  { name: '250', nameEn: '250', nameKo: '250' },
+  { name: '255', nameEn: '255', nameKo: '255' },
+  { name: '260', nameEn: '260', nameKo: '260' },
+  { name: '265', nameEn: '265', nameKo: '265' },
+  { name: '270', nameEn: '270', nameKo: '270' },
+  { name: '275', nameEn: '275', nameKo: '275' },
+  { name: '280', nameEn: '280', nameKo: '280' },
+  { name: '285', nameEn: '285', nameKo: '285' },
+  { name: '290', nameEn: '290', nameKo: '290' },
 ];
 const gradeDefs = [
   { id: 'grade_green', name: 'Green', rate: 1, minAmount: 0 },
@@ -76,9 +107,7 @@ function shippingTimeline(createdAt) {
 
 function getPaymentStatusFromOrder(orderStatus, index) {
   if (orderStatus === OrderStatus.CompletedPayment) {
-    return index % 7 === 0
-      ? PaymentStatus.FailedPayment
-      : PaymentStatus.CompletedPayment;
+    return PaymentStatus.CompletedPayment;
   }
   if (orderStatus === OrderStatus.Canceled) {
     return PaymentStatus.CanceledPayment;
@@ -93,10 +122,46 @@ function getShippingStatusFromOrder(orderStatus, index) {
   return ShippingStatus.ReadyToShip;
 }
 
-function makeSizeSpecs(categoryName, i) {
-  const rows = ['XS', 'S', 'M', 'L', 'XL'];
+function getSeedImageUrl(type, id, width, height) {
+  // 기본은 내부 fallback 이미지를 사용해서 외부 이미지 서비스 장애 영향 최소화.
+  if (process.env.SEED_USE_EXTERNAL_IMAGES !== 'true') {
+    return DEFAULT_FALLBACK_IMAGE_URL;
+  }
+  return `https://picsum.photos/seed/codiit-${type}-${id}/${width}/${height}`;
+}
 
-  if (categoryName === 'BOTTOM' || categoryName === 'SKIRT') {
+function getProductSizeNames(categoryName, index) {
+  const upper = categoryName.toUpperCase();
+
+  if (upper === 'SHOES') {
+    const start = index % 5;
+    return SHOES_SIZES.slice(start, start + 5);
+  }
+
+  if (upper === 'ACC') {
+    return ['FREE'];
+  }
+
+  // 의류 카테고리는 FREE 단독 또는 XS~XL 세트 중 하나만 사용
+  if (index % 4 === 0) {
+    return ['FREE'];
+  }
+  return APPAREL_SIZES;
+}
+
+function makeSizeSpecs(categoryName, sizeLabels, i) {
+  const rows = sizeLabels;
+  const upper = categoryName.toUpperCase();
+
+  if (upper === 'SHOES') {
+    return rows.map((label, idx) => ({
+      sizeLabel: label,
+      displayOrder: idx,
+      totalLengthCm: Number(label),
+    }));
+  }
+
+  if (upper === 'BOTTOM' || upper === 'SKIRT') {
     return rows.map((label, idx) => ({
       sizeLabel: label,
       displayOrder: idx,
@@ -144,6 +209,20 @@ async function resetData() {
   await prisma.size.deleteMany();
 }
 
+function assertSeedExecutionAllowed() {
+  if (process.env.SEED_MOCK_ALLOW_RESET === 'true') {
+    return;
+  }
+
+  throw new Error(
+    [
+      'Seed reset is blocked by default.',
+      'Set SEED_MOCK_ALLOW_RESET=true to run scripts/seed-mock.js intentionally.',
+      'Example: SEED_MOCK_ALLOW_RESET=true npm run seed:mock',
+    ].join(' '),
+  );
+}
+
 async function seedGrades() {
   for (const grade of gradeDefs) {
     await prisma.grade.create({ data: grade });
@@ -162,7 +241,7 @@ async function seedUsers(grades) {
         email: `seller${i}@codiit.com`,
         name: `셀러${i}`,
         passwordHash: hashPassword(DEFAULT_PASSWORD),
-        imageUrl: `https://picsum.photos/seed/codiit-seller-${i}/200/200`,
+        imageUrl: getSeedImageUrl('seller', i, 200, 200),
       },
     });
     sellers.push(seller);
@@ -181,7 +260,7 @@ async function seedUsers(grades) {
         email: `buyer${i}@codiit.com`,
         name: `바이어${i}`,
         passwordHash: hashPassword(DEFAULT_PASSWORD),
-        imageUrl: `https://picsum.photos/seed/codiit-buyer-${i}/200/200`,
+        imageUrl: getSeedImageUrl('buyer', i, 200, 200),
         points: 2000 + i * 3000,
         lifetimeSpend,
         gradeId: grade.id,
@@ -230,8 +309,8 @@ async function seedStores(sellers) {
         mailOrderSalesNumber: `2026-서울강남-${String(1000 + idx)}`,
         businessPhoneNumber: `02-100${idx}-200${idx}`,
         businessAddress: `서울시 강남구 테헤란로 ${10 + idx}`,
-        imageUrl: `https://picsum.photos/seed/codiit-store-${idx}/800/800`,
-        imageKey: `stores/store-${idx}.jpg`,
+        imageUrl: getSeedImageUrl('store', idx, 800, 800),
+        imageKey: null,
       },
     });
 
@@ -274,18 +353,21 @@ async function seedSizes() {
 
 async function seedProducts(stores, categories, sizes) {
   const products = [];
+  const sizeByName = new Map(sizes.map((size) => [size.name.toUpperCase(), size]));
 
   for (let s = 0; s < stores.length; s += 1) {
     for (let p = 0; p < PRODUCTS_PER_SELLER; p += 1) {
       const category = pick(categories, s + p);
       const discountRate = p % 4 === 0 ? 15 : p % 3 === 0 ? 10 : null;
       const price = 25000 + s * 6000 + p * 1300;
-      const specRows = makeSizeSpecs(category.name, p);
+      const productSizeNames = getProductSizeNames(category.name, s + p);
+      const specRows = makeSizeSpecs(category.name, productSizeNames, p);
+      const productSizes = productSizeNames
+        .map((name) => sizeByName.get(name.toUpperCase()))
+        .filter(Boolean);
 
-      const stockValues = sizes.map((_, idx) =>
-        p % 9 === 0
-          ? 0
-          : Math.max(0, 2 + ((s + p + idx) % 9)),
+      const stockValues = productSizes.map((_, idx) =>
+        p % 9 === 0 ? 0 : Math.max(0, 2 + ((s + p + idx) % 9)),
       );
       const isSoldOut = stockValues.every((qty) => qty === 0);
 
@@ -313,8 +395,8 @@ async function seedProducts(stores, categories, sizes) {
           exchangeShippingFee: 6000,
           price,
           isSoldOut,
-          imageUrl: `https://picsum.photos/seed/codiit-product-${s + 1}-${p + 1}/900/900`,
-          imageKey: `products/product-${s + 1}-${p + 1}.jpg`,
+          imageUrl: getSeedImageUrl('product', `${s + 1}-${p + 1}`, 900, 900),
+          imageKey: null,
           discountRate,
           discountStartTime: discountRate
             ? new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
@@ -323,14 +405,18 @@ async function seedProducts(stores, categories, sizes) {
             ? new Date(Date.now() + 6 * 24 * 60 * 60 * 1000)
             : null,
           stocks: {
-            create: sizes.map((size, idx) => ({
+            create: productSizes.map((size, idx) => ({
               sizeId: size.id,
               quantity: stockValues[idx],
             })),
           },
-          sizeSpecs: {
-            create: specRows,
-          },
+          ...(specRows.length > 0
+            ? {
+                sizeSpecs: {
+                  create: specRows,
+                },
+              }
+            : {}),
         },
       });
 
@@ -363,17 +449,19 @@ async function seedFavoritesAndCarts(buyers, stores, products, sizes) {
 
     for (let i = 0; i < 6; i += 1) {
       const product = pick(products, b * 3 + i);
-      const size = pick(sizes, i);
-      const stock = await prisma.productStock.findUnique({
-        where: { productId_sizeId: { productId: product.id, sizeId: size.id } },
+      const stockCandidates = await prisma.productStock.findMany({
+        where: { productId: product.id, quantity: { gt: 0 } },
+        select: { sizeId: true, quantity: true },
       });
-      if (!stock || stock.quantity === 0) continue;
+      if (stockCandidates.length === 0) continue;
+
+      const stock = pick(stockCandidates, i);
 
       await prisma.cartItem.create({
         data: {
           cartId: cart.id,
           productId: product.id,
-          sizeId: size.id,
+          sizeId: stock.sizeId,
           quantity: Math.min(1 + (i % 3), stock.quantity),
         },
       });
@@ -414,7 +502,12 @@ async function seedOrdersPaymentsShippingsAndReviews(buyers, products, sizes) {
 
       for (let k = 0; k < itemCount; k += 1) {
         const product = pick(products, b * ORDERS_PER_BUYER + i + k);
-        const size = pick(sizes, i + k);
+        const stockCandidates = await prisma.productStock.findMany({
+          where: { productId: product.id },
+          select: { sizeId: true },
+        });
+        if (stockCandidates.length === 0) continue;
+        const stock = pick(stockCandidates, i + k);
         const quantity = 1 + ((i + k) % 2);
         const unitPrice = Math.floor(
           product.price * (1 - (product.discountRate ?? 0) / 100),
@@ -425,7 +518,7 @@ async function seedOrdersPaymentsShippingsAndReviews(buyers, products, sizes) {
           data: {
             orderId: order.id,
             productId: product.id,
-            sizeId: size.id,
+            sizeId: stock.sizeId,
             quantity,
             unitPrice,
             productName: product.name,
@@ -742,6 +835,7 @@ async function seedNotifications(sellers, buyers, products) {
 }
 
 async function main() {
+  assertSeedExecutionAllowed();
   await resetData();
   const grades = await seedGrades();
   const { sellers, buyers } = await seedUsers(grades);

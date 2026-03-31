@@ -38,6 +38,12 @@ export interface ProductListResponse {
 interface StockSize {
   id: number;
   name: string;
+  nameKo?: string;
+  nameEn?: string;
+  size?: {
+    ko?: string;
+    en?: string;
+  };
 }
 
 // 재고
@@ -106,7 +112,7 @@ export interface ProductInfoData {
     returnShippingFee: number | null;
     exchangeShippingFee: number | null;
   };
-  sizeGuideType: "TOP" | "BOTTOM" | "NONE";
+  sizeGuideType: "TOP" | "BOTTOM" | "SHOES" | "NONE";
   sizeSpecs: Array<{
     sizeLabel: string;
     displayOrder: number;
