@@ -1,59 +1,109 @@
-# 프로젝트 CODI-IT (Backend)
+# 프로젝트 CODI-IT
 
-CODI-IT 쇼핑몰 백엔드 서버입니다.  
-상품/스토어/주문/결제/배송/리뷰/문의/알림(SSE) 기능을 제공합니다.
+- [팀 협업 문서(Notion)](https://www.notion.so/Codi-it-311875261f4d80f3a1dbef277357817f?source=copy_link)
+- [배포 사이트](https://codiit.shop)
+
+## 팀원 구성 및 업무 분담
+
+| 팀원                                                | 주요 담당                                                                                           |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 정현준 ([Github](https://github.com/stuhk56-hash/)) | 로그인/로그아웃(판매자·구매자), 회원가입/개인정보 수정, 구매자 포인트 등급/사용                     |
+| 박건용 ([Github](https://github.com/pkeony/))       | 주문 생성, 장바구니 담기 기능, 상품 결제 기능, 배송조회/주문 상세조회, API 문서화                   |
+| 박대용 ([Github](https://github.com/Ddragon718/))   | 문의 CRUD 및 답변, 리뷰 등록/삭제/조회, 품절/문의답변 실시간 알림(SSE), 판매 대시보드 데이터        |
+| 최민수 ([Github](https://github.com/chamysj/))      | 스토어 등록/수정/조회, 관심 스토어 등록/해제, 상품 CRUD, 판매량 기반 추천상품, AWS 인프라 구축/배포 |
 
 ## 프로젝트 소개
 
-- 쇼핑몰 도메인 API 서버
-- 기간: 2026.03 (진행 중)
-- 문서: [팀 협업 문서(Notion)](https://www.notion.so/2de465dc83a0817eab90cebee0287992)
+- 패션 이커머스 플랫폼
+- 기간: 2026.02.13(금) ~ 2026.04.02(목)
 
 ## 기술 스택
 
-- Backend: Node.js, Express v5, TypeScript
+- Backend: Node.js, Express, TypeScript
 - Database: PostgreSQL (RDS)
 - ORM: Prisma
-- Validation: Superstruct, class-validator
-- Auth: JWT (Access/Refresh), HttpOnly Cookie
+- Validation: Superstruct
+- Auth: JWT (Access/Refresh), HttpOnly Cookie, HTTPS
 - Security: Helmet, scrypt 비밀번호 해시, AES-256-GCM(스토어 민감정보 암복호화)
 - Storage: AWS S3
 - Infra: EC2, Route 53, Nginx + Let's Encrypt, PM2
 - CI/CD: GitHub Actions (PR Test, main Push Deploy)
+- API 문서화: swagger
+- 협업 도구: Discord, GitHub, Notion
+- 일정 관리: GitHub issues, Notion 타임라인
 
-## 핵심 구현 기능
+## 팀원별 구현 기능 상세
 
-### 인증/유저
+### **정현준 (인증/회원/포인트)**
 
-- 이메일 로그인/토큰 재발급/로그아웃
-- Access Token + Refresh Token 흐름
-- HttpOnly 쿠키 기반 Refresh Token 관리
+- **인증/회원**
+  - 판매자/구매자 로그인 및 로그아웃 구현
+  - 회원가입 및 개인정보 수정 기능 구현
+  - JWT Access/Refresh + HttpOnly Cookie 인증 흐름 적용
+- **포인트/등급**
+  - 구매자 포인트 등급 기능 구현
+  - 주문 시 포인트 사용/적립 로직 구현
 
-### 스토어/상품
+### **박건용 (주문/결제/배송)**
 
-- 스토어 생성/수정/조회
-- 상품 CRUD, 사이즈별 재고 관리, 품절 상태 반영
-- 사업자 정보 유효성 검증(사업자등록번호 체크섬 포함)
-- 스토어 민감정보 암호화 저장
+- **주문·결제 워크플로우**
+  - 장바구니 담기 기능 구현
+  - 주문 생성 및 결제 처리 기능 구현
+  - 주문 상태(결제 대기/완료/취소) 흐름 관리
+- **배송 및 주문 조회**
+  - 배송조회 기능 구현
+  - 주문 상세조회 API를 통한 주문 정보 제공
+  - 주문 아이템 단위 스냅샷 기반 데이터 일관성 유지
+- **API 문서화**
+  - 주문/결제/배송 도메인 Swagger 명세 작성 및 유지보수
 
-### 주문/결제/배송
+### **박대용 (문의/리뷰/알림/대시보드)**
 
-- 주문 생성/조회/취소
-- 결제 상태 및 결제수단 관리
-- 배송 상태/이력 관리
-- 주문 스냅샷(판매자 정보 포함) 기반 데이터 일관성 유지
+- **문의·리뷰 도메인**
+  - 문의 CRUD 및 판매자 답변 기능 구현
+  - 리뷰 등록/삭제/조회 기능 구현
+- **실시간 알림**
+  - 상품 품절 시 구매자/판매자 알림 전송
+  - 문의글 답변 등록 시 실시간 알림(SSE) 전송
+- **판매 대시보드**
+  - 판매 데이터 집계 및 대시보드 지표 API 구현
 
-### 리뷰/문의/알림
+### **최민수 (스토어/상품/인프라)**
 
-- 리뷰 작성/수정/삭제/조회
-- 상품 문의 및 답변
-- SSE 기반 실시간 알림 전송
+- **스토어/상품 관리**
+  - 스토어 등록/수정/조회 기능 구현
+  - 관심 스토어 등록/해제 기능 구현
+  - 상품 CRUD 및 사이즈/재고 관리 기능 구현
+  - 메인 페이지 판매량 기반 추천상품 기능 구현
+- **인프라/배포**
+  - AWS 인프라(EC2, RDS, S3, Route 53, Nginx, PM2) 구성
+  - GitHub Actions 기반 CI/CD 배포 파이프라인 구축
 
-### 파일 업로드
+## 파일 구조
 
-- Multer 기반 이미지 업로드
-- S3 업로드/삭제
-- 업로드 용량 제한 및 오류 응답 처리
+```text
+src
+ ┣ modules       # 도메인 모듈(auth, products, orders, reviews, stores ...)
+ ┃ ┗ <module>
+ ┃    ┣ *.controller.ts   # HTTP 요청/응답 처리
+ ┃    ┣ *.service.ts      # 비즈니스 로직
+ ┃    ┣ *.repository.ts   # DB 접근(Prisma)
+ ┃    ┣ structs/          # Superstruct 유효성 검증
+ ┃    ┣ dto/              # 요청/응답 DTO
+ ┃    ┣ utils/            # 모듈 유틸리티
+ ┃    ┣ types/            # 모듈 전용 타입
+ ┃    ┗ entities/         # 엔티티 타입
+ ┣ middlewares   # 인증/인가/전역 에러 핸들러
+ ┣ lib           # 공통 상수, 보안, 검증, 에러, 요청 유틸
+ ┣ types         # 전역 타입
+ ┣ main.ts       # 서버 시작 파일
+ ┣ app.module.ts # 루트 모듈
+ ┗ swagger.ts    # Swagger 설정
+```
+
+## API 명세
+
+- Swagger UI: [https://api.codiit.shop/api-docs](https://api.codiit.shop/api-docs)
 
 ## 보안/설계 포인트
 
