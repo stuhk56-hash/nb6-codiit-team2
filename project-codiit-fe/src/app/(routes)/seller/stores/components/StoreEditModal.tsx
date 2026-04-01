@@ -2,6 +2,7 @@ import { editStore } from "@/lib/api/store";
 import { StoreCreateForm } from "@/lib/schemas/storecreate.schema";
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import StoreForm from "./StoreForm";
 
 interface StoreEditModalProps {
@@ -35,7 +36,10 @@ export default function StoreEditModal({ onClose, store }: StoreEditModalProps) 
       toaster("info", "스토어 정보를 수정했습니다");
       onClose();
     } catch (error) {
-      toaster("warn", "스토어 수정 실패: " + error);
+      const message = axios.isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message || error.message
+        : "스토어 수정 중 오류가 발생했습니다.";
+      toaster("warn", message);
     }
   };
 
