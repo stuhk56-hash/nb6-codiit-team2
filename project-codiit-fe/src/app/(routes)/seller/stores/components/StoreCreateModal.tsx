@@ -2,6 +2,7 @@ import { createStore } from "@/lib/api/store";
 import { StoreCreateForm } from "@/lib/schemas/storecreate.schema";
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import StoreForm from "./StoreForm";
 
 interface StoreCreateModalProps {
@@ -21,7 +22,10 @@ export default function StoreCreateModal({ onClose }: StoreCreateModalProps) {
       toaster("info", "스토어를 생성했습니다");
       onClose();
     } catch (error) {
-      toaster("warn", "스토어 생성 실패: " + error);
+      const message = axios.isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message || error.message
+        : "스토어 생성 중 오류가 발생했습니다.";
+      toaster("warn", message);
     }
   };
 

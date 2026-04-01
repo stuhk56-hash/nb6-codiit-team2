@@ -6,6 +6,7 @@ import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { transformToFormValues } from "@/utils/productDetailToFormValues";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
+import axios from "axios";
 import ProductForm from "../../components/ProductForm";
 
 export default function ProductEditPage() {
@@ -29,11 +30,12 @@ export default function ProductEditPage() {
       router.push("/seller/my-products");
     },
     onError: (error: unknown) => {
-      if (error instanceof Error) {
-        toaster("warn", "상품 수정 실패: " + error.message);
-      } else {
-        toaster("warn", "상품 수정 실패: 알 수 없는 에러");
-      }
+      const message = axios.isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message || error.message
+        : error instanceof Error
+          ? error.message
+          : "상품 수정 중 오류가 발생했습니다.";
+      toaster("warn", `상품 수정 실패: ${message}`);
     },
   });
 
