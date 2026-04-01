@@ -25,6 +25,9 @@ app.use(corsMiddleware);
 app.use(cookieParser());
 
 setupSwagger(app);
+app.get('/', (_, res) => {
+  res.status(200).send('NB6 TEAM2 Codi-it');
+});
 setupRoutes(app);
 app.use(defaultNotFoundHandler);
 app.use(globalErrorHandler);
